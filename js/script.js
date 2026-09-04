@@ -485,7 +485,8 @@ if (signupForm) {
     }
 
     if (registrationSuccess) {
-      const checkoutUrl = `/checkout?tipo=inscricao&valor=50&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}`;
+      const activeValor = Number(window.EJC_ACTIVE_PRICE || 50);
+      const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}`;
 
       const btnPayAfterSignup = document.getElementById("btnPayAfterSignup");
       if (btnPayAfterSignup) {
@@ -559,12 +560,84 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==============================================================================
+// SINCRONIZAÇÃO DINÂMICA DA CONFIGURAÇÃO FINANCEIRA PÚBLICA (PREÇO, LOTE)
+// ==============================================================================
+window.EJC_ACTIVE_PRICE = 50.00;
+window.EJC_ACTIVE_LOTE = "1º Lote";
+
+function aplicarConfiguracaoNaPagina(cfg) {
+  if (!cfg) return;
+  const valor = Number(cfg.valor_inscricao || (cfg.pix && cfg.pix.valorTaxaInscricao) || cfg.valorTaxaInscricao || 50.00);
+  const lote = cfg.lote_atual || (cfg.pix && cfg.pix.loteAtual) || cfg.loteAtual || "1º Lote";
+
+  window.EJC_ACTIVE_PRICE = valor;
+  window.EJC_ACTIVE_LOTE = lote;
+
+  const valorFormatado = valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const heroFeeText = document.getElementById("heroFeeText");
+  if (heroFeeText) {
+    heroFeeText.textContent = `Taxa única de ${valorFormatado} (${lote}). Cartão de crédito em até 12x ou Pix com baixa imediata.`;
+  }
+
+  const feeLotBadge = document.getElementById("feeLotBadge");
+  if (feeLotBadge) {
+    feeLotBadge.textContent = `Taxa da equipe (${lote})`;
+  }
+
+  const mainFeePriceDisplay = document.getElementById("mainFeePriceDisplay");
+  if (mainFeePriceDisplay) {
+    mainFeePriceDisplay.textContent = valorFormatado;
+  }
+
+  const btnPayFeeSection = document.getElementById("btnPayFeeSection");
+  if (btnPayFeeSection) {
+    btnPayFeeSection.textContent = `Pagar Taxa de ${valorFormatado} (Pix ou Cartão)`;
+  }
+}
+
+function carregarConfiguracaoPublica() {
+  // 1. Aplicação imediata síncrona do cache local para prevenir FOUC (flash de dados antigos)
+  try {
+    const cached = localStorage.getItem("ejc_config_financeira");
+    if (cached) {
+      aplicarConfiguracaoNaPagina(JSON.parse(cached));
+    }
+  } catch (e) {}
+
+  // 2. Busca remota no servidor com headers anti-cache estritos
+  fetch(`/api/config?_t=${Date.now()}`, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+  })
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      if (data) {
+        aplicarConfiguracaoNaPagina(data);
+      }
+    })
+    .catch(err => console.warn("[Config Publica] Erro ao carregar /api/config:", err));
+}
+
+// Ouvinte para atualização em tempo real entre abas no mesmo navegador
+window.addEventListener("storage", (e) => {
+  if (e.key === "ejc_config_financeira" && e.newValue) {
+    try {
+      aplicarConfiguracaoNaPagina(JSON.parse(e.newValue));
+    } catch(err) {}
+  }
+});
+
+// Inicialização imediata
+carregarConfiguracaoPublica();
+
+// ==============================================================================
 // REDIRECIONAMENTO PARA O CHECKOUT OFICIAL CENTRALIZADO (PIX & CARTÃO)
 // ==============================================================================
 document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(btn => {
   btn.addEventListener("click", () => {
-    const valor = Number(btn.dataset.valor || 50);
     const tipo = btn.dataset.tipo || "inscricao";
+    const valor = tipo === "inscricao" ? Number(window.EJC_ACTIVE_PRICE || 50) : Number(btn.dataset.valor || 50);
     const nome = document.querySelector("#full-name")?.value || "";
     const email = document.querySelector("#email")?.value || "";
     const wpp = document.querySelector("#whatsapp")?.value || "";

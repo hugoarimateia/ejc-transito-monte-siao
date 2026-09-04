@@ -164,9 +164,9 @@
 <span class="eyebrow">Checkout Oficial da Equipe</span>
 <h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
 <p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu Sub.</p>
-<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span>Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
+<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
 <div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
-<a href="/checkout?tipo=inscricao&valor=50" class="button button-primary" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
+<a href="/checkout?tipo=inscricao" class="button button-primary" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
   <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
 </a>
 </div>
@@ -178,7 +178,7 @@
 </div>
 <strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout Transparente</strong>
 <p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com aprovação em segundos e todas as principais bandeiras de cartão.</p>
-<a href="/checkout?tipo=inscricao&valor=50" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
+<a href="/checkout?tipo=inscricao" id="linkGoToCheckoutSub" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
 </figure>
 </div>
 <div aria-label="Subs disponíveis" class="sub-choice-grid">
@@ -402,11 +402,11 @@
 </div>
 <div class="fee-area reveal">
 <div class="fee-card fee-primary">
-<span>Taxa da equipe</span>
-<strong>R$ 50,00</strong>
+<span id="feeLotBadge">Taxa da equipe</span>
+<strong id="mainFeePriceDisplay">R$ 50,00</strong>
 <small>Materiais e organização da Equipe do Trânsito</small>
 <div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até 15 dias antes do encontro</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela coordenação.</small></div>
-<a href="/checkout?tipo=inscricao&valor=50" class="button button-light" style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar Taxa de R$ 50 (Pix ou Cartão)</a>
+<a href="/checkout?tipo=inscricao" class="button button-light" id="btnPayFeeSection" style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar Taxa no Checkout Oficial</a>
 </div>
 <div class="expense-card contribution-interactive-card">
 <h3>Fazer uma contribuição avulsa</h3>

@@ -1,7 +1,10 @@
 // ==============================================================================
 // VERCEL SERVERLESS FUNCTION: /api/pix-create
 // Geração server-side segura de cobrança Pix Dinâmica no padrão Banco Central
+// Sincronizado diretamente com _settings-store.js
 // ==============================================================================
+
+const settingsStore = require("./_settings-store");
 
 function calcularCRC16(str) {
   let crc = 0xFFFF;
@@ -56,6 +59,7 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -66,17 +70,33 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id } = req.body || {};
-    const valorNumerico = Number(valor || 50);
-
-    if (isNaN(valorNumerico) || valorNumerico <= 0) {
-      return res.status(400).json({ error: "Valor da cobrança inválido" });
+    let activeSettings = settingsStore.getDefaultSettings();
+    try {
+      const activeData = await settingsStore.getActiveSettings();
+      if (activeData && activeData.settings) {
+        activeSettings = activeData.settings;
+      }
+    } catch (e) {
+      console.warn("[pix-create] Fallback para default settings:", e.message);
     }
 
-    const chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
-    const beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
-    const cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
+    const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id } = req.body || {};
+
+    let valorNumerico;
+    if (tipo === "inscricao") {
+      valorNumerico = Number(activeSettings.valor_inscricao || 50);
+    } else {
+      valorNumerico = Number(valor || 50);
+      if (isNaN(valorNumerico) || valorNumerico <= 0) {
+        return res.status(400).json({ error: "Valor da cobrança inválido" });
+      }
+    }
+
+    const chavePix = activeSettings.pix_chave || process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
+    const beneficiario = activeSettings.pix_beneficiario || process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
+    const cidade = activeSettings.pix_cidade || process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);
+    const loteAtual = activeSettings.lote_atual || "1º Lote";
 
     const txid = "EJC" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     const expiracao = new Date(Date.now() + tempoExpiracao * 60000).toISOString();
@@ -87,7 +107,7 @@ module.exports = async (req, res) => {
       cidade: cidade,
       valor: valorNumerico,
       txid: txid,
-      info: tipo === "inscricao" ? "TAXA EQUIPE EJC TRANSITO" : "CONTRIBUICAO EJC TRANSITO"
+      info: tipo === "inscricao" ? `TAXA EJC TRANSITO ${loteAtual}`.toUpperCase() : "CONTRIBUICAO EJC TRANSITO"
     });
 
     // Registra no Supabase via REST API se credenciais de servidor estiverem configuradas

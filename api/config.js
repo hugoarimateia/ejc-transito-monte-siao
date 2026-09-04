@@ -10,8 +10,11 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  // Cache curto de 2s para propagar alterações de preço/PIX quase instantaneamente
-  res.setHeader("Cache-Control", "public, s-maxage=2, stale-while-revalidate=5");
+  // Anti-cache estrito: propagação imediata de preços, lotes e chave PIX
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -56,8 +59,14 @@ module.exports = async (req, res) => {
   };
 
   return res.status(200).json({
+    success: true,
     supabaseUrl,
     supabaseAnonKey,
+    valor_inscricao: pixConfig.valor_inscricao,
+    lote_atual: pixConfig.lote_atual,
+    pix_chave: pixConfig.chave,
+    pix_beneficiario: pixConfig.beneficiario,
+    pix_cidade: pixConfig.cidade,
     pix: pixConfig,
     whatsapp: whatsappConfig
   });

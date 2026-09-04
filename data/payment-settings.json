@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 9,
+    "versao": 13,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -11,10 +11,10 @@
     "pix_tipo_chave": "EMAIL",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_cidade": "CAMPINA GRANDE",
-    "atualizado_em": "2026-09-04T21:15:02.464Z",
+    "atualizado_em": "2026-09-04T21:32:09.122Z",
     "pix_documento": "",
-    "motivo_alteracao": "Restauração pós-teste",
-    "atualizado_por": "sistema_restauracao"
+    "motivo_alteracao": "Restauração",
+    "atualizado_por": "admin_test"
   },
   "lotes": [
     {
@@ -33,12 +33,76 @@
     {
       "id": "lote-1788556501588",
       "nome": "2º Lote Especial",
-      "valor": 75,
+      "valor": 65,
       "ativo": true,
       "criado_em": "2026-09-04T21:15:01.586Z"
     }
   ],
   "historico": [
+    {
+      "id": "audit-1788557529122-xx9t",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "financeiro.novo@ejcparoquia.com (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Restauração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:32:09.122Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 13
+      }
+    },
+    {
+      "id": "audit-1788557529093-0pbt",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 65.00 (2º Lote Especial)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Restauração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:32:09.093Z",
+      "detalhes": {
+        "versao": 12,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788557529025-e0r3",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "financeiro.novo@ejcparoquia.com (EMAIL)",
+      "motivo": "Troca de conta bancária oficial",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:32:09.025Z",
+      "detalhes": {
+        "beneficiario": "PAROQUIA EJC NOVO BENEFICIARIO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 11
+      }
+    },
+    {
+      "id": "audit-1788557528953-gop5",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 65.00 (2º Lote Especial)",
+      "motivo": "Virada de lote programada",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:32:08.953Z",
+      "detalhes": {
+        "versao": 10,
+        "lote": "2º Lote Especial",
+        "valor_promocional": null
+      }
+    },
     {
       "id": "audit-1788556502465-yj5f",
       "acao": "PIX_KEY_UPDATED",
@@ -191,7 +255,10 @@
     }
   ],
   "whatsapp": {
-    "verde": "https://chat.whatsapp.com/TESTE_VERDE_NOVO",
-    "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
+    "verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
+    "vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
+    "amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+    "azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+    "geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
   }
 }
