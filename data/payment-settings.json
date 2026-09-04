@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 1,
+    "versao": 9,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -10,40 +10,188 @@
     "pix_chave": "leoeuler03@gmail.com",
     "pix_tipo_chave": "EMAIL",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
-    "pix_documento": "",
     "pix_cidade": "CAMPINA GRANDE",
-    "pix_instituicao": "",
-    "motivo_alteracao": "Configuração oficial padrão inicial",
-    "atualizado_por": "sistema",
-    "atualizado_em": "2026-09-04T12:00:00.000Z"
+    "atualizado_em": "2026-09-04T21:15:02.464Z",
+    "pix_documento": "",
+    "motivo_alteracao": "Restauração pós-teste",
+    "atualizado_por": "sistema_restauracao"
   },
   "lotes": [
     {
       "id": "lote-1",
       "nome": "1º Lote",
       "valor": 50,
+      "ativo": true
+    },
+    {
+      "id": "lote-1788556495736",
+      "nome": "Lote Promocional EROFS",
+      "valor": 85,
       "ativo": true,
-      "criado_em": "2026-09-04T12:00:00.000Z"
+      "criado_em": "2026-09-04T21:14:55.735Z"
+    },
+    {
+      "id": "lote-1788556501588",
+      "nome": "2º Lote Especial",
+      "valor": 75,
+      "ativo": true,
+      "criado_em": "2026-09-04T21:15:01.586Z"
     }
   ],
   "historico": [
     {
-      "id": "hist-0",
-      "acao": "SYSTEM_INITIALIZED",
-      "usuario": "sistema",
-      "campo_afetado": "inicializacao",
+      "id": "audit-1788556502465-yj5f",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "sistema_restauracao",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "ejc.financeiro2026@igreja.com.br (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Restauração pós-teste",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:02.464Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 9
+      }
+    },
+    {
+      "id": "audit-1788556501881-6ab1",
+      "acao": "PRICE_UPDATED",
+      "usuario": "sistema_restauracao",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 75.00 (2º Lote Especial)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Restauração pós-teste",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:01.881Z",
+      "detalhes": {
+        "versao": 8,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788556501865-dit3",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "admin_teste",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: 83999998888",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:01.865Z"
+    },
+    {
+      "id": "audit-1788556501641-b9lf",
+      "acao": "WHATSAPP_LINKS_UPDATED",
+      "usuario": "admin_teste",
+      "campo_afetado": "configuracoes_whatsapp",
       "valor_anterior": null,
-      "valor_novo": "R$ 50.00 - leoeuler03@gmail.com",
-      "motivo": "Criação e inicialização do repositório persistente oficial",
-      "ip_origem: ": "127.0.0.1",
-      "criado_em": "2026-09-04T12:00:00.000Z"
+      "valor_novo": "{\"verde\":\"https://chat.whatsapp.com/TESTE_VERDE_NOVO\",\"vermelho\":\"https://chat.whatsapp.com/TESTE_VERMELHO_NOVO\"}",
+      "motivo": "Atualização dos links dos grupos WhatsApp",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:01.641Z"
+    },
+    {
+      "id": "audit-1788556501605-mg8s",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_teste",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "ejc.financeiro2026@igreja.com.br (EMAIL)",
+      "motivo": "Nova chave de teste",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:01.605Z",
+      "detalhes": {
+        "beneficiario": "PAROQUIA EJC MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 7
+      }
+    },
+    {
+      "id": "audit-1788556501587-ixci",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_teste",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 75.00 (2º Lote Especial)",
+      "motivo": "Teste de persistência automatizado",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:15:01.586Z",
+      "detalhes": {
+        "versao": 6,
+        "lote": "2º Lote Especial",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788556495810-ir6l",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "restauracao",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "chave.nova.producao@igreja.org (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Restauração pós-simulação",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:14:55.810Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 5
+      }
+    },
+    {
+      "id": "audit-1788556495751-o6hj",
+      "acao": "PRICE_UPDATED",
+      "usuario": "restauracao",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 85.00 (Lote Promocional EROFS)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Restauração pós-simulação",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:14:55.751Z",
+      "detalhes": {
+        "versao": 4,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788556495735-jab0",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_teste_erofs",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 85.00 (Lote Promocional EROFS)",
+      "motivo": "Ajuste de lote sob EROFS",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:14:55.735Z",
+      "detalhes": {
+        "versao": 3,
+        "lote": "Lote Promocional EROFS",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788556495630-gjvt",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_teste_erofs",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "chave.nova.producao@igreja.org (EMAIL)",
+      "motivo": "Teste sob simulação EROFS",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-04T21:14:55.629Z",
+      "detalhes": {
+        "beneficiario": "PAROQUIA MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 2
+      }
     }
   ],
   "whatsapp": {
-    "verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-    "vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-    "amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-    "azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
-    "geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
+    "verde": "https://chat.whatsapp.com/TESTE_VERDE_NOVO",
+    "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
   }
 }

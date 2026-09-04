@@ -146,8 +146,8 @@ $$;
 -- 5. FUNÇÃO RPC: ATUALIZAR CONFIGURAÇÃO FINANCEIRA COM AUDITORIA E VERSIONAMENTO
 CREATE OR REPLACE FUNCTION public.atualizar_configuracao_financeira(
     p_usuario TEXT,
-    p_lote_atual TEXT,
-    p_valor_inscricao NUMERIC,
+    p_lote_atual TEXT DEFAULT NULL,
+    p_valor_inscricao NUMERIC DEFAULT NULL,
     p_valor_promocional NUMERIC DEFAULT NULL,
     p_taxa_adicional NUMERIC DEFAULT 0.00,
     p_max_parcelas INT DEFAULT 12,
@@ -168,7 +168,7 @@ DECLARE
     v_nova_versao INT := 1;
     v_novo_id UUID;
 BEGIN
-    IF p_valor_inscricao <= 0 THEN
+    IF p_valor_inscricao IS NOT NULL AND p_valor_inscricao <= 0 THEN
         RETURN json_build_object('success', false, 'message', 'O valor da inscrição deve ser positivo.');
     END IF;
 

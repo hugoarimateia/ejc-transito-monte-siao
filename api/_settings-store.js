@@ -14,6 +14,9 @@ const DATA_DIR = path.resolve(__dirname, "../data");
 const PRIMARY_FILE = path.join(DATA_DIR, "payment-settings.json");
 const TMP_FILE = path.join(os.tmpdir(), "ejc-payment-settings.json");
 
+// Cache em memória compartilhado durante o ciclo de vida da instância serverless
+let memoryStore = null;
+
 // Configurações padrão de fábrica (somente usadas se não houver dados gravados)
 function getDefaultSettings() {
   return {
@@ -66,18 +69,23 @@ function getDefaultStore() {
   };
 }
 
-// Carrega dados do disco (data/payment-settings.json ou /tmp)
+// Carrega dados do disco com ANTI-SHADOWING rigoroso
+// Em ambientes serverless (Vercel), /var/task/data/payment-settings.json é READ-ONLY.
+// Se gravações forem feitas em /tmp, esta função prioriza /tmp se tiver versão mais recente!
 function loadLocalStore() {
+  let primaryData = null;
+  let tmpData = null;
+
   try {
     if (fs.existsSync(PRIMARY_FILE)) {
       const raw = fs.readFileSync(PRIMARY_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed && parsed.settings && parsed.settings.valor_inscricao) {
-        return parsed;
+        primaryData = parsed;
       }
     }
   } catch (err) {
-    console.warn("[SettingsStore] Falha ao ler PRIMARY_FILE, tentando TMP_FILE:", err.message);
+    console.warn("[SettingsStore] Falha ao ler PRIMARY_FILE:", err.message);
   }
 
   try {
@@ -85,24 +93,65 @@ function loadLocalStore() {
       const rawTmp = fs.readFileSync(TMP_FILE, "utf-8");
       const parsedTmp = JSON.parse(rawTmp);
       if (parsedTmp && parsedTmp.settings && parsedTmp.settings.valor_inscricao) {
-        return parsedTmp;
+        tmpData = parsedTmp;
       }
     }
   } catch (err) {
     console.warn("[SettingsStore] Falha ao ler TMP_FILE:", err.message);
   }
 
+  // Anti-shadowing: determina a versão mais recente entre PRIMARY e TMP
+  let chosen = null;
+  if (primaryData && tmpData) {
+    const versaoPrimary = Number(primaryData.settings?.versao || 0);
+    const versaoTmp = Number(tmpData.settings?.versao || 0);
+    if (versaoTmp > versaoPrimary) {
+      chosen = tmpData;
+    } else if (versaoPrimary > versaoTmp) {
+      chosen = primaryData;
+    } else {
+      // Mesma versão: compara timestamps de atualização
+      const timePrimary = new Date(primaryData.settings?.atualizado_em || 0).getTime();
+      const timeTmp = new Date(tmpData.settings?.atualizado_em || 0).getTime();
+      chosen = timeTmp >= timePrimary ? tmpData : primaryData;
+    }
+  } else if (tmpData) {
+    chosen = tmpData;
+  } else if (primaryData) {
+    chosen = primaryData;
+  }
+
+  // Se houver um store em memória nesta execução com versão mais recente, preserva-o
+  if (memoryStore && memoryStore.settings) {
+    const memoryVersao = Number(memoryStore.settings.versao || 0);
+    const chosenVersao = chosen ? Number(chosen.settings?.versao || 0) : 0;
+    if (memoryVersao >= chosenVersao) {
+      return memoryStore;
+    }
+  }
+
+  if (chosen) {
+    memoryStore = chosen;
+    return chosen;
+  }
+
   const initial = getDefaultStore();
-  saveLocalStore(initial);
+  memoryStore = initial;
+  try {
+    saveLocalStore(initial);
+  } catch (e) {
+    // ignora se fs for read-only no bootstrap
+  }
   return initial;
 }
 
 // Salva dados no disco com atomicidade e garantia de diretório
 function saveLocalStore(data) {
   let saved = false;
+  memoryStore = data;
   const content = JSON.stringify(data, null, 2);
 
-  // 1. Tenta salvar em data/payment-settings.json
+  // 1. Tenta salvar em data/payment-settings.json (funciona em desenvolvimento e servidores com disco gravável)
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -110,7 +159,10 @@ function saveLocalStore(data) {
     fs.writeFileSync(PRIMARY_FILE, content, "utf-8");
     saved = true;
   } catch (err) {
-    console.warn("[SettingsStore] Não foi possível salvar em PRIMARY_FILE:", err.message);
+    // Em Vercel Serverless / AWS Lambda, /var/task é EROFS (Read-Only)
+    if (err.code !== "EROFS") {
+      console.warn("[SettingsStore] Aviso ao salvar PRIMARY_FILE:", err.message);
+    }
   }
 
   // 2. Salva em TMP_FILE (sempre gravável, inclusive em Vercel Serverless / AWS Lambda)
@@ -118,7 +170,7 @@ function saveLocalStore(data) {
     fs.writeFileSync(TMP_FILE, content, "utf-8");
     saved = true;
   } catch (err) {
-    console.warn("[SettingsStore] Não foi possível salvar em TMP_FILE:", err.message);
+    console.warn("[SettingsStore] Falha ao salvar TMP_FILE:", err.message);
   }
 
   if (!saved) {
@@ -145,24 +197,76 @@ async function getActiveSettings() {
     try {
       const res = await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
         headers: { "apikey": key, "Authorization": `Bearer ${key}` },
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(3500)
       });
       if (res.ok) {
         const rows = await res.json();
         if (rows && rows.length > 0) {
           const remoteSettings = rows[0];
-          // Se o Supabase possui uma versão mais recente ou válida, sincroniza localmente
           localData.settings = {
             ...localData.settings,
             ...remoteSettings,
-            valor_inscricao: Number(remoteSettings.valor_inscricao)
+            valor_inscricao: Number(remoteSettings.valor_inscricao),
+            taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
+            max_parcelas: Number(remoteSettings.max_parcelas || 12)
           };
+
+          // Sincroniza histórico recente do Supabase se disponível
+          try {
+            const histRes = await fetch(`${url}/rest/v1/historico_configuracoes_financeiras?order=criado_em.desc&limit=50`, {
+              headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+              signal: AbortSignal.timeout(2000)
+            });
+            if (histRes.ok) {
+              const histRows = await histRes.json();
+              if (Array.isArray(histRows) && histRows.length > 0) {
+                localData.historico = histRows;
+              }
+            }
+          } catch (eHist) {}
+
+          // Sincroniza WhatsApp do Supabase se disponível
+          try {
+            const wppRes = await fetch(`${url}/rest/v1/configuracoes_whatsapp?ativo=eq.true`, {
+              headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+              signal: AbortSignal.timeout(2000)
+            });
+            if (wppRes.ok) {
+              const wppRows = await wppRes.json();
+              if (Array.isArray(wppRows) && wppRows.length > 0) {
+                const wppMap = {};
+                wppRows.forEach(r => {
+                  if (r.sub && r.link_grupo) {
+                    wppMap[String(r.sub).toLowerCase()] = r.link_grupo;
+                  }
+                });
+                localData.whatsapp = { ...localData.whatsapp, ...wppMap };
+              }
+            }
+          } catch (eWpp) {}
+
+          // Sincroniza lotes do Supabase se disponível
+          try {
+            const lotesRes = await fetch(`${url}/rest/v1/lotes_inscricao?order=criado_em.asc`, {
+              headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+              signal: AbortSignal.timeout(2000)
+            });
+            if (lotesRes.ok) {
+              const lotesRows = await lotesRes.json();
+              if (Array.isArray(lotesRows) && lotesRows.length > 0) {
+                localData.lotes = lotesRows.map(l => ({
+                  ...l,
+                  valor: Number(l.valor)
+                }));
+              }
+            }
+          } catch (eLotes) {}
+
           saveLocalStore(localData);
         }
       }
     } catch (err) {
-      // Supabase indisponível: utiliza a persistência local sincronizada
-      console.warn("[SettingsStore GET] Supabase offline ou falhou, mantendo dados persistidos:", err.message);
+      console.warn("[SettingsStore GET] Supabase indisponível no momento, utilizando dados persistidos locais:", err.message);
     }
   }
 
@@ -192,11 +296,12 @@ async function updatePriceSettings({
     throw new Error("O valor da inscrição deve ser um número positivo e maior que zero.");
   }
 
-  const localData = loadLocalStore();
-  const currentSettings = localData.settings;
+  // Obtém o estado ativo atual (consultando Supabase se disponível para não sobrescrever PIX ativo)
+  const activeData = await getActiveSettings();
+  const currentSettings = activeData.settings;
   const valorAnterior = currentSettings.valor_inscricao;
   const loteAnterior = currentSettings.lote_atual;
-  const novaVersao = (currentSettings.versao || 1) + 1;
+  const novaVersao = (Number(currentSettings.versao) || 1) + 1;
   const agora = new Date().toISOString();
 
   const novoSettings = {
@@ -229,13 +334,13 @@ async function updatePriceSettings({
     }
   };
 
-  // Tenta persistir no Supabase
+  // 1. Tenta persistir no Supabase (Fonte de Verdade Canônica)
   let supabasePersisted = false;
   const { url, key } = getSupabaseCredentials();
 
   if (url && key) {
     try {
-      // 1. Tenta via RPC
+      // 1.1 Tenta via RPC
       const rpcRes = await fetch(`${url}/rest/v1/rpc/atualizar_configuracao_financeira`, {
         method: "POST",
         headers: {
@@ -250,6 +355,11 @@ async function updatePriceSettings({
           p_valor_promocional: novoSettings.valor_promocional,
           p_taxa_adicional: novoSettings.taxa_adicional,
           p_max_parcelas: novoSettings.max_parcelas,
+          p_pix_chave: currentSettings.pix_chave,
+          p_pix_tipo_chave: currentSettings.pix_tipo_chave,
+          p_pix_beneficiario: currentSettings.pix_beneficiario,
+          p_pix_documento: currentSettings.pix_documento,
+          p_pix_cidade: currentSettings.pix_cidade,
           p_motivo: motivo || "Atualização de preço",
           p_ip: ip || "127.0.0.1"
         }),
@@ -259,7 +369,7 @@ async function updatePriceSettings({
       if (rpcRes.ok) {
         supabasePersisted = true;
       } else {
-        // 2. Fallback: inserção direta de tabela
+        // 1.2 Fallback: PostgREST direto nas tabelas
         await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
@@ -279,20 +389,38 @@ async function updatePriceSettings({
             pix_chave: currentSettings.pix_chave,
             pix_tipo_chave: currentSettings.pix_tipo_chave,
             pix_beneficiario: currentSettings.pix_beneficiario,
+            pix_documento: currentSettings.pix_documento,
             pix_cidade: currentSettings.pix_cidade,
             motivo_alteracao: motivo,
             atualizado_por: usuario || "admin",
             atualizado_em: agora
           })
         });
-        if (directRes.ok) supabasePersisted = true;
+        if (directRes.ok) {
+          supabasePersisted = true;
+          await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
+            method: "POST",
+            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              acao: "PRICE_UPDATED",
+              usuario: usuario || "admin",
+              campo_afetado: "valor_inscricao",
+              valor_anterior: String(valorAnterior),
+              valor_novo: String(valorNum),
+              motivo: motivo || "Atualização de preço via fallback",
+              ip_origem: ip || "127.0.0.1",
+              detalhes: { lote: novoSettings.lote_atual, versao: novaVersao }
+            })
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       console.warn("[SettingsStore updatePriceSettings] Supabase indisponível no momento:", err.message);
     }
   }
 
-  // Persiste no storage local / serverless
+  // 2. Persiste no storage local / serverless
+  const localData = loadLocalStore();
   localData.settings = novoSettings;
   if (!Array.isArray(localData.historico)) localData.historico = [];
   localData.historico.unshift(auditEntry);
@@ -317,7 +445,30 @@ async function updatePriceSettings({
 
   saveLocalStore(localData);
 
-  // READ-AFTER-WRITE VERIFICATION: Re-lê para assegurar integridade
+  // 3. READ-AFTER-WRITE VERIFICATION:
+  // Se Supabase foi atualizado, valida diretamente no banco remoto
+  if (supabasePersisted && url && key) {
+    try {
+      const verifyDbRes = await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
+        headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (verifyDbRes.ok) {
+        const verifyRows = await verifyDbRes.json();
+        if (verifyRows && verifyRows.length > 0) {
+          const dbValor = Number(verifyRows[0].valor_inscricao);
+          if (dbValor !== valorNum) {
+            throw new Error(`Falha de verificação read-after-write no banco: esperado R$ ${valorNum}, mas gravado R$ ${dbValor}`);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.message.includes("Falha de verificação")) throw err;
+      console.warn("[SettingsStore updatePriceSettings] Verificação no banco falhou:", err.message);
+    }
+  }
+
+  // Valida persistência local anti-shadowing
   const verifyData = loadLocalStore();
   if (Number(verifyData.settings.valor_inscricao) !== valorNum) {
     throw new Error(`Falha de verificação read-after-write: esperado R$ ${valorNum}, mas gravado R$ ${verifyData.settings.valor_inscricao}`);
@@ -355,20 +506,21 @@ async function updatePixSettings({
   if (!beneficiarioLimpo) throw new Error("O nome do favorecido/beneficiário é obrigatório.");
   if (!cidadeLimpa) throw new Error("A cidade da conta é obrigatória para conformidade BACEN.");
 
-  const localData = loadLocalStore();
-  const currentSettings = localData.settings;
+  // Consulta configuração ativa oficial (priorizando Supabase para reter o preço ativo vigente)
+  const activeData = await getActiveSettings();
+  const currentSettings = activeData.settings;
   const chaveAnterior = currentSettings.pix_chave;
-  const novaVersao = (currentSettings.versao || 1) + 1;
+  const novaVersao = (Number(currentSettings.versao) || 1) + 1;
   const agora = new Date().toISOString();
 
-  // Preserva o valor de inscrição ativo intacto! Não reseta para 50.00
+  // Preserva rigorosamente o valor de inscrição e lote ativos! Não reseta para padrão!
   const novoSettings = {
     ...currentSettings,
     versao: novaVersao,
     pix_chave: chaveLimpa,
     pix_tipo_chave: tipoChave,
     pix_beneficiario: beneficiarioLimpo,
-    pix_documento: pix_documento !== undefined ? String(pix_documento).trim() : currentSettings.pix_documento,
+    pix_documento: pix_documento !== undefined ? String(pix_documento).trim() : (currentSettings.pix_documento || ""),
     pix_cidade: cidadeLimpa,
     motivo_alteracao: motivo || "Atualização de dados PIX via painel",
     atualizado_por: usuario || "admin",
@@ -392,12 +544,13 @@ async function updatePixSettings({
     }
   };
 
-  // Tenta persistir no Supabase
+  // 1. Tenta persistir no Supabase (Fonte Canônica)
   let supabasePersisted = false;
   const { url, key } = getSupabaseCredentials();
 
   if (url && key) {
     try {
+      // 1.1 Tenta via RPC passando o preço ativo para conformidade de schema
       const rpcRes = await fetch(`${url}/rest/v1/rpc/atualizar_configuracao_financeira`, {
         method: "POST",
         headers: {
@@ -407,8 +560,11 @@ async function updatePixSettings({
         },
         body: JSON.stringify({
           p_usuario: usuario || "admin",
-          p_lote_atual: null,
-          p_valor_inscricao: null, // Deixa NULL para manter o preço existente via COALESCE
+          p_lote_atual: currentSettings.lote_atual || "1º Lote",
+          p_valor_inscricao: currentSettings.valor_inscricao || 50.00,
+          p_valor_promocional: currentSettings.valor_promocional || null,
+          p_taxa_adicional: currentSettings.taxa_adicional || 0.00,
+          p_max_parcelas: currentSettings.max_parcelas || 12,
           p_pix_chave: chaveLimpa,
           p_pix_tipo_chave: tipoChave,
           p_pix_beneficiario: beneficiarioLimpo,
@@ -422,13 +578,59 @@ async function updatePixSettings({
 
       if (rpcRes.ok) {
         supabasePersisted = true;
+      } else {
+        // 1.2 Fallback: PostgREST direto nas tabelas
+        await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ativo: false, atualizado_em: agora })
+        });
+        const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+          method: "POST",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            versao: novaVersao,
+            ativo: true,
+            lote_atual: currentSettings.lote_atual || "1º Lote",
+            valor_inscricao: currentSettings.valor_inscricao || 50.00,
+            valor_promocional: currentSettings.valor_promocional,
+            taxa_adicional: currentSettings.taxa_adicional || 0.00,
+            max_parcelas: currentSettings.max_parcelas || 12,
+            pix_chave: chaveLimpa,
+            pix_tipo_chave: tipoChave,
+            pix_beneficiario: beneficiarioLimpo,
+            pix_documento: novoSettings.pix_documento,
+            pix_cidade: cidadeLimpa,
+            motivo_alteracao: motivo,
+            atualizado_por: usuario || "admin",
+            atualizado_em: agora
+          })
+        });
+        if (directRes.ok) {
+          supabasePersisted = true;
+          await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
+            method: "POST",
+            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              acao: "PIX_KEY_UPDATED",
+              usuario: usuario || "admin",
+              campo_afetado: "pix_chave",
+              valor_anterior: chaveAnterior,
+              valor_novo: chaveLimpa,
+              motivo: motivo || "Atualização de chave PIX via fallback",
+              ip_origem: ip || "127.0.0.1",
+              detalhes: { beneficiario: beneficiarioLimpo, versao: novaVersao }
+            })
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       console.warn("[SettingsStore updatePixSettings] Supabase indisponível no momento:", err.message);
     }
   }
 
-  // Persiste no storage local
+  // 2. Persiste no storage local / serverless
+  const localData = loadLocalStore();
   localData.settings = novoSettings;
   if (!Array.isArray(localData.historico)) localData.historico = [];
   localData.historico.unshift(auditEntry);
@@ -436,7 +638,30 @@ async function updatePixSettings({
 
   saveLocalStore(localData);
 
-  // READ-AFTER-WRITE VERIFICATION
+  // 3. READ-AFTER-WRITE VERIFICATION:
+  // Se Supabase foi atualizado, valida diretamente no banco remoto
+  if (supabasePersisted && url && key) {
+    try {
+      const verifyDbRes = await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
+        headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (verifyDbRes.ok) {
+        const verifyRows = await verifyDbRes.json();
+        if (verifyRows && verifyRows.length > 0) {
+          const dbChave = verifyRows[0].pix_chave;
+          if (dbChave !== chaveLimpa) {
+            throw new Error(`Falha de verificação read-after-write no banco: esperado ${chaveLimpa}, mas gravado no Supabase ${dbChave}`);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.message.includes("Falha de verificação")) throw err;
+      console.warn("[SettingsStore updatePixSettings] Verificação no banco falhou:", err.message);
+    }
+  }
+
+  // Valida persistência local anti-shadowing
   const verifyData = loadLocalStore();
   if (verifyData.settings.pix_chave !== chaveLimpa) {
     throw new Error(`Falha de verificação read-after-write: esperado ${chaveLimpa}, mas gravado ${verifyData.settings.pix_chave}`);
@@ -448,7 +673,7 @@ async function updatePixSettings({
     supabasePersisted,
     settings: verifyData.settings,
     auditEntry,
-    message: `Chave PIX atualizada com sucesso.`
+    message: `Chave PIX atualizada com sucesso para ${chaveLimpa}.`
   };
 }
 
@@ -544,12 +769,13 @@ async function approvePayment({ identificador, usuario, ip }) {
         })
       });
 
-      // Tenta atualizar em 'checkout_transacoes'
-      const resTx = await fetch(`${url}/rest/v1/checkout_transacoes?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)})`, {
+      // Tenta atualizar em 'pagamentos' (e 'checkout_transacoes' se existir)
+      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)})`, {
         method: "PATCH",
         headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "aprovado",
+          status: "approved",
+          pago_em: agora,
           atualizado_em: agora
         })
       });

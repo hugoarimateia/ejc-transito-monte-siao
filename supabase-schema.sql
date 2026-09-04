@@ -337,3 +337,577 @@ USING (bucket_id = 'fotos');
 CREATE POLICY "Remoção controlada de fotos"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'fotos');
+
+-- ==============================================================================
+-- 12. CHECKOUT UNIFICADO: PAGAMENTOS, AUDITORIA E WHATSAPP
+-- ==============================================================================
+
+-- Se pagamentos_pix for uma tabela base, renomeia com segurança para pagamentos
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'pagamentos_pix' AND table_type = 'BASE TABLE') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'pagamentos') THEN
+        ALTER TABLE public.pagamentos_pix RENAME TO pagamentos;
+    END IF;
+END $$;
+
+-- Cria a tabela pagamentos caso ainda não exista
+CREATE TABLE IF NOT EXISTS public.pagamentos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    txid TEXT UNIQUE NOT NULL,
+    inscricao_id UUID REFERENCES public.inscricoes(id) ON DELETE SET NULL,
+    nome_pagador TEXT NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
+    whatsapp_pagador TEXT,
+    cpf_pagador TEXT,
+    valor NUMERIC(10,2) NOT NULL,
+    metodo TEXT NOT NULL DEFAULT 'pix', -- 'pix' ou 'credit_card'
+    parcelas INT NOT NULL DEFAULT 1,
+    cartao_ultimos_digitos VARCHAR(4),
+    cartao_bandeira VARCHAR(30),
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'approved', 'rejected', 'cancelled', 'expired', 'refunded', 'error'
+    tipo TEXT NOT NULL DEFAULT 'inscricao', -- 'inscricao' ou 'contribuicao'
+    pix_copia_e_cola TEXT,
+    qr_code_base64 TEXT,
+    expiracao TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '15 minutes'),
+    pago_em TIMESTAMPTZ,
+    gateway TEXT NOT NULL DEFAULT 'checkout_transparente',
+    gateway_transaction_id TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    payload_webhook JSONB
+);
+
+-- Garante colunas de checkout unificado caso a tabela tenha sido renomeada
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS metodo TEXT NOT NULL DEFAULT 'pix';
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS parcelas INT NOT NULL DEFAULT 1;
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS cartao_ultimos_digitos VARCHAR(4);
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS cartao_bandeira VARCHAR(30);
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS gateway_transaction_id TEXT;
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+-- Índices de performance para checkout unificado
+CREATE INDEX IF NOT EXISTS idx_pagamentos_txid ON public.pagamentos(txid);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_status ON public.pagamentos(status);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_email ON public.pagamentos(email);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_metodo ON public.pagamentos(metodo);
+
+-- View de compatibilidade retroativa para não quebrar queries legadas
+CREATE OR REPLACE VIEW public.pagamentos_pix AS 
+SELECT * FROM public.pagamentos WHERE metodo = 'pix';
+
+-- Tabela de auditoria e histórico de transações
+CREATE TABLE IF NOT EXISTS public.auditoria_transacoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transacao_id TEXT NOT NULL,
+    acao TEXT NOT NULL, -- 'criado', 'aprovado', 'recusado', 'expirado', 'cancelado', 'comprovante_enviado', 'status_alterado_admin'
+    status_anterior TEXT,
+    status_novo TEXT,
+    executado_por TEXT NOT NULL DEFAULT 'sistema',
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    detalhes JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_transacao_id ON public.auditoria_transacoes(transacao_id);
+
+-- Tabela de configurações de WhatsApp administráveis
+CREATE TABLE IF NOT EXISTS public.configuracoes_whatsapp (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sub TEXT UNIQUE NOT NULL,
+    link_grupo TEXT NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_por TEXT DEFAULT 'coordenacao'
+);
+
+-- Popula links padrão administráveis se não existirem
+INSERT INTO public.configuracoes_whatsapp (sub, link_grupo, ativo)
+VALUES
+    ('Verde', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde', true),
+    ('Vermelho', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho', true),
+    ('Amarelo', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo', true),
+    ('Azul', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul', true),
+    ('Geral', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0', true)
+ON CONFLICT (sub) DO NOTHING;
+
+-- Adiciona coluna de e-mail na tabela de inscrições se ausente
+ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_inscricoes_email ON public.inscricoes(email);
+
+-- Função RPC: Criar transação no Checkout Unificado
+CREATE OR REPLACE FUNCTION public.criar_transacao_checkout(
+    p_txid TEXT,
+    p_nome_pagador TEXT,
+    p_email TEXT,
+    p_whatsapp_pagador TEXT,
+    p_cpf_pagador TEXT,
+    p_valor NUMERIC,
+    p_metodo TEXT, -- 'pix' ou 'credit_card'
+    p_parcelas INT DEFAULT 1,
+    p_cartao_ultimos_digitos TEXT DEFAULT NULL,
+    p_cartao_bandeira TEXT DEFAULT NULL,
+    p_status TEXT DEFAULT 'pending',
+    p_tipo TEXT DEFAULT 'inscricao',
+    p_pix_copia_e_cola TEXT DEFAULT NULL,
+    p_qr_code_base64 TEXT DEFAULT NULL,
+    p_expiracao TIMESTAMPTZ DEFAULT (now() + interval '15 minutes'),
+    p_inscricao_id UUID DEFAULT NULL,
+    p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_pagamento_id UUID;
+BEGIN
+    INSERT INTO public.pagamentos (
+        txid, nome_pagador, email, whatsapp_pagador, cpf_pagador, valor,
+        metodo, parcelas, cartao_ultimos_digitos, cartao_bandeira,
+        status, tipo, pix_copia_e_cola, qr_code_base64, expiracao,
+        inscricao_id, metadata, gateway_transaction_id
+    ) VALUES (
+        p_txid, p_nome_pagador, p_email, p_whatsapp_pagador, p_cpf_pagador, p_valor,
+        p_metodo, p_parcelas, p_cartao_ultimos_digitos, p_cartao_bandeira,
+        p_status, p_tipo, p_pix_copia_e_cola, p_qr_code_base64, p_expiracao,
+        p_inscricao_id, p_metadata, p_txid
+    )
+    ON CONFLICT (txid) DO UPDATE
+    SET valor = EXCLUDED.valor,
+        status = EXCLUDED.status,
+        atualizado_em = now()
+    RETURNING id INTO v_pagamento_id;
+
+    -- Registra auditoria da transação
+    INSERT INTO public.auditoria_transacoes (
+        transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
+    ) VALUES (
+        p_txid, 'criado', NULL, p_status, 'checkout',
+        json_build_object('metodo', p_metodo, 'valor', p_valor, 'email', p_email)
+    );
+
+    RETURN json_build_object(
+        'success', true,
+        'id', v_pagamento_id,
+        'txid', p_txid,
+        'status', p_status
+    );
+END;
+$$;
+
+-- Função RPC: Confirmar pagamento unificado (Pix ou Cartão)
+CREATE OR REPLACE FUNCTION public.confirmar_pagamento_unificado(
+    p_txid TEXT,
+    p_gateway TEXT DEFAULT 'checkout_transparente',
+    p_executado_por TEXT DEFAULT 'sistema',
+    p_payload JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_pagamento RECORD;
+    v_status_antigo TEXT;
+BEGIN
+    SELECT * INTO v_pagamento FROM public.pagamentos WHERE txid = p_txid FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', false, 'message', 'Transação não encontrada.');
+    END IF;
+
+    -- Idempotência: se já aprovado, retorna sucesso sem duplicar auditoria
+    IF v_pagamento.status = 'approved' OR v_pagamento.status = 'confirmado' THEN
+        RETURN json_build_object('success', true, 'status', 'approved', 'txid', p_txid, 'mensagem', 'Já confirmado previamente.');
+    END IF;
+
+    v_status_antigo := v_pagamento.status;
+
+    UPDATE public.pagamentos
+    SET status = 'approved',
+        pago_em = now(),
+        gateway = p_gateway,
+        payload_webhook = p_payload,
+        atualizado_em = now()
+    WHERE id = v_pagamento.id;
+
+    -- Se vinculado a uma inscrição, atualiza status da inscrição
+    IF v_pagamento.inscricao_id IS NOT NULL THEN
+        UPDATE public.inscricoes
+        SET pagamento_status = 'confirmado',
+            forma_pagamento = v_pagamento.metodo,
+            observacao_pagamento = 'Pagamento aprovado via Checkout Unificado (' || UPPER(v_pagamento.metodo) || ').'
+        WHERE id = v_pagamento.inscricao_id;
+    END IF;
+
+    -- Registra auditoria
+    INSERT INTO public.auditoria_transacoes (
+        transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
+    ) VALUES (
+        p_txid, 'aprovado', v_status_antigo, 'approved', p_executado_por,
+        json_build_object('gateway', p_gateway, 'metodo', v_pagamento.metodo, 'valor', v_pagamento.valor)
+    );
+
+    RETURN json_build_object('success', true, 'status', 'approved', 'txid', p_txid);
+END;
+$$;
+
+-- RLS para Checkout Unificado
+ALTER TABLE public.pagamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auditoria_transacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuracoes_whatsapp ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Inserção pública de pagamentos" ON public.pagamentos FOR INSERT WITH CHECK (true);
+CREATE POLICY "Leitura pública de pagamentos por txid" ON public.pagamentos FOR SELECT USING (true);
+CREATE POLICY "Atualização pública de pagamentos" ON public.pagamentos FOR UPDATE USING (true);
+
+CREATE POLICY "Inserção de auditoria" ON public.auditoria_transacoes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Leitura de auditoria" ON public.auditoria_transacoes FOR SELECT USING (true);
+
+CREATE POLICY "Leitura pública de links whatsapp" ON public.configuracoes_whatsapp FOR SELECT USING (true);
+CREATE POLICY "Atualização de links whatsapp" ON public.configuracoes_whatsapp FOR UPDATE USING (true);
+CREATE POLICY "Inserção de links whatsapp" ON public.configuracoes_whatsapp FOR INSERT WITH CHECK (true);
+
+-- ==============================================================================
+-- 13. GESTÃO CENTRALIZADA DE PREÇOS E PIX (ADMIN FINANCEIRO)
+-- ==============================================================================
+
+-- Tabela de configurações financeiras versionada
+CREATE TABLE IF NOT EXISTS public.configuracoes_financeiras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    versao INT NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    lote_atual TEXT NOT NULL DEFAULT '1º Lote',
+    valor_inscricao NUMERIC(10,2) NOT NULL DEFAULT 50.00,
+    valor_promocional NUMERIC(10,2),
+    taxa_adicional NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    max_parcelas INT NOT NULL DEFAULT 12,
+    pix_chave TEXT NOT NULL DEFAULT 'leoeuler03@gmail.com',
+    pix_tipo_chave TEXT NOT NULL DEFAULT 'EMAIL', -- 'EMAIL', 'CPF', 'CNPJ', 'TELEFONE', 'ALEATORIA'
+    pix_beneficiario TEXT NOT NULL DEFAULT 'EJC TRANSITO MONTE SIAO',
+    pix_documento TEXT DEFAULT '',
+    pix_cidade TEXT NOT NULL DEFAULT 'CAMPINA GRANDE',
+    pix_instituicao TEXT DEFAULT '',
+    motivo_alteracao TEXT,
+    atualizado_por TEXT NOT NULL DEFAULT 'coordenacao',
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Garante que apenas um registro seja ativo por vez
+CREATE UNIQUE INDEX IF NOT EXISTS idx_config_financeira_ativa 
+ON public.configuracoes_financeiras (ativo) 
+WHERE ativo = true;
+
+-- Tabela de lotes de inscrição
+CREATE TABLE IF NOT EXISTS public.lotes_inscricao (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome TEXT NOT NULL,
+    valor NUMERIC(10,2) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    data_inicio TIMESTAMPTZ DEFAULT now(),
+    data_fim TIMESTAMPTZ,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Popula lote inicial padrão caso não exista
+INSERT INTO public.lotes_inscricao (nome, valor, ativo)
+VALUES ('1º Lote', 50.00, true)
+ON CONFLICT DO NOTHING;
+
+-- Popula configuração financeira padrão caso não exista nenhuma ativa
+INSERT INTO public.configuracoes_financeiras (
+    versao,
+    ativo,
+    lote_atual,
+    valor_inscricao,
+    taxa_adicional,
+    max_parcelas,
+    pix_chave,
+    pix_tipo_chave,
+    pix_beneficiario,
+    pix_cidade,
+    atualizado_por
+)
+SELECT 
+    1,
+    true,
+    '1º Lote',
+    50.00,
+    0.00,
+    12,
+    'leoeuler03@gmail.com',
+    'EMAIL',
+    'EJC TRANSITO MONTE SIAO',
+    'CAMPINA GRANDE',
+    'sistema_inicial'
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.configuracoes_financeiras WHERE ativo = true
+);
+
+-- Tabela de histórico e auditoria de alterações financeiras
+CREATE TABLE IF NOT EXISTS public.historico_configuracoes_financeiras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    acao TEXT NOT NULL, -- 'PRICE_UPDATED', 'PIX_KEY_UPDATED', 'PIX_RECIPIENT_UPDATED', 'PAYMENT_SETTING_UPDATED'
+    usuario TEXT NOT NULL,
+    campo_afetado TEXT NOT NULL,
+    valor_anterior TEXT,
+    valor_novo TEXT,
+    motivo TEXT,
+    ip_origem TEXT,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    detalhes JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_historico_fin_criado_em 
+ON public.historico_configuracoes_financeiras(criado_em DESC);
+
+-- Função RPC: Obter configuração financeira ativa
+CREATE OR REPLACE FUNCTION public.obter_configuracao_financeira_ativa()
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_config RECORD;
+BEGIN
+    SELECT * INTO v_config 
+    FROM public.configuracoes_financeiras 
+    WHERE ativo = true 
+    ORDER BY versao DESC 
+    LIMIT 1;
+
+    IF NOT FOUND THEN
+        RETURN json_build_object(
+            'success', true,
+            'lote_atual', '1º Lote',
+            'valor_inscricao', 50.00,
+            'valor_promocional', NULL,
+            'taxa_adicional', 0.00,
+            'max_parcelas', 12,
+            'pix_chave', 'leoeuler03@gmail.com',
+            'pix_tipo_chave', 'EMAIL',
+            'pix_beneficiario', 'EJC TRANSITO MONTE SIAO',
+            'pix_cidade', 'CAMPINA GRANDE'
+        );
+    END IF;
+
+    RETURN json_build_object(
+        'success', true,
+        'id', v_config.id,
+        'versao', v_config.versao,
+        'lote_atual', v_config.lote_atual,
+        'valor_inscricao', v_config.valor_inscricao,
+        'valor_promocional', v_config.valor_promocional,
+        'taxa_adicional', v_config.taxa_adicional,
+        'max_parcelas', v_config.max_parcelas,
+        'pix_chave', v_config.pix_chave,
+        'pix_tipo_chave', v_config.pix_tipo_chave,
+        'pix_beneficiario', v_config.pix_beneficiario,
+        'pix_documento', v_config.pix_documento,
+        'pix_cidade', v_config.pix_cidade,
+        'atualizado_em', v_config.atualizado_em,
+        'atualizado_por', v_config.atualizado_por
+    );
+END;
+$$;
+
+-- Função RPC: Atualizar configuração financeira com auditoria e versionamento
+CREATE OR REPLACE FUNCTION public.atualizar_configuracao_financeira(
+    p_usuario TEXT,
+    p_lote_atual TEXT DEFAULT NULL,
+    p_valor_inscricao NUMERIC DEFAULT NULL,
+    p_valor_promocional NUMERIC DEFAULT NULL,
+    p_taxa_adicional NUMERIC DEFAULT 0.00,
+    p_max_parcelas INT DEFAULT 12,
+    p_pix_chave TEXT DEFAULT NULL,
+    p_pix_tipo_chave TEXT DEFAULT NULL,
+    p_pix_beneficiario TEXT DEFAULT NULL,
+    p_pix_documento TEXT DEFAULT NULL,
+    p_pix_cidade TEXT DEFAULT NULL,
+    p_motivo TEXT DEFAULT NULL,
+    p_ip TEXT DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_atual RECORD;
+    v_nova_versao INT := 1;
+    v_novo_id UUID;
+BEGIN
+    IF p_valor_inscricao IS NOT NULL AND p_valor_inscricao <= 0 THEN
+        RETURN json_build_object('success', false, 'message', 'O valor da inscrição deve ser positivo.');
+    END IF;
+
+    -- Localiza a configuração ativa atual com lock
+    SELECT * INTO v_atual 
+    FROM public.configuracoes_financeiras 
+    WHERE ativo = true 
+    FOR UPDATE;
+
+    IF FOUND THEN
+        v_nova_versao := v_atual.versao + 1;
+        -- Desativa a versão anterior
+        UPDATE public.configuracoes_financeiras 
+        SET ativo = false, atualizado_em = now() 
+        WHERE id = v_atual.id;
+    END IF;
+
+    -- Insere a nova versão ativa
+    INSERT INTO public.configuracoes_financeiras (
+        versao,
+        ativo,
+        lote_atual,
+        valor_inscricao,
+        valor_promocional,
+        taxa_adicional,
+        max_parcelas,
+        pix_chave,
+        pix_tipo_chave,
+        pix_beneficiario,
+        pix_documento,
+        pix_cidade,
+        motivo_alteracao,
+        atualizado_por,
+        atualizado_em
+    ) VALUES (
+        v_nova_versao,
+        true,
+        COALESCE(p_lote_atual, v_atual.lote_atual, '1º Lote'),
+        COALESCE(p_valor_inscricao, v_atual.valor_inscricao, 50.00),
+        p_valor_promocional,
+        COALESCE(p_taxa_adicional, v_atual.taxa_adicional, 0.00),
+        COALESCE(p_max_parcelas, v_atual.max_parcelas, 12),
+        COALESCE(p_pix_chave, v_atual.pix_chave, 'leoeuler03@gmail.com'),
+        COALESCE(p_pix_tipo_chave, v_atual.pix_tipo_chave, 'EMAIL'),
+        COALESCE(p_pix_beneficiario, v_atual.pix_beneficiario, 'EJC TRANSITO MONTE SIAO'),
+        COALESCE(p_pix_documento, v_atual.pix_documento, ''),
+        COALESCE(p_pix_cidade, v_atual.pix_cidade, 'CAMPINA GRANDE'),
+        p_motivo,
+        COALESCE(p_usuario, 'admin'),
+        now()
+    )
+    RETURNING id INTO v_novo_id;
+
+    -- Auditoria para alteração de valor
+    IF v_atual.valor_inscricao IS DISTINCT FROM p_valor_inscricao AND p_valor_inscricao IS NOT NULL THEN
+        INSERT INTO public.historico_configuracoes_financeiras (
+            acao, usuario, campo_afetado, valor_anterior, valor_novo, motivo, ip_origem, detalhes
+        ) VALUES (
+            'PRICE_UPDATED',
+            COALESCE(p_usuario, 'admin'),
+            'valor_inscricao',
+            COALESCE(v_atual.valor_inscricao::TEXT, '50.00'),
+            p_valor_inscricao::TEXT,
+            p_motivo,
+            p_ip,
+            json_build_object('lote', p_lote_atual, 'versao', v_nova_versao)
+        );
+    END IF;
+
+    -- Auditoria para alteração de Chave PIX
+    IF v_atual.pix_chave IS DISTINCT FROM p_pix_chave AND p_pix_chave IS NOT NULL THEN
+        INSERT INTO public.historico_configuracoes_financeiras (
+            acao, usuario, campo_afetado, valor_anterior, valor_novo, motivo, ip_origem, detalhes
+        ) VALUES (
+            'PIX_KEY_UPDATED',
+            COALESCE(p_usuario, 'admin'),
+            'pix_chave',
+            COALESCE(v_atual.pix_chave, 'leoeuler03@gmail.com'),
+            p_pix_chave,
+            p_motivo,
+            p_ip,
+            json_build_object('tipo_chave', p_pix_tipo_chave, 'versao', v_nova_versao)
+        );
+    END IF;
+
+    -- Auditoria para alteração de Beneficiário PIX
+    IF v_atual.pix_beneficiario IS DISTINCT FROM p_pix_beneficiario AND p_pix_beneficiario IS NOT NULL THEN
+        INSERT INTO public.historico_configuracoes_financeiras (
+            acao, usuario, campo_afetado, valor_anterior, valor_novo, motivo, ip_origem, detalhes
+        ) VALUES (
+            'PIX_RECIPIENT_UPDATED',
+            COALESCE(p_usuario, 'admin'),
+            'pix_beneficiario',
+            v_atual.pix_beneficiario,
+            p_pix_beneficiario,
+            p_motivo,
+            p_ip,
+            json_build_object('cidade', p_pix_cidade, 'versao', v_nova_versao)
+        );
+    END IF;
+
+    RETURN json_build_object(
+        'success', true,
+        'id', v_novo_id,
+        'versao', v_nova_versao,
+        'valor_inscricao', COALESCE(p_valor_inscricao, v_atual.valor_inscricao, 50.00),
+        'pix_chave', COALESCE(p_pix_chave, v_atual.pix_chave, 'leoeuler03@gmail.com')
+    );
+END;
+$$;
+
+-- RLS para Gestão Financeira
+ALTER TABLE public.configuracoes_financeiras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lotes_inscricao ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.historico_configuracoes_financeiras ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Leitura publica de configuracoes financeiras ativas" 
+ON public.configuracoes_financeiras 
+FOR SELECT 
+USING (ativo = true);
+
+CREATE POLICY "Modificacao administrativa de configuracoes financeiras" 
+ON public.configuracoes_financeiras 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Leitura publica de lotes" 
+ON public.lotes_inscricao 
+FOR SELECT 
+USING (true);
+
+CREATE POLICY "Modificacao de lotes" 
+ON public.lotes_inscricao 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Insercao de historico de auditoria financeira" 
+ON public.historico_configuracoes_financeiras 
+FOR INSERT 
+WITH CHECK (true);
+
+CREATE POLICY "Leitura de historico de auditoria financeira" 
+ON public.historico_configuracoes_financeiras 
+FOR SELECT 
+USING (true);
+
+-- ==============================================================================
+-- 14. CONCESSÃO EXPLÍCITA DE PRIVILÉGIOS (GRANTS)
+-- ==============================================================================
+GRANT ALL ON TABLE public.pagamentos TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.auditoria_transacoes TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.configuracoes_whatsapp TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.configuracoes_financeiras TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.lotes_inscricao TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.historico_configuracoes_financeiras TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.criar_transacao_checkout(
+    TEXT, TEXT, TEXT, TEXT, TEXT, NUMERIC, TEXT, INT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, UUID, JSONB
+) TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.confirmar_pagamento_unificado(
+    TEXT, TEXT, TEXT, JSONB
+) TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.obter_configuracao_financeira_ativa() TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.atualizar_configuracao_financeira(
+    TEXT, TEXT, NUMERIC, NUMERIC, NUMERIC, INT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT
+) TO anon, authenticated, service_role;
+
