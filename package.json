@@ -1,0 +1,25 @@
+{
+  "name": "site-ejc-transito",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portal Oficial da Equipe do Trânsito do EJC - IEAD Monte Sião",
+  "scripts": {
+    "dev": "node scripts/build-env.js && npx --yes serve -l 3000 .",
+    "build": "node scripts/build-env.js",
+    "start": "npx --yes serve -l 3000 .",
+    "test": "node -c js/script.js && node -c js/supabase-config.js && node scripts/build-env.js"
+  },
+  "keywords": [
+    "ejc",
+    "transito",
+    "monte-siao",
+    "pix",
+    "supabase",
+    "vercel"
+  ],
+  "author": "Equipe do Trânsito EJC",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

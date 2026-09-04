@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#023284">
+  <title>EJC | Painel Administrativo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+  <link href="../css/all.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f3fa; min-height: 100vh; display: flex; flex-direction: column; }
+    .admin-container { width: min(calc(100% - 32px), 1100px); margin: 40px auto; flex: 1; }
+    .admin-auth-card {
+      max-width: 440px; margin: 80px auto; padding: 36px; border-radius: 28px;
+      background: #fff; box-shadow: var(--shadow); text-align: center;
+    }
+    .admin-auth-card h2 { margin: 12px 0 6px; font-family: "Archivo Black", sans-serif; color: var(--blue-dark); font-size: 1.8rem; }
+    .admin-auth-card p { color: var(--muted); margin-bottom: 24px; font-size: .95rem; }
+    .admin-auth-card input { width: 100%; padding: 14px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; margin-bottom: 16px; outline: none; }
+    .admin-auth-card input:focus { border-color: var(--blue); }
+    .admin-panel-wrap { display: none; }
+    .admin-panel-wrap.active { display: block; }
+    .admin-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    .admin-header-bar h1 { font-family: "Archivo Black", sans-serif; color: var(--blue-dark); margin: 0; font-size: 2rem; }
+    .admin-nav-actions { display: flex; gap: 12px; }
+    .stat-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-box { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(20,34,86,.06); border-left: 5px solid var(--blue); }
+    .stat-box.green { border-left-color: #24a764; }
+    .stat-box.red { border-left-color: #e8333e; }
+    .stat-box.yellow { border-left-color: #e9dd3c; }
+    .stat-box.blue { border-left-color: #2778d4; }
+    .stat-box strong { font-size: 2.2rem; font-family: "Archivo Black", sans-serif; color: var(--ink); display: block; line-height: 1.1; }
+    .stat-box span { font-size: .85rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    .table-container { background: #fff; border-radius: 24px; padding: 26px; box-shadow: var(--shadow); margin-bottom: 30px; }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .table-toolbar input, .table-toolbar select { padding: 10px 14px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; outline: none; }
+    .table-toolbar input { min-width: 260px; }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .9rem; }
+    .data-table th { padding: 12px; border-bottom: 2px solid #eef2fa; color: var(--muted); font-size: .78rem; text-transform: uppercase; font-weight: 800; }
+    .data-table td { padding: 14px 12px; border-bottom: 1px solid #eef2fa; color: var(--ink); vertical-align: middle; }
+    .data-table tr:hover { background: #f9fbff; }
+    .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .75rem; font-weight: 800; text-transform: uppercase; }
+    .status-confirmado { background: #e5f8ee; color: #137442; }
+    .status-pendente { background: #fff8db; color: #8a5a00; }
+    .status-informado { background: #e6f0ff; color: #1755a0; }
+    .sub-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: .78rem; font-weight: 700; }
+    .sub-tag.Verde { background: #e5f8ee; color: #137442; }
+    .sub-tag.Vermelho { background: #ffeaec; color: #a61f29; }
+    .sub-tag.Amarelo { background: #ffffda; color: #8a7300; }
+    .sub-tag.Azul { background: #e6f0ff; color: #1755a0; }
+    .action-btn { padding: 6px 12px; border: none; border-radius: 8px; font-weight: 700; font-size: .8rem; cursor: pointer; transition: .2s; }
+    .action-btn.confirm { background: #24a764; color: #fff; }
+    .action-btn.view { background: #eef2fa; color: var(--blue-dark); margin-right: 4px; }
+    .modal-detail { max-width: 500px; padding: 24px; border: 0; border-radius: 20px; box-shadow: var(--shadow); }
+    .modal-detail::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+    <!-- TELA DE LOGIN -->
+    <div class="admin-auth-card" id="authCard">
+      <img src="../images/logo1.png" alt="Logo EJC" style="width: 80px; margin: 0 auto; border-radius: 14px;">
+      <h2>Área da Coordenação</h2>
+      <p>Informe a senha de acesso para gerenciar as inscrições e contribuições.</p>
+      <form id="authForm">
+        <input type="password" id="adminPassword" placeholder="Senha da Coordenação" required autofocus>
+        <button type="submit" class="button button-primary" style="width: 100%;">Entrar no Painel</button>
+      </form>
+      <p id="authError" style="color: #c72532; margin-top: 14px; font-weight: 700; display: none;">Senha incorreta. Tente novamente.</p>
+      <a href="../" style="display: inline-block; margin-top: 18px; color: var(--muted); font-size: .85rem; font-weight: 700;">← Voltar ao site principal</a>
+    </div>
+
+    <!-- PAINEL ADMINISTRATIVO -->
+    <div class="admin-panel-wrap" id="panelWrap">
+      <div class="admin-header-bar">
+        <div>
+          <span class="eyebrow">EJC Trânsito Monte Sião</span>
+          <h1>Painel da Coordenação</h1>
+        </div>
+        <div class="admin-nav-actions">
+          <button class="button button-secondary" id="exportBtn" style="min-height: 44px; font-size: .85rem;">📥 Exportar CSV</button>
+          <button class="button button-primary" id="logoutBtn" style="min-height: 44px; font-size: .85rem;">Sair</button>
+        </div>
+      </div>
+
+      <!-- CARDS DE ESTATÍSTICAS -->
+      <div class="stat-card-grid">
+        <div class="stat-box">
+          <span id="statTotalLabel">Total Inscritos</span>
+          <strong id="statTotalInscritos">0</strong>
+        </div>
+        <div class="stat-box green">
+          <span>Sub Verde</span>
+          <strong id="statSubVerde">0 / 50</strong>
+        </div>
+        <div class="stat-box red">
+          <span>Sub Vermelho</span>
+          <strong id="statSubVermelho">0 / 50</strong>
+        </div>
+        <div class="stat-box yellow">
+          <span>Sub Amarelo</span>
+          <strong id="statSubAmarelo">0 / 50</strong>
+        </div>
+        <div class="stat-box blue">
+          <span>Sub Azul</span>
+          <strong id="statSubAzul">0 / 50</strong>
+        </div>
+        <div class="stat-box" style="border-left-color: var(--yellow);">
+          <span>Total Pix Arrecadado</span>
+          <strong id="statTotalPix">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <!-- TABELA DE INSCRIÇÕES -->
+      <div class="table-container">
+        <div class="table-toolbar">
+          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">Inscrições da Equipe</h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" id="searchInput" placeholder="Buscar por nome ou telefone...">
+            <select id="subFilter">
+              <option value="">Todos os Subs</option>
+              <option value="Verde">Sub Verde</option>
+              <option value="Vermelho">Sub Vermelho</option>
+              <option value="Amarelo">Sub Amarelo</option>
+              <option value="Azul">Sub Azul</option>
+            </select>
+            <select id="statusFilter">
+              <option value="">Todos os Status</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="informado">Informado</option>
+              <option value="pendente">Pendente</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Nome Completo</th>
+                <th>Sub</th>
+                <th>WhatsApp</th>
+                <th>Camisa</th>
+                <th>Pagamento</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 30px;">Carregando inscrições...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABELA DE CONTRIBUIÇÕES PIX AVULSAS -->
+      <div class="table-container">
+        <div class="table-toolbar">
+          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">Contribuições Pix</h3>
+          <span style="font-size: .85rem; color: var(--muted);" id="pixCountLabel">0 contribuições registradas</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Contribuinte</th>
+                <th>WhatsApp</th>
+                <th>Valor</th>
+                <th>Código Transação (txid)</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="pixTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">Nenhuma contribuição registrada ainda.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALHES -->
+  <dialog class="modal-detail" id="detailModal">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <h3 id="modalName" style="margin: 0; font-family: 'Archivo Black', sans-serif; color: var(--blue-dark);">Detalhes do Inscrito</h3>
+      <button type="button" onclick="document.getElementById('detailModal').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+    <div id="modalContent" style="font-size: .9rem; line-height: 1.6; color: var(--ink);"></div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/env-config.js"></script>
+  <script src="../js/supabase-config.js"></script>
+  <script>
+    const AUTH_PASS = "ejc2026"; // Senha padrão da coordenação
+    const authCard = document.getElementById("authCard");
+    const panelWrap = document.getElementById("panelWrap");
+    const authForm = document.getElementById("authForm");
+    const adminPassword = document.getElementById("adminPassword");
+    const authError = document.getElementById("authError");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    let inscricoesData = [];
+    let pagamentosPixData = [];
+
+    // Checa sessão
+    if (sessionStorage.getItem("ejc_admin_auth") === "true") {
+      showPanel();
+    }
+
+    authForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (adminPassword.value.trim() === AUTH_PASS) {
+        sessionStorage.setItem("ejc_admin_auth", "true");
+        showPanel();
+      } else {
+        authError.style.display = "block";
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      sessionStorage.removeItem("ejc_admin_auth");
+      location.reload();
+    });
+
+    function showPanel() {
+      authCard.style.display = "none";
+      panelWrap.classList.add("active");
+      carregarDados();
+    }
+
+    function carregarDados() {
+      // 1. Carrega inscrições locais
+      const localInscricoes = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+      const localPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
+
+      inscricoesData = localInscricoes;
+      pagamentosPixData = localPix;
+
+      renderizarTudo();
+
+      // 2. Se houver Supabase configurado, tenta buscar
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
+        try {
+          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+          client.from("inscricoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              // Mescla com locais evitando duplicidades por whatsapp
+              const existingPhones = new Set(data.map(d => d.whatsapp));
+              const nonDuplicatedLocal = localInscricoes.filter(l => !existingPhones.has(l.whatsapp));
+              inscricoesData = [...data, ...nonDuplicatedLocal];
+              renderizarTudo();
+            }
+          });
+
+          client.from("pagamentos_pix").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              const existingTxids = new Set(data.map(d => d.txid));
+              const nonDuplicatedPix = localPix.filter(l => !existingTxids.has(l.txid));
+              pagamentosPixData = [...data, ...nonDuplicatedPix];
+              renderizarTudo();
+            }
+          });
+        } catch(e) {
+          console.warn("Supabase remoto não disponível, operando em modo local.", e);
+        }
+      }
+    }
+
+    function renderizarTudo() {
+      renderizarEstatisticas();
+      renderizarTabelaInscricoes();
+      renderizarTabelaPix();
+    }
+
+    function renderizarEstatisticas() {
+      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Azul: 0 };
+      inscricoesData.forEach(item => {
+        if (subs[item.sub] !== undefined) subs[item.sub]++;
+      });
+
+      document.getElementById("statTotalInscritos").textContent = inscricoesData.length;
+      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 50`;
+      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 50`;
+      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 50`;
+      document.getElementById("statSubAzul").textContent = `${subs.Azul} / 50`;
+
+      // Total Pix
+      const totalPixConfirmado = pagamentosPixData
+        .filter(p => p.status === "confirmado")
+        .reduce((sum, p) => sum + Number(p.valor || 0), 0);
+      document.getElementById("statTotalPix").textContent = totalPixConfirmado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function renderizarTabelaInscricoes() {
+      const tbody = document.getElementById("tableBody");
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const subFilter = document.getElementById("subFilter").value;
+      const statusFilter = document.getElementById("statusFilter").value;
+
+      const filtered = inscricoesData.filter(item => {
+        const matchSearch = (item.nome_completo || "").toLowerCase().includes(search) || (item.whatsapp || "").includes(search);
+        const matchSub = !subFilter || item.sub === subFilter;
+        const matchStatus = !statusFilter || item.pagamento_status === statusFilter;
+        return matchSearch && matchSub && matchStatus;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--muted); padding: 30px;">Nenhuma inscrição encontrada com os filtros selecionados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => `
+        <tr>
+          <td>${new Date(item.criado_em || Date.now()).toLocaleDateString("pt-BR")}</td>
+          <td><strong>${item.nome_completo || "Sem nome"}</strong></td>
+          <td><span class="sub-tag ${item.sub || ''}">${item.sub || '-'}</span></td>
+          <td>${item.whatsapp || '-'}</td>
+          <td>${item.tamanho_camisa || '-'} (${item.modelo_camisa || 'Tradicional'})</td>
+          <td><span class="status-badge status-${item.pagamento_status || 'pendente'}">${item.pagamento_status || 'pendente'}</span></td>
+          <td>
+            <button class="action-btn view" onclick="verDetalhes('${item.whatsapp}')">Detalhes</button>
+            ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')">Confirmar</button>` : ''}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function renderizarTabelaPix() {
+      const tbody = document.getElementById("pixTableBody");
+      document.getElementById("pixCountLabel").textContent = `${pagamentosPixData.length} contribuições registradas`;
+
+      if (pagamentosPixData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">Nenhuma contribuição Pix registrada ainda.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pagamentosPixData.map(pix => `
+        <tr>
+          <td>${new Date(pix.criado_em || Date.now()).toLocaleString("pt-BR")}</td>
+          <td><strong>${pix.nome_pagador || 'Anônimo'}</strong></td>
+          <td>${pix.whatsapp_pagador || '-'}</td>
+          <td><strong>R$ ${Number(pix.valor || 0).toFixed(2).replace('.', ',')}</strong></td>
+          <td><code style="font-size: .78rem; background: #eee; padding: 2px 6px; border-radius: 4px;">${pix.txid}</code></td>
+          <td><span class="status-badge status-${pix.status}">${pix.status}</span></td>
+          <td>
+            ${pix.status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPixManual('${pix.txid}')">Aprovar</button>` : '<span style="color: #24a764; font-weight:800; font-size:.8rem;">✓ Concluído</span>'}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    window.verDetalhes = function(whatsapp) {
+      const item = inscricoesData.find(i => i.whatsapp === whatsapp);
+      if (!item) return;
+
+      document.getElementById("modalName").textContent = item.nome_completo;
+      document.getElementById("modalContent").innerHTML = `
+        <p><strong>Sub Grupo:</strong> ${item.sub}</p>
+        <p><strong>WhatsApp:</strong> ${item.whatsapp}</p>
+        <p><strong>Tamanho da Camisa:</strong> ${item.tamanho_camisa} (${item.modelo_camisa || 'Tradicional'})</p>
+        <p><strong>Camisa Adicional:</strong> ${item.quer_camisa_adicional ? `Sim (${item.quantidade_camisas_adicionais || 1}x - ${item.tamanho_camisa_adicional || ''})` : 'Não'}</p>
+        <p><strong>Talento:</strong> ${item.talento || 'Nenhum informado'}</p>
+        <p><strong>Status do Pagamento:</strong> <span class="status-badge status-${item.pagamento_status}">${item.pagamento_status}</span></p>
+        <p><strong>Forma Informada:</strong> ${item.forma_pagamento || '-'}</p>
+        ${item.justificativa_pagamento ? `<p><strong>Justificativa/Obs:</strong> ${item.justificativa_pagamento}</p>` : ''}
+        ${item.foto_caminho ? `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${item.foto_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>` : ''}
+        ${item.comprovante_caminho ? `<div style="margin-top: 10px;"><strong>Comprovante de Pagamento:</strong><br><a href="${item.comprovante_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver comprovante anexo</a></div>` : ''}
+      `;
+      document.getElementById("detailModal").showModal();
+    };
+
+    window.confirmarPagamentoInscricao = function(whatsapp) {
+      if (!confirm("Deseja confirmar manualmente o pagamento desta inscrição?")) return;
+      
+      const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+      const idx = local.findIndex(i => i.whatsapp === whatsapp);
+      if (idx !== -1) {
+        local[idx].pagamento_status = "confirmado";
+        localStorage.setItem("ejc_inscricoes", JSON.stringify(local));
+      }
+
+      // Atualiza também no array atual
+      const cur = inscricoesData.find(i => i.whatsapp === whatsapp);
+      if (cur) cur.pagamento_status = "confirmado";
+
+      renderizarTudo();
+      alert("Pagamento da inscrição confirmado com sucesso!");
+    };
+
+    window.confirmarPixManual = function(txid) {
+      if (!confirm(`Deseja aprovar manualmente o recebimento do Pix txid ${txid}?`)) return;
+
+      const localPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
+      const idx = localPix.findIndex(p => p.txid === txid);
+      if (idx !== -1) {
+        localPix[idx].status = "confirmado";
+        localPix[idx].pago_em = new Date().toISOString();
+        localStorage.setItem("ejc_pagamentos_pix", JSON.stringify(localPix));
+      }
+
+      const cur = pagamentosPixData.find(p => p.txid === txid);
+      if (cur) {
+        cur.status = "confirmado";
+        cur.pago_em = new Date().toISOString();
+      }
+
+      renderizarTudo();
+      alert("Contribuição Pix aprovada!");
+    };
+
+    // Filtros e busca
+    document.getElementById("searchInput").addEventListener("input", renderizarTabelaInscricoes);
+    document.getElementById("subFilter").addEventListener("change", renderizarTabelaInscricoes);
+    document.getElementById("statusFilter").addEventListener("change", renderizarTabelaInscricoes);
+
+    // Exportar CSV
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      if (inscricoesData.length === 0) {
+        alert("Não há dados de inscrições para exportar.");
+        return;
+      }
+      const headers = ["Data", "Nome Completo", "Sub", "WhatsApp", "Camisa", "Status Pagamento", "Talento"];
+      const rows = inscricoesData.map(i => [
+        `"${new Date(i.criado_em || Date.now()).toLocaleDateString("pt-BR")}"`,
+        `"${(i.nome_completo || "").replace(/"/g, '""')}"`,
+        `"${i.sub || ''}"`,
+        `"${i.whatsapp || ''}"`,
+        `"${i.tamanho_camisa || ''} ${i.modelo_camisa || ''}"`,
+        `"${i.pagamento_status || ''}"`,
+        `"${(i.talento || '').replace(/"/g, '""')}"`
+      ]);
+      const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map(r => r.join(";"))].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `inscricoes_ejc_transito_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
