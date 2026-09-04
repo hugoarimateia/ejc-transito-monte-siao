@@ -84,11 +84,6 @@ module.exports = async (req, res) => {
       parcelas
     } = req.body || {};
 
-    const valorNumerico = Number(valor || 50);
-    if (isNaN(valorNumerico) || valorNumerico <= 0) {
-      return res.status(400).json({ error: "Valor da transação inválido." });
-    }
-
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
@@ -100,11 +95,47 @@ module.exports = async (req, res) => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+    // Busca configuração financeira ativa oficial no banco (Preço oficial vigente e Chave PIX)
+    let officialPrice = Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00);
+    let chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
+    let beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
+    let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
+    let loteAtual = "1º Lote";
+
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const finRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+        });
+        if (finRes.ok) {
+          const finData = await finRes.json();
+          if (finData && finData.length > 0) {
+            const conf = finData[0];
+            officialPrice = Number(conf.valor_inscricao || officialPrice);
+            chavePix = conf.pix_chave || chavePix;
+            beneficiario = conf.pix_beneficiario || beneficiario;
+            cidade = conf.pix_cidade || cidade;
+            loteAtual = conf.lote_atual || loteAtual;
+          }
+        }
+      } catch (err) {
+        console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
+      }
+    }
+
+    // SEGURANÇA: Para inscrições, o valor OFICIAL ativo no backend é obrigatório (não confia no valor enviado pelo navegador)
+    let valorNumerico;
+    if (tipo === "inscricao") {
+      valorNumerico = officialPrice;
+    } else {
+      valorNumerico = Number(valor || 50);
+      if (isNaN(valorNumerico) || valorNumerico <= 0) {
+        return res.status(400).json({ error: "Valor da contribuição inválido." });
+      }
+    }
+
     // PROCESSAMENTO PIX
     if (metodo === "pix") {
-      const chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
-      const beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
-      const cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
       const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);
       const expiracao = new Date(Date.now() + tempoExpiracao * 60000).toISOString();
 
@@ -114,7 +145,7 @@ module.exports = async (req, res) => {
         cidade: cidade,
         valor: valorNumerico,
         txid: txid,
-        info: tipo === "inscricao" ? "TAXA EQUIPE EJC TRANSITO" : "CONTRIBUICAO EJC TRANSITO"
+        info: tipo === "inscricao" ? `TAXA EJC TRANSITO ${loteAtual}`.toUpperCase() : "CONTRIBUICAO EJC TRANSITO"
       });
 
       // Persiste no Supabase

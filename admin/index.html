@@ -82,6 +82,65 @@
     .wpp-setting-card label { display: block; font-size: .82rem; font-weight: 700; color: #334155; margin-bottom: 6px; }
     .wpp-setting-card input[type="url"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: .85rem; box-sizing: border-box; }
     .wpp-toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .8rem; color: #64748b; }
+
+    .admin-tab-nav {
+      display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; background: #fff; padding: 8px; border-radius: 16px; box-shadow: 0 4px 14px rgba(20,34,86,.04);
+    }
+    .admin-tab-btn {
+      padding: 10px 18px; border: none; background: transparent; font-family: inherit; font-size: .88rem; font-weight: 700; color: #475569; border-radius: 10px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .admin-tab-btn:hover { background: #f1f5f9; color: var(--blue-dark); }
+    .admin-tab-btn.active { background: var(--blue); color: #fff; box-shadow: 0 4px 10px rgba(2, 50, 132, 0.25); }
+
+    .financial-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 24px;
+    }
+    .form-card {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .form-card h4 {
+      margin: 0 0 14px; font-family: "Archivo Black", sans-serif; font-size: 1.1rem; color: var(--blue-dark); display: flex; align-items: center; gap: 8px;
+    }
+    .form-field { margin-bottom: 14px; }
+    .form-field label { display: block; font-size: .82rem; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .form-field small { display: block; font-size: .74rem; color: var(--muted); margin-top: 4px; }
+    .form-field input, .form-field select, .form-field textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: .88rem; box-sizing: border-box; background: #fff; transition: border .2s, box-shadow .2s;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+      border-color: var(--blue); outline: none; box-shadow: 0 0 0 3px rgba(2, 50, 132, 0.12);
+    }
+    .form-field input:disabled, .form-field select:disabled, .form-field textarea:disabled {
+      background: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0;
+    }
+    .input-action-wrap { display: flex; gap: 8px; }
+    .input-action-wrap input { flex: 1; }
+    .icon-action-btn {
+      padding: 0 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; cursor: pointer; color: #475569; font-size: .9rem; transition: all .2s; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .icon-action-btn:hover { background: #f1f5f9; color: var(--blue); }
+
+    .diff-box {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin: 16px 0; font-size: .88rem;
+    }
+    .diff-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+    .diff-row:last-child { border-bottom: none; }
+    .diff-old { color: #dc2626; text-decoration: line-through; font-weight: 600; }
+    .diff-new { color: #16a34a; font-weight: 700; }
+
+    .alert-banner {
+      padding: 12px 16px; border-radius: 12px; font-size: .84rem; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; line-height: 1.4;
+    }
+    .alert-warning { background: #fffbeb; border: 1px solid #fef3c7; color: #92400e; }
+    .alert-info { background: #eff6ff; border: 1px solid #dbeafe; color: #1e40af; }
+    .alert-danger { background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+
+    .role-badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700;
+    }
+    .role-superadmin { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .role-financeiro { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .role-comum { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
   </style>
 </head>
 <body>
@@ -104,7 +163,10 @@
     <div class="admin-panel-wrap" id="panelWrap">
       <div class="admin-header-bar">
         <div>
-          <span class="eyebrow">EJC Trânsito Monte Sião</span>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span class="eyebrow" style="margin: 0;">EJC Trânsito Monte Sião</span>
+            <span id="headerRoleBadge" class="role-badge role-superadmin"><i class="fa-solid fa-shield-halved"></i> Superadmin</span>
+          </div>
           <h1>Painel da Coordenação & Checkout</h1>
         </div>
         <div class="admin-nav-actions">
@@ -150,10 +212,23 @@
           <span>Total via Cartão</span>
           <strong id="statTotalCard">R$ 0,00</strong>
         </div>
+        <div class="stat-box" style="border-left-color: #8b5cf6;">
+          <span>Lote Vigente</span>
+          <strong id="statLoteAtual" style="font-size: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">1º Lote (R$ 50,00)</strong>
+        </div>
+      </div>
+
+      <!-- BARRA DE NAVEGAÇÃO ENTRE ABAS -->
+      <div class="admin-tab-nav" id="adminTabNav">
+        <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
+        <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-users"></i> Inscrições</button>
+        <button type="button" class="admin-tab-btn" data-tab="pagamentos"><i class="fa-solid fa-credit-card"></i> Pagamentos & Checkout</button>
+        <button type="button" class="admin-tab-btn" data-tab="financeiro"><i class="fa-solid fa-sliders"></i> Gestão Financeira & PIX</button>
+        <button type="button" class="admin-tab-btn" data-tab="whatsapp"><i class="fa-brands fa-whatsapp"></i> Links WhatsApp</button>
       </div>
 
       <!-- TABELA 1: INSCRIÇÕES DA EQUIPE -->
-      <div class="table-container">
+      <div class="table-container" id="sectionInscricoes">
         <div class="table-toolbar">
           <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">Inscrições da Equipe</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -197,7 +272,7 @@
       </div>
 
       <!-- TABELA 2: GESTÃO CENTRALIZADA DE PAGAMENTOS (PIX & CARTÃO) -->
-      <div class="table-container">
+      <div class="table-container" id="sectionPagamentos">
         <div class="table-toolbar">
           <div>
             <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">Checkout & Pagamentos Unificados</h3>
@@ -244,8 +319,203 @@
         </div>
       </div>
 
-      <!-- PAINEL 3: CONFIGURAÇÃO DE LINKS DO WHATSAPP ADMINISTRÁVEIS -->
-      <div class="table-container">
+      <!-- PAINEL 3: GESTÃO FINANCEIRA, PREÇOS E PIX -->
+      <div class="table-container" id="sectionFinanceiro">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">
+                <i class="fa-solid fa-sliders" style="color: var(--blue);"></i> Gestão Financeira & Dados do PIX
+              </h3>
+              <span id="financeiroStatusBadge" class="status-badge" style="background:#e0f2fe; color:#0369a1;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</span>
+            </div>
+            <p style="margin: 6px 0 0; color: var(--muted); font-size: .88rem;">
+              Controle centralizado dos preços de inscrição, lotes, parcelamento no cartão e chave PIX do recebedor oficial (Bacen EMV). As alterações refletem imediatamente no checkout e não modificam transações passadas.
+            </p>
+          </div>
+          <div id="readOnlyNotice" style="display: none;">
+            <span class="status-badge" style="background: #fef3c7; color: #b45309; padding: 6px 12px; font-size: .8rem;">
+              <i class="fa-solid fa-lock"></i> Somente Leitura
+            </span>
+          </div>
+        </div>
+
+        <div id="readOnlyBanner" class="alert-banner alert-warning" style="display: none;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+          <div>
+            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com permissão apenas de visualização. Para alterar valores de inscrição ou dados da chave PIX, realize login com uma senha com permissão financeira (<code>financeiro2026</code> ou <code>ejc2026</code>).
+          </div>
+        </div>
+
+        <!-- GRID DOS BLOCOS A E B -->
+        <div class="financial-grid">
+          
+          <!-- BLOCO A: VALORES DAS INSCRIÇÕES -->
+          <div class="form-card">
+            <div>
+              <h4><i class="fa-solid fa-tags" style="color: var(--blue);"></i> Bloco A: Valores das Inscrições</h4>
+              <p style="color: var(--muted); font-size: .82rem; margin: 0 0 16px;">
+                Define o preço oficial obrigatório cobrado dos participantes. O backend valida e rejeita valores adulterados no cliente.
+              </p>
+
+              <form id="formPrecosInscricao">
+                <div class="form-field">
+                  <label for="inputLoteAtual">Lote Vigente:</label>
+                  <input type="text" id="inputLoteAtual" required placeholder="Ex: 1º Lote">
+                  <small>Nome do lote exibido publicamente no resumo do checkout.</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-field">
+                    <label for="inputValorInscricao">Preço Oficial (R$):</label>
+                    <input type="number" id="inputValorInscricao" step="0.01" min="1.00" required placeholder="50.00">
+                    <small>Valor unitário da inscrição.</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="inputValorPromocional">Preço Promocional (R$):</label>
+                    <input type="number" id="inputValorPromocional" step="0.01" min="0.00" placeholder="Opcional">
+                    <small>Desconto promocional.</small>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-field">
+                    <label for="inputMaxParcelas">Máximo de Parcelas no Cartão:</label>
+                    <select id="inputMaxParcelas">
+                      <option value="1">1x (À vista)</option>
+                      <option value="2">2x</option>
+                      <option value="3">3x</option>
+                      <option value="4">4x</option>
+                      <option value="5">5x</option>
+                      <option value="6">6x</option>
+                      <option value="10">10x</option>
+                      <option value="12" selected>12x (Máximo)</option>
+                    </select>
+                    <small>Parcelas no checkout.</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="inputTaxaAdicional">Taxa Camisa Extra (R$):</label>
+                    <input type="number" id="inputTaxaAdicional" step="0.01" min="0.00" placeholder="0.00">
+                    <small>Valor adicional por camisa.</small>
+                  </div>
+                </div>
+
+                <div style="margin-top: 18px;">
+                  <button type="submit" class="button button-primary" id="btnSalvarPrecos" style="width: 100%; min-height: 44px; font-size: .88rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Valores das Inscrições
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- BLOCO B: CONFIGURAÇÕES DO RECEBEDOR PIX -->
+          <div class="form-card">
+            <div>
+              <h4><i class="fa-brands fa-pix" style="color: #0d9488;"></i> Bloco B: Configuração do PIX</h4>
+              <p style="color: var(--muted); font-size: .82rem; margin: 0 0 16px;">
+                Dados da conta destino usados para gerar o QR Code estático EMV e Copia e Cola do Banco Central.
+              </p>
+
+              <form id="formPixConfig">
+                <div class="form-field">
+                  <label for="inputPixTipoChave">Tipo da Chave PIX:</label>
+                  <select id="inputPixTipoChave" required>
+                    <option value="EMAIL">E-mail</option>
+                    <option value="CPF">CPF (11 dígitos)</option>
+                    <option value="CNPJ">CNPJ (14 dígitos)</option>
+                    <option value="TELEFONE">Telefone celular (com DDD)</option>
+                    <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                  </select>
+                  <small>Formato validado conforme padrão do Bacen.</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="inputPixChave">Chave PIX:</label>
+                  <div class="input-action-wrap">
+                    <input type="password" id="inputPixChave" required placeholder="Digite a chave PIX">
+                    <button type="button" class="icon-action-btn" id="btnToggleMaskPix" title="Revelar/Ocultar Chave">
+                      <i class="fa-regular fa-eye" id="eyeIconPix"></i>
+                    </button>
+                    <button type="button" class="icon-action-btn" id="btnCopyPixAdmin" title="Copiar Chave">
+                      <i class="fa-regular fa-copy"></i>
+                    </button>
+                  </div>
+                  <small id="pixKeyHelp">Chave protegida por máscara visual para segurança de dados.</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="inputPixBeneficiario">Nome do Beneficiário / Titular:</label>
+                  <input type="text" id="inputPixBeneficiario" required maxlength="25" placeholder="Ex: EJC TRANSITO MONTE SIAO">
+                  <small>Nome registrado na conta bancária (máx. 25 caracteres).</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-field">
+                    <label for="inputPixDocumento">Documento CPF/CNPJ (Opcional):</label>
+                    <input type="text" id="inputPixDocumento" placeholder="00.000.000/0000-00">
+                    <small>Para conferência administrativa.</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="inputPixCidade">Cidade da Conta (BACEN EMV):</label>
+                    <input type="text" id="inputPixCidade" required maxlength="15" placeholder="CAMPINA GRANDE">
+                    <small>Exigido no Bacen EMV (máx. 15 caracteres).</small>
+                  </div>
+                </div>
+
+                <div style="margin-top: 18px;">
+                  <button type="submit" class="button button-primary" id="btnSalvarPix" style="width: 100%; min-height: 44px; font-size: .88rem; background: #0d9488; border-color: #0d9488; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Dados do PIX
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BLOCO C: HISTÓRICO DE AUDITORIA FINANCEIRA -->
+        <div style="margin-top: 24px; border-top: 1px solid #eef2fa; padding-top: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+            <div>
+              <h4 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.1rem; color: var(--blue-dark);">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--blue);"></i> Bloco C: Histórico de Alterações & Auditoria Financeira
+              </h4>
+              <span style="font-size: .82rem; color: var(--muted);" id="histCountLabel">0 modificações registradas</span>
+            </div>
+            <button type="button" class="button button-secondary" id="btnRecarregarHistorico" style="min-height: 36px; font-size: .8rem; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-rotate"></i> Atualizar Histórico
+            </button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Tipo de Alteração</th>
+                  <th>Responsável</th>
+                  <th>Valores Anteriores</th>
+                  <th>Novos Valores</th>
+                  <th>Justificativa / Motivo</th>
+                </tr>
+              </thead>
+              <tbody id="histTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--muted); padding: 20px;">Carregando histórico de auditoria...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PAINEL 4: CONFIGURAÇÃO DE LINKS DO WHATSAPP ADMINISTRÁVEIS -->
+      <div class="table-container" id="sectionWhatsapp">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;">
           <div>
             <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">
@@ -296,11 +566,116 @@
     </div>
   </dialog>
 
+  <!-- MODAL DE CONFIRMAÇÃO: PREÇOS E LOTES -->
+  <dialog class="modal-detail" id="modalConfirmarPrecos" style="max-width: 540px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+      <div>
+        <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; color: var(--blue-dark); font-size: 1.25rem;">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #eab308;"></i> Confirmar Alteração de Preços
+        </h3>
+        <span style="color: var(--muted); font-size: .84rem;">Revise os novos valores antes de confirmar</span>
+      </div>
+      <button type="button" onclick="document.getElementById('modalConfirmarPrecos').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+
+    <div class="alert-banner alert-warning">
+      <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
+      <div>
+        <strong>Atenção:</strong> O novo valor de inscrição entrará em vigor imediatamente para todos os novos checkouts e pagamentos gerados a partir de agora. Transações anteriores pendentes ou concluídas <strong>não</strong> serão alteradas.
+      </div>
+    </div>
+
+    <div class="diff-box" id="diffPrecosContent">
+      <!-- Inserido dinamicamente via JS -->
+    </div>
+
+    <div class="form-field" style="margin-top: 14px;">
+      <label for="motivoAlteracaoPreco">Motivo / Justificativa da Alteração:</label>
+      <input type="text" id="motivoAlteracaoPreco" placeholder="Ex: Virada para 2º Lote / Reajuste autorizado">
+      <small>Este motivo será registrado permanentemente no histórico de auditoria.</small>
+    </div>
+
+    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="button button-secondary" onclick="document.getElementById('modalConfirmarPrecos').close()" style="min-height: 40px; font-size: .85rem;">
+        Cancelar
+      </button>
+      <button type="button" class="button button-primary" id="btnConfirmarSalvarPrecos" style="min-height: 40px; font-size: .85rem;">
+        <i class="fa-solid fa-check"></i> Confirmar e Aplicar Preços
+      </button>
+    </div>
+  </dialog>
+
+  <!-- MODAL DE CONFIRMAÇÃO: DADOS DO PIX -->
+  <dialog class="modal-detail" id="modalConfirmarPix" style="max-width: 540px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+      <div>
+        <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; color: #0d9488; font-size: 1.25rem;">
+          <i class="fa-brands fa-pix"></i> Confirmar Alteração da Chave PIX
+        </h3>
+        <span style="color: var(--muted); font-size: .84rem;">Revise os dados bancários do recebedor oficial</span>
+      </div>
+      <button type="button" onclick="document.getElementById('modalConfirmarPix').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+
+    <div class="alert-banner alert-danger">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+      <div>
+        <strong>Atenção Crítica:</strong> Todos os novos QR Codes e Copia e Cola gerados no checkout utilizarão esta nova chave PIX. Certifique-se de que a conta bancária do favorecido está ativa e operando normalmente.
+      </div>
+    </div>
+
+    <div class="diff-box" id="diffPixContent">
+      <!-- Inserido dinamicamente via JS -->
+    </div>
+
+    <div class="form-field" style="margin-top: 14px;">
+      <label for="motivoAlteracaoPix">Motivo / Justificativa da Alteração:</label>
+      <input type="text" id="motivoAlteracaoPix" placeholder="Ex: Substituição da conta de recebimento">
+      <small>Este motivo será registrado permanentemente no histórico de auditoria.</small>
+    </div>
+
+    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="button button-secondary" onclick="document.getElementById('modalConfirmarPix').close()" style="min-height: 40px; font-size: .85rem;">
+        Cancelar
+      </button>
+      <button type="button" class="button button-primary" id="btnConfirmarSalvarPix" style="min-height: 40px; font-size: .85rem; background: #0d9488; border-color: #0d9488;">
+        <i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX
+      </button>
+    </div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/env-config.js"></script>
   <script src="../js/supabase-config.js"></script>
   <script>
-    const AUTH_PASS = "ejc2026"; // Senha padrão da coordenação
+    const AUTH_PASS = "ejc2026"; // Senha padrão superadmin
+    const ROLE_MAP = {
+      "ejc2026": { role: "superadmin", label: "Superadmin (Acesso Total)", class: "role-superadmin", icon: "fa-shield-halved", canEdit: true },
+      "financeiro2026": { role: "financeiro", label: "Gestor Financeiro", class: "role-financeiro", icon: "fa-coins", canEdit: true },
+      "coordenacao2026": { role: "comum", label: "Coordenação (Visualização)", class: "role-comum", icon: "fa-eye", canEdit: false }
+    };
+
+    let currentUserRole = "superadmin";
+    let currentAdminPass = "ejc2026";
+    let canUserEditFinance = true;
+
+    // Configuração ativa em memória
+    let configFinanceiraAtiva = {
+      lote_atual: "1º Lote",
+      valor_inscricao: 50.00,
+      valor_promocional: null,
+      taxa_adicional: 0.00,
+      max_parcelas: 12,
+      pix_chave: "leoeuler03@gmail.com",
+      pix_tipo_chave: "EMAIL",
+      pix_beneficiario: "EJC TRANSITO MONTE SIAO",
+      pix_documento: "",
+      pix_cidade: "CAMPINA GRANDE",
+      versao: 1
+    };
+    let historicoFinanceiroData = [];
+    let isPixKeyVisible = false;
+
     const authCard = document.getElementById("authCard");
     const panelWrap = document.getElementById("panelWrap");
     const authForm = document.getElementById("authForm");
@@ -321,15 +696,25 @@
 
     let activeModalTxid = null;
 
-    // Checa sessão
-    if (sessionStorage.getItem("ejc_admin_auth") === "true") {
+    // Checa sessão existente
+    const savedPass = sessionStorage.getItem("ejc_admin_pass") || (sessionStorage.getItem("ejc_admin_auth") === "true" ? "ejc2026" : "");
+    if (savedPass && (ROLE_MAP[savedPass] || savedPass === "ejc2026")) {
+      currentAdminPass = savedPass;
+      currentUserRole = ROLE_MAP[savedPass] ? ROLE_MAP[savedPass].role : "superadmin";
+      canUserEditFinance = ROLE_MAP[savedPass] ? ROLE_MAP[savedPass].canEdit : true;
       showPanel();
     }
 
     authForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (adminPassword.value.trim() === AUTH_PASS) {
+      const pass = adminPassword.value.trim();
+      if (ROLE_MAP[pass] || pass === AUTH_PASS) {
+        currentAdminPass = pass;
+        currentUserRole = ROLE_MAP[pass] ? ROLE_MAP[pass].role : "superadmin";
+        canUserEditFinance = ROLE_MAP[pass] ? ROLE_MAP[pass].canEdit : true;
         sessionStorage.setItem("ejc_admin_auth", "true");
+        sessionStorage.setItem("ejc_admin_pass", pass);
+        sessionStorage.setItem("ejc_admin_role", currentUserRole);
         showPanel();
       } else {
         authError.style.display = "block";
@@ -338,13 +723,57 @@
 
     logoutBtn.addEventListener("click", () => {
       sessionStorage.removeItem("ejc_admin_auth");
+      sessionStorage.removeItem("ejc_admin_pass");
+      sessionStorage.removeItem("ejc_admin_role");
       location.reload();
     });
 
     function showPanel() {
       authCard.style.display = "none";
       panelWrap.classList.add("active");
+
+      // Atualiza badge de papel no cabeçalho
+      const roleInfo = ROLE_MAP[currentAdminPass] || { label: "Superadmin", class: "role-superadmin", icon: "fa-shield-halved" };
+      const badgeEl = document.getElementById("headerRoleBadge");
+      if (badgeEl) {
+        badgeEl.className = `role-badge ${roleInfo.class}`;
+        badgeEl.innerHTML = `<i class="fa-solid ${roleInfo.icon}"></i> ${roleInfo.label}`;
+      }
+
+      // Configuração das Abas
+      configurarAbas();
+
+      // Carregamento de dados
       carregarDados();
+      carregarConfiguracoesFinanceiras();
+    }
+
+    function configurarAbas() {
+      const tabBtns = document.querySelectorAll(".admin-tab-btn");
+      tabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          tabBtns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+
+          const targetTab = btn.getAttribute("data-tab");
+          const secInsc = document.getElementById("sectionInscricoes");
+          const secPay = document.getElementById("sectionPagamentos");
+          const secFin = document.getElementById("sectionFinanceiro");
+          const secWpp = document.getElementById("sectionWhatsapp");
+
+          if (targetTab === "all") {
+            if (secInsc) secInsc.style.display = "block";
+            if (secPay) secPay.style.display = "block";
+            if (secFin) secFin.style.display = "block";
+            if (secWpp) secWpp.style.display = "block";
+          } else {
+            if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
+            if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
+            if (secFin) secFin.style.display = (targetTab === "financeiro") ? "block" : "none";
+            if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
+          }
+        });
+      });
     }
 
     function carregarDados() {
@@ -828,6 +1257,465 @@
       a.download = `inscricoes_ejc_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    });
+
+    // ==============================================================================
+    // GESTÃO FINANCEIRA, PREÇOS E PIX
+    // ==============================================================================
+    async function carregarConfiguracoesFinanceiras() {
+      const statusBadge = document.getElementById("financeiroStatusBadge");
+      const readOnlyBanner = document.getElementById("readOnlyBanner");
+      const readOnlyNotice = document.getElementById("readOnlyNotice");
+      const btnSalvarPrecos = document.getElementById("btnSalvarPrecos");
+      const btnSalvarPix = document.getElementById("btnSalvarPix");
+
+      // Aplica restrições de permissão do usuário
+      if (!canUserEditFinance) {
+        if (readOnlyBanner) readOnlyBanner.style.display = "flex";
+        if (readOnlyNotice) readOnlyNotice.style.display = "block";
+        if (btnSalvarPrecos) {
+          btnSalvarPrecos.disabled = true;
+          btnSalvarPrecos.style.opacity = "0.6";
+          btnSalvarPrecos.style.cursor = "not-allowed";
+          btnSalvarPrecos.title = "Acesso somente leitura";
+        }
+        if (btnSalvarPix) {
+          btnSalvarPix.disabled = true;
+          btnSalvarPix.style.opacity = "0.6";
+          btnSalvarPix.style.cursor = "not-allowed";
+          btnSalvarPix.title = "Acesso somente leitura";
+        }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+          el.disabled = true;
+        });
+      } else {
+        if (readOnlyBanner) readOnlyBanner.style.display = "none";
+        if (readOnlyNotice) readOnlyNotice.style.display = "none";
+        if (btnSalvarPrecos) { btnSalvarPrecos.disabled = false; btnSalvarPrecos.style.opacity = "1"; btnSalvarPrecos.style.cursor = "pointer"; }
+        if (btnSalvarPix) { btnSalvarPix.disabled = false; btnSalvarPix.style.opacity = "1"; btnSalvarPix.style.cursor = "pointer"; }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+          el.disabled = false;
+        });
+      }
+
+      // Tenta buscar via API /api/payment-settings
+      try {
+        const res = await fetch("/api/payment-settings", {
+          headers: {
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) {
+            configFinanceiraAtiva = data.settings;
+            localStorage.setItem("ejc_config_financeira", JSON.stringify(data.settings));
+          }
+          if (data.historico) {
+            historicoFinanceiroData = data.historico;
+            localStorage.setItem("ejc_historico_financeiro", JSON.stringify(data.historico));
+          }
+          if (data.permissions) {
+            canUserEditFinance = Boolean(data.permissions.canEdit);
+          }
+        } else {
+          carregarFallbackConfigFinanceira();
+        }
+      } catch (err) {
+        console.warn("[Admin Financeiro] API remota inacessível, utilizando cache local:", err);
+        carregarFallbackConfigFinanceira();
+      }
+
+      preencherFormulariosFinanceiros();
+      renderizarHistoricoFinanceiro();
+
+      if (statusBadge) {
+        statusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Versão Ativa (v${configFinanceiraAtiva.versao || 1})`;
+        statusBadge.style.background = "#ecfdf5";
+        statusBadge.style.color = "#047857";
+      }
+
+      const statLote = document.getElementById("statLoteAtual");
+      if (statLote) {
+        statLote.textContent = `${configFinanceiraAtiva.lote_atual || '1º Lote'} (R$ ${Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2).replace('.', ',')})`;
+      }
+    }
+
+    function carregarFallbackConfigFinanceira() {
+      const cached = localStorage.getItem("ejc_config_financeira");
+      if (cached) {
+        try { configFinanceiraAtiva = JSON.parse(cached); } catch(e){}
+      }
+      const cachedHist = localStorage.getItem("ejc_historico_financeiro");
+      if (cachedHist) {
+        try { historicoFinanceiroData = JSON.parse(cachedHist); } catch(e){}
+      }
+    }
+
+    function preencherFormulariosFinanceiros() {
+      document.getElementById("inputLoteAtual").value = configFinanceiraAtiva.lote_atual || "1º Lote";
+      document.getElementById("inputValorInscricao").value = Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2);
+      document.getElementById("inputValorPromocional").value = configFinanceiraAtiva.valor_promocional ? Number(configFinanceiraAtiva.valor_promocional).toFixed(2) : "";
+      document.getElementById("inputMaxParcelas").value = String(configFinanceiraAtiva.max_parcelas || 12);
+      document.getElementById("inputTaxaAdicional").value = configFinanceiraAtiva.taxa_adicional ? Number(configFinanceiraAtiva.taxa_adicional).toFixed(2) : "0.00";
+
+      document.getElementById("inputPixTipoChave").value = configFinanceiraAtiva.pix_tipo_chave || "EMAIL";
+      const pixKeyInput = document.getElementById("inputPixChave");
+      pixKeyInput.value = configFinanceiraAtiva.pix_chave || "";
+      pixKeyInput.type = isPixKeyVisible ? "text" : "password";
+
+      document.getElementById("inputPixBeneficiario").value = configFinanceiraAtiva.pix_beneficiario || "EJC TRANSITO MONTE SIAO";
+      document.getElementById("inputPixDocumento").value = configFinanceiraAtiva.pix_documento || "";
+      document.getElementById("inputPixCidade").value = configFinanceiraAtiva.pix_cidade || "CAMPINA GRANDE";
+    }
+
+    // Toggle Revelar / Ocultar Chave PIX
+    document.getElementById("btnToggleMaskPix").addEventListener("click", () => {
+      isPixKeyVisible = !isPixKeyVisible;
+      const pixKeyInput = document.getElementById("inputPixChave");
+      const eyeIcon = document.getElementById("eyeIconPix");
+      if (isPixKeyVisible) {
+        pixKeyInput.type = "text";
+        eyeIcon.className = "fa-regular fa-eye-slash";
+      } else {
+        pixKeyInput.type = "password";
+        eyeIcon.className = "fa-regular fa-eye";
+      }
+    });
+
+    // Copiar Chave PIX
+    document.getElementById("btnCopyPixAdmin").addEventListener("click", () => {
+      const chave = configFinanceiraAtiva.pix_chave || document.getElementById("inputPixChave").value;
+      if (chave) {
+        navigator.clipboard.writeText(chave).then(() => {
+          alert("✓ Chave PIX copiada para a área de transferência!");
+        });
+      }
+    });
+
+    // Bloco C: Renderizar Histórico
+    function renderizarHistoricoFinanceiro() {
+      const tbody = document.getElementById("histTableBody");
+      const countLabel = document.getElementById("histCountLabel");
+
+      if (countLabel) {
+        countLabel.textContent = `${historicoFinanceiroData.length} modificações registradas`;
+      }
+
+      if (!historicoFinanceiroData || historicoFinanceiroData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 24px;">Nenhuma alteração registrada ainda no histórico.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = historicoFinanceiroData.map(h => {
+        let acaoBadge = "";
+        if (h.tipo_alteracao === "PRICE_UPDATED") {
+          acaoBadge = `<span class="status-badge" style="background: #eef2ff; color: #4338ca;"><i class="fa-solid fa-tags"></i> Preço Atualizado</span>`;
+        } else if (h.tipo_alteracao === "PIX_KEY_UPDATED") {
+          acaoBadge = `<span class="status-badge" style="background: #f0fdfa; color: #0f766e;"><i class="fa-brands fa-pix"></i> Chave PIX</span>`;
+        } else if (h.tipo_alteracao === "PIX_RECIPIENT_UPDATED") {
+          acaoBadge = `<span class="status-badge" style="background: #ecfdf5; color: #047857;"><i class="fa-solid fa-building-columns"></i> Favorecido PIX</span>`;
+        } else {
+          acaoBadge = `<span class="status-badge" style="background: #f1f5f9; color: #475569;">${h.tipo_alteracao || 'CONFIG_UPDATED'}</span>`;
+        }
+
+        const dataFormatada = new Date(h.criado_em || Date.now()).toLocaleString("pt-BR");
+        const responsavel = h.usuario_responsavel || "sistema";
+
+        const antes = h.valores_anteriores || {};
+        const novos = h.valores_novos || {};
+
+        let textoAntes = "-";
+        let textoNovos = "-";
+
+        if (h.tipo_alteracao === "PRICE_UPDATED") {
+          textoAntes = `<strong>${antes.lote_atual || '1º Lote'}</strong>: R$ ${Number(antes.valor_inscricao || 0).toFixed(2).replace('.', ',')}`;
+          textoNovos = `<strong>${novos.lote_atual || '1º Lote'}</strong>: R$ ${Number(novos.valor_inscricao || 0).toFixed(2).replace('.', ',')}`;
+        } else if (h.tipo_alteracao === "PIX_KEY_UPDATED" || h.tipo_alteracao === "PIX_RECIPIENT_UPDATED") {
+          textoAntes = `${antes.pix_chave || '-'} (${antes.pix_beneficiario || '-'})`;
+          textoNovos = `${novos.pix_chave || '-'} (${novos.pix_beneficiario || '-'})`;
+        } else {
+          textoAntes = JSON.stringify(antes);
+          textoNovos = JSON.stringify(novos);
+        }
+
+        return `
+          <tr>
+            <td><small>${dataFormatada}</small></td>
+            <td>${acaoBadge}</td>
+            <td><strong>${responsavel}</strong></td>
+            <td style="color: #dc2626;"><small>${textoAntes}</small></td>
+            <td style="color: #16a34a;"><small>${textoNovos}</small></td>
+            <td><small style="color: var(--muted);">${h.motivo || 'Sem justificativa informada'}</small></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("btnRecarregarHistorico").addEventListener("click", () => {
+      carregarConfiguracoesFinanceiras();
+    });
+
+    // ==============================================================================
+    // SUBMISSÃO DO FORMULÁRIO DE PREÇOS (COM MODAL DE CONFIRMAÇÃO CRÍTICA)
+    // ==============================================================================
+    let pendingPricePayload = null;
+
+    document.getElementById("formPrecosInscricao").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!canUserEditFinance) {
+        alert("Acesso somente leitura. Você não tem permissão para alterar valores de inscrição.");
+        return;
+      }
+
+      const novoLote = document.getElementById("inputLoteAtual").value.trim();
+      const novoValor = parseFloat(document.getElementById("inputValorInscricao").value);
+      const novoPromo = document.getElementById("inputValorPromocional").value ? parseFloat(document.getElementById("inputValorPromocional").value) : null;
+      const novasParcelas = parseInt(document.getElementById("inputMaxParcelas").value, 10);
+      const novaTaxa = parseFloat(document.getElementById("inputTaxaAdicional").value || "0");
+
+      if (isNaN(novoValor) || novoValor <= 0) {
+        alert("O valor da inscrição deve ser um número positivo maior que zero.");
+        return;
+      }
+
+      const diffBox = document.getElementById("diffPrecosContent");
+      diffBox.innerHTML = `
+        <div class="diff-row">
+          <span>Lote Vigente:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.lote_atual || '1º Lote'}</span> → <span class="diff-new">${novoLote}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Preço Oficial da Inscrição:</span>
+          <span><span class="diff-old">R$ ${Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2).replace('.', ',')}</span> → <span class="diff-new">R$ ${novoValor.toFixed(2).replace('.', ',')}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Preço Promocional:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.valor_promocional ? 'R$ ' + Number(configFinanceiraAtiva.valor_promocional).toFixed(2).replace('.', ',') : 'Nenhum'}</span> → <span class="diff-new">${novoPromo ? 'R$ ' + novoPromo.toFixed(2).replace('.', ',') : 'Nenhum'}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Parcelas Máximas:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.max_parcelas || 12}x</span> → <span class="diff-new">${novasParcelas}x</span></span>
+        </div>
+      `;
+
+      pendingPricePayload = {
+        action: "update_prices",
+        lote_atual: novoLote,
+        valor_inscricao: novoValor,
+        valor_promocional: novoPromo,
+        max_parcelas: novasParcelas,
+        taxa_adicional: novaTaxa,
+        usuario: currentUserRole,
+        admin_pass: currentAdminPass
+      };
+
+      document.getElementById("motivoAlteracaoPreco").value = "";
+      document.getElementById("modalConfirmarPrecos").showModal();
+    });
+
+    document.getElementById("btnConfirmarSalvarPrecos").addEventListener("click", async () => {
+      if (!pendingPricePayload) return;
+      const motivo = document.getElementById("motivoAlteracaoPreco").value.trim();
+      pendingPricePayload.motivo = motivo || "Atualização de preços no painel administrativo";
+
+      const btn = document.getElementById("btnConfirmarSalvarPrecos");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify(pendingPricePayload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          document.getElementById("modalConfirmarPrecos").close();
+          alert("✓ Valores de inscrição atualizados com sucesso! Os novos valores já estão ativos no checkout.");
+          await carregarConfiguracoesFinanceiras();
+        } else {
+          alert(`Erro ao salvar preços: ${data.error || 'Falha na comunicação com o servidor'}`);
+        }
+      } catch (err) {
+        console.warn("[Admin Preços] Fallback local:", err);
+        configFinanceiraAtiva.lote_atual = pendingPricePayload.lote_atual;
+        configFinanceiraAtiva.valor_inscricao = pendingPricePayload.valor_inscricao;
+        configFinanceiraAtiva.valor_promocional = pendingPricePayload.valor_promocional;
+        configFinanceiraAtiva.max_parcelas = pendingPricePayload.max_parcelas;
+        configFinanceiraAtiva.versao = (configFinanceiraAtiva.versao || 1) + 1;
+        localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
+
+        historicoFinanceiroData.unshift({
+          tipo_alteracao: "PRICE_UPDATED",
+          usuario_responsavel: currentUserRole,
+          motivo: pendingPricePayload.motivo,
+          valores_anteriores: { lote_atual: configFinanceiraAtiva.lote_atual, valor_inscricao: configFinanceiraAtiva.valor_inscricao },
+          valores_novos: { lote_atual: pendingPricePayload.lote_atual, valor_inscricao: pendingPricePayload.valor_inscricao },
+          criado_em: new Date().toISOString()
+        });
+        localStorage.setItem("ejc_historico_financeiro", JSON.stringify(historicoFinanceiroData));
+
+        document.getElementById("modalConfirmarPrecos").close();
+        alert("✓ Preços atualizados no cache local!");
+        carregarConfiguracoesFinanceiras();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Aplicar Preços`;
+      }
+    });
+
+    // ==============================================================================
+    // SUBMISSÃO DO FORMULÁRIO PIX (COM VALIDAÇÃO RIGOROSA E MODAL DE CONFIRMAÇÃO)
+    // ==============================================================================
+    let pendingPixPayload = null;
+
+    function validarChavePixFrontend(chave, tipo) {
+      const c = chave.trim();
+      if (!c) return "A chave PIX não pode ser vazia.";
+      if (tipo === "EMAIL" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) {
+        return "Formato de e-mail inválido para chave PIX.";
+      }
+      if (tipo === "CPF" && c.replace(/\D/g, "").length !== 11) {
+        return "Chave CPF deve conter exatamente 11 dígitos.";
+      }
+      if (tipo === "CNPJ" && c.replace(/\D/g, "").length !== 14) {
+        return "Chave CNPJ deve conter exatamente 14 dígitos.";
+      }
+      if (tipo === "TELEFONE" && (c.replace(/\D/g, "").length < 10 || c.replace(/\D/g, "").length > 13)) {
+        return "Telefone deve conter entre 10 e 13 dígitos numéricos com DDD.";
+      }
+      if (tipo === "ALEATORIA" && c.length < 16) {
+        return "Chave aleatória (EVP) deve conter no mínimo 16 caracteres.";
+      }
+      return null;
+    }
+
+    document.getElementById("formPixConfig").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!canUserEditFinance) {
+        alert("Acesso somente leitura. Você não tem permissão para alterar as configurações do PIX.");
+        return;
+      }
+
+      const tipoChave = document.getElementById("inputPixTipoChave").value;
+      const chavePix = document.getElementById("inputPixChave").value.trim();
+      const beneficiario = document.getElementById("inputPixBeneficiario").value.trim();
+      const documento = document.getElementById("inputPixDocumento").value.trim();
+      const cidade = document.getElementById("inputPixCidade").value.trim();
+
+      const erroValidacao = validarChavePixFrontend(chavePix, tipoChave);
+      if (erroValidacao) {
+        alert(erroValidacao);
+        return;
+      }
+
+      if (!beneficiario) {
+        alert("O nome do favorecido/beneficiário é obrigatório.");
+        return;
+      }
+
+      if (!cidade) {
+        alert("A cidade da conta é obrigatória para conformidade BACEN EMV.");
+        return;
+      }
+
+      const diffBox = document.getElementById("diffPixContent");
+      diffBox.innerHTML = `
+        <div class="diff-row">
+          <span>Tipo da Chave:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.pix_tipo_chave || 'EMAIL'}</span> → <span class="diff-new">${tipoChave}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Chave PIX:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.pix_chave || '-'}</span> → <span class="diff-new">${chavePix}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Beneficiário:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.pix_beneficiario || '-'}</span> → <span class="diff-new">${beneficiario}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Cidade Bacen:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.pix_cidade || '-'}</span> → <span class="diff-new">${cidade}</span></span>
+        </div>
+      `;
+
+      pendingPixPayload = {
+        action: "update_pix",
+        pix_chave: chavePix,
+        pix_tipo_chave: tipoChave,
+        pix_beneficiario: beneficiario,
+        pix_documento: documento,
+        pix_cidade: cidade,
+        usuario: currentUserRole,
+        admin_pass: currentAdminPass
+      };
+
+      document.getElementById("motivoAlteracaoPix").value = "";
+      document.getElementById("modalConfirmarPix").showModal();
+    });
+
+    document.getElementById("btnConfirmarSalvarPix").addEventListener("click", async () => {
+      if (!pendingPixPayload) return;
+      const motivo = document.getElementById("motivoAlteracaoPix").value.trim();
+      pendingPixPayload.motivo = motivo || "Atualização da chave PIX no painel administrativo";
+
+      const btn = document.getElementById("btnConfirmarSalvarPix");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify(pendingPixPayload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          document.getElementById("modalConfirmarPix").close();
+          alert("✓ Dados do PIX atualizados com sucesso! A nova chave já está em uso nos checkouts.");
+          await carregarConfiguracoesFinanceiras();
+        } else {
+          alert(`Erro ao salvar configurações do PIX: ${data.error || 'Falha na comunicação com o servidor'}`);
+        }
+      } catch (err) {
+        console.warn("[Admin PIX] Fallback local:", err);
+        configFinanceiraAtiva.pix_chave = pendingPixPayload.pix_chave;
+        configFinanceiraAtiva.pix_tipo_chave = pendingPixPayload.pix_tipo_chave;
+        configFinanceiraAtiva.pix_beneficiario = pendingPixPayload.pix_beneficiario;
+        configFinanceiraAtiva.pix_documento = pendingPixPayload.pix_documento;
+        configFinanceiraAtiva.pix_cidade = pendingPixPayload.pix_cidade;
+        configFinanceiraAtiva.versao = (configFinanceiraAtiva.versao || 1) + 1;
+        localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
+
+        historicoFinanceiroData.unshift({
+          tipo_alteracao: "PIX_KEY_UPDATED",
+          usuario_responsavel: currentUserRole,
+          motivo: pendingPixPayload.motivo,
+          valores_anteriores: { pix_chave: configFinanceiraAtiva.pix_chave, pix_beneficiario: configFinanceiraAtiva.pix_beneficiario },
+          valores_novos: { pix_chave: pendingPixPayload.pix_chave, pix_beneficiario: pendingPixPayload.pix_beneficiario },
+          criado_em: new Date().toISOString()
+        });
+        localStorage.setItem("ejc_historico_financeiro", JSON.stringify(historicoFinanceiroData));
+
+        document.getElementById("modalConfirmarPix").close();
+        alert("✓ Dados do PIX atualizados no cache local!");
+        carregarConfiguracoesFinanceiras();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX`;
+      }
     });
   </script>
 </body>

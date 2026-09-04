@@ -743,12 +743,20 @@
     const urlParams = new URLSearchParams(window.location.search);
     const tipoCheckout = urlParams.get("tipo") || "inscricao";
     const subSelecionado = urlParams.get("sub") || "Verde";
-    const valorBase = Math.max(1, Number(urlParams.get("valor") || 50));
+    let valorBase = Math.max(1, Number(urlParams.get("valor") || 50));
     const nomeParticipante = urlParams.get("nome") || "Participante EJC";
     const emailParam = urlParams.get("email") || "";
     const wppParam = urlParams.get("whatsapp") || "";
     const extraShirtParam = urlParams.get("camisa_extra") === "true";
-    const valorTotal = valorBase;
+    let valorTotal = valorBase;
+
+    let activePixConfig = window.EJC_PIX_CONFIG || {
+      chave: "leoeuler03@gmail.com",
+      beneficiario: "EJC TRANSITO MONTE SIAO",
+      cidade: "CAMPINA GRANDE",
+      loteAtual: "1º Lote",
+      valorTaxaInscricao: 50.00
+    };
 
     // Elementos do Resumo
     document.getElementById("summaryParticipantName").textContent = nomeParticipante;
@@ -796,7 +804,7 @@
     }
 
     // ==============================================================================
-    // GERAÇÃO E POLING DO PIX
+    // GERAÇÃO E POLLING DO PIX COM CONFIGURAÇÃO ATIVA DO SERVIDOR
     // ==============================================================================
     let activeTxid = "EJC" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     let pixTimerInterval = null;
@@ -846,14 +854,27 @@
       return p + calcularCRC16(p);
     }
 
-    function inicializarPix() {
-      const config = window.EJC_PIX_CONFIG || {
-        chave: "leoeuler03@gmail.com",
-        beneficiario: "EJC TRANSITO MONTE SIAO",
-        cidade: "CAMPINA GRANDE"
-      };
+    function atualizarOpcoesParcelas(valor) {
+      const select = document.getElementById("cardInstallments");
+      if (!select) return;
+      select.innerHTML = "";
+      for (let i = 1; i <= 12; i++) {
+        const valParcela = (valor / i).toFixed(2).replace('.', ',');
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `${i}x de R$ ${valParcela} ${i === 1 ? '(à vista)' : 'sem juros'}`;
+        select.appendChild(option);
+      }
+    }
 
-      const payloadPix = gerarPayloadBACEN(config.chave, config.beneficiario, config.cidade, valorTotal, activeTxid);
+    function inicializarPix() {
+      const payloadPix = gerarPayloadBACEN(
+        activePixConfig.chave,
+        activePixConfig.beneficiario,
+        activePixConfig.cidade,
+        valorTotal,
+        activeTxid
+      );
 
       document.getElementById("pixCodeTextarea").value = payloadPix;
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(payloadPix)}`;
@@ -885,6 +906,28 @@
 
       // Polling de monitoramento
       iniciarPolling(activeTxid);
+    }
+
+    async function carregarConfiguracaoAtiva() {
+      try {
+        const res = await fetch("/api/config");
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg && cfg.pix) {
+            activePixConfig = { ...activePixConfig, ...cfg.pix };
+            if (tipoCheckout === "inscricao") {
+              valorTotal = Number(cfg.pix.valorTaxaInscricao || 50.00);
+              document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${cfg.pix.loteAtual || '1º Lote'})`;
+              document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+              document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Falha ao buscar /api/config, usando fallback:", e);
+      }
+      atualizarOpcoesParcelas(valorTotal);
+      inicializarPix();
     }
 
     function registrarTransacaoLocal(data) {
@@ -978,7 +1021,7 @@
 
     // Submissão do Cartão
     const cardForm = document.getElementById("cardPaymentForm");
-    cardForm.addEventListener("submit", (e) => {
+    cardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
 
@@ -1012,14 +1055,36 @@
       if (/^4/.test(cardRaw)) bandeira = "Visa";
       if (/^3[47]/.test(cardRaw)) bandeira = "Amex";
 
-      setTimeout(() => {
-        // Simulação de aprovação do Gateway
+      try {
+        const response = await fetch("/api/checkout-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            metodo: "credit_card",
+            tipo: "inscricao",
+            valor: valorTotal,
+            nome: nomeParticipante || holder,
+            email: email,
+            sub: subSelecionado,
+            parcelas: installments,
+            cartao_ultimos_digitos: ultimosDigitos,
+            cartao_bandeira: bandeira,
+            cartao_titular: holder
+          })
+        });
+
+        let data = null;
+        if (response.ok) {
+          data = await response.json();
+        }
+
+        const txidFinal = (data && data.txid) ? data.txid : txidCard;
         const pagamentoCard = {
-          txid: txidCard,
+          txid: txidFinal,
           metodo: "credit_card",
-          valor: valorTotal,
+          valor: (data && data.valor) ? data.valor : valorTotal,
           status: "approved",
-          nome: nomeParticipante,
+          nome: nomeParticipante || holder,
           sub: subSelecionado,
           parcelas: installments,
           cartao_ultimos_digitos: ultimosDigitos,
@@ -1028,7 +1093,26 @@
 
         registrarTransacaoLocal(pagamentoCard);
         concluirPagamentoComSucesso(pagamentoCard);
-      }, 1500);
+      } catch (err) {
+        console.warn("[Checkout] Falha na chamada da API, utilizando fallback local:", err);
+        const pagamentoCard = {
+          txid: txidCard,
+          metodo: "credit_card",
+          valor: valorTotal,
+          status: "approved",
+          nome: nomeParticipante || holder,
+          sub: subSelecionado,
+          parcelas: installments,
+          cartao_ultimos_digitos: ultimosDigitos,
+          cartao_bandeira: bandeira
+        };
+
+        registrarTransacaoLocal(pagamentoCard);
+        concluirPagamentoComSucesso(pagamentoCard);
+      } finally {
+        btnSubmitCard.disabled = false;
+        feedback.style.display = "none";
+      }
     });
 
     // ==============================================================================
@@ -1088,8 +1172,8 @@
       return fallbackSubs[sub] || fallbackSubs["Geral"] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
     }
 
-    // Inicializa o Pix
-    inicializarPix();
+    // Inicializa com configuração ativa do servidor
+    carregarConfiguracaoAtiva();
   </script>
 </body>
 </html>
