@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <script>
+  (function(){
+    try {
+      var s = localStorage.getItem("ejc_theme");
+      var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", s || (d ? "dark" : "light"));
+    } catch(e) {}
+  })();
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#023284">
@@ -11,511 +20,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <link href="css/all.min.css" rel="stylesheet">
-  <style>
-    :root {
-      --checkout-bg: #091026;
-      --checkout-card: #111b38;
-      --checkout-card-border: rgba(255, 255, 255, 0.1);
-      --checkout-text: #ffffff;
-      --checkout-muted: #8e9bb8;
-      --checkout-input-bg: #182449;
-      --checkout-input-border: #283763;
-    }
-
-    body {
-      background: var(--checkout-bg);
-      color: var(--checkout-text);
-      font-family: "Inter", system-ui, sans-serif;
-      min-height: 100vh;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .checkout-header {
-      padding: 18px 0;
-      border-bottom: 1px solid var(--checkout-card-border);
-      background: rgba(9, 16, 38, 0.95);
-      backdrop-filter: blur(12px);
-    }
-
-    .checkout-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .checkout-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      color: #fff;
-    }
-
-    .checkout-brand img {
-      width: 46px;
-      height: 46px;
-      border-radius: 10px;
-      object-fit: cover;
-    }
-
-    .checkout-brand strong {
-      font-size: 1.1rem;
-      display: block;
-      line-height: 1.1;
-    }
-
-    .checkout-brand span {
-      font-size: .78rem;
-      color: var(--checkout-muted);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-
-    .security-badge-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: rgba(36, 167, 100, 0.15);
-      color: #34d399;
-      font-size: .8rem;
-      font-weight: 700;
-    }
-
-    .checkout-main {
-      flex: 1;
-      padding: 40px 0 60px;
-    }
-
-    /* GRID SPLIT MODERNO */
-    .checkout-grid {
-      display: grid;
-      grid-template-columns: 0.95fr 1.05fr;
-      gap: 36px;
-      align-items: start;
-    }
-
-    /* LADO ESQUERDO: RESUMO DA INSCRIÇÃO */
-    .order-summary-card {
-      background: var(--checkout-card);
-      border: 1px solid var(--checkout-card-border);
-      border-radius: 28px;
-      padding: clamp(24px, 4vw, 36px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-      position: sticky;
-      top: 30px;
-    }
-
-    .order-summary-card h2 {
-      font-family: "Archivo Black", sans-serif;
-      font-size: 1.6rem;
-      margin: 0 0 16px;
-      color: #fff;
-    }
-
-    .event-info-box {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 24px;
-    }
-
-    .event-info-box .event-tag {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: .74rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      background: rgba(8, 125, 249, 0.2);
-      color: #60a5fa;
-    }
-
-    .event-info-box h3 {
-      margin: 0 0 4px;
-      font-size: 1.25rem;
-      color: #fff;
-    }
-
-    .event-info-box p {
-      margin: 0;
-      font-size: .88rem;
-      color: var(--checkout-muted);
-    }
-
-    .price-breakdown {
-      display: grid;
-      gap: 12px;
-      margin: 24px 0;
-      padding: 20px 0;
-      border-top: 1px solid var(--checkout-card-border);
-      border-bottom: 1px solid var(--checkout-card-border);
-      font-size: .92rem;
-    }
-
-    .price-row {
-      display: flex;
-      justify-content: space-between;
-      color: var(--checkout-muted);
-    }
-
-    .price-row.total {
-      color: #fff;
-      font-size: 1.35rem;
-      font-weight: 800;
-      padding-top: 8px;
-    }
-
-    .price-row.total strong {
-      font-family: "Archivo Black", sans-serif;
-      color: var(--yellow);
-      font-size: 1.6rem;
-    }
-
-    .trust-badges {
-      display: grid;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
-    .trust-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: .82rem;
-      color: var(--checkout-muted);
-    }
-
-    .trust-item i {
-      color: #34d399;
-      font-size: 1rem;
-    }
-
-    /* LADO DIREITO: ÁREA DE PAGAMENTO CENTRALIZADA */
-    .payment-container-card {
-      background: var(--checkout-card);
-      border: 1px solid var(--checkout-card-border);
-      border-radius: 28px;
-      padding: clamp(24px, 4vw, 36px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-    }
-
-    .payment-container-card h2 {
-      font-family: "Archivo Black", sans-serif;
-      font-size: 1.6rem;
-      margin: 0 0 6px;
-      color: #fff;
-    }
-
-    .payment-container-card > p {
-      color: var(--checkout-muted);
-      margin: 0 0 24px;
-      font-size: .92rem;
-    }
-
-    /* CAMPO DE E-MAIL OBRIGATÓRIO */
-    .email-field-box {
-      margin-bottom: 24px;
-      padding: 16px;
-      border-radius: 18px;
-      background: rgba(8, 125, 249, 0.08);
-      border: 1px solid rgba(8, 125, 249, 0.2);
-    }
-
-    .email-field-box label {
-      display: block;
-      font-size: .84rem;
-      font-weight: 700;
-      color: #93c5fd;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-
-    .email-field-box input {
-      width: 100%;
-      padding: 13px 16px;
-      border: 1px solid var(--checkout-input-border);
-      border-radius: 12px;
-      background: var(--checkout-input-bg);
-      color: #fff;
-      font: inherit;
-      outline: none;
-      box-sizing: border-box;
-      transition: .2s ease;
-    }
-
-    .email-field-box input:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.25);
-    }
-
-    .email-field-box small {
-      display: block;
-      margin-top: 6px;
-      color: var(--checkout-muted);
-      font-size: .78rem;
-    }
-
-    /* SELETOR DE ABAS UNIFICADAS: PIX / CARTÃO */
-    .method-selector-tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 28px;
-    }
-
-    .method-tab-btn {
-      padding: 16px 14px;
-      border: 2px solid var(--checkout-input-border);
-      border-radius: 16px;
-      background: var(--checkout-input-bg);
-      color: var(--checkout-muted);
-      font: 800 .95rem "Inter", sans-serif;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: .22s ease;
-    }
-
-    .method-tab-btn i {
-      font-size: 1.2rem;
-    }
-
-    .method-tab-btn:hover {
-      border-color: var(--blue);
-      color: #fff;
-    }
-
-    .method-tab-btn.active {
-      border-color: var(--blue);
-      background: linear-gradient(145deg, #0b50b8, var(--blue-dark));
-      color: #fff;
-      box-shadow: 0 8px 24px rgba(8, 125, 249, 0.25);
-    }
-
-    /* CONTEÚDO DAS ABAS */
-    .method-content-panel {
-      display: none;
-    }
-
-    .method-content-panel.active {
-      display: block;
-      animation: fadeIn .3s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* FORMULÁRIO DO CARTÃO */
-    .card-form-grid {
-      display: grid;
-      gap: 16px;
-    }
-
-    .card-field {
-      display: grid;
-      gap: 6px;
-    }
-
-    .card-field label {
-      font-size: .82rem;
-      font-weight: 700;
-      color: var(--checkout-muted);
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-
-    .card-input-wrap {
-      position: relative;
-    }
-
-    .card-input-wrap input, .card-input-wrap select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid var(--checkout-input-border);
-      border-radius: 12px;
-      background: var(--checkout-input-bg);
-      color: #fff;
-      font: inherit;
-      outline: none;
-      box-sizing: border-box;
-      transition: .2s ease;
-    }
-
-    .card-input-wrap input:focus, .card-input-wrap select:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.25);
-    }
-
-    .card-brand-icon {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 1.4rem;
-      color: var(--yellow);
-    }
-
-    .card-row-half {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    /* ABA DO PIX */
-    .pix-checkout-wrap {
-      text-align: center;
-    }
-
-    .pix-qr-container {
-      width: 230px;
-      height: 230px;
-      margin: 0 auto 16px;
-      padding: 12px;
-      background: #fff;
-      border-radius: 20px;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .pix-qr-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      border-radius: 8px;
-    }
-
-    .pix-timer-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: rgba(252, 192, 2, 0.15);
-      color: var(--yellow);
-      font-size: .88rem;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-
-    .pix-copy-textarea {
-      width: 100%;
-      height: 72px;
-      padding: 10px;
-      border: 1px solid var(--checkout-input-border);
-      border-radius: 12px;
-      background: var(--checkout-input-bg);
-      color: #94a3b8;
-      font: 500 .8rem/1.4 monospace;
-      resize: none;
-      outline: none;
-      box-sizing: border-box;
-      margin-bottom: 12px;
-    }
-
-    .waiting-pulse-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      color: #93c5fd;
-      font-size: .88rem;
-      font-weight: 700;
-    }
-
-    .pulse-indicator-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--blue);
-      box-shadow: 0 0 0 0 rgba(8, 125, 249, .7);
-      animation: pulseDot 1.6s infinite;
-    }
-
-    @keyframes pulseDot {
-      0% { transform: scale(.95); box-shadow: 0 0 0 0 rgba(8, 125, 249, .7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(8, 125, 249, 0); }
-      100% { transform: scale(.95); box-shadow: 0 0 0 0 rgba(8, 125, 249, 0); }
-    }
-
-    /* TELA DE SUCESSO UNIFICADA */
-    .success-screen-card {
-      display: none;
-      text-align: center;
-      padding: 20px 0;
-      animation: fadeIn .4s ease;
-    }
-
-    .success-icon-badge {
-      width: 76px;
-      height: 76px;
-      margin: 0 auto 20px;
-      border-radius: 50%;
-      background: #24a764;
-      color: #fff;
-      font-size: 2.5rem;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 12px 30px rgba(36, 167, 100, 0.35);
-    }
-
-    .receipt-info-box {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--checkout-card-border);
-      border-radius: 18px;
-      padding: 18px;
-      margin: 20px 0;
-      text-align: left;
-      display: grid;
-      gap: 10px;
-      font-size: .9rem;
-    }
-
-    .receipt-info-box div {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .receipt-info-box span { color: var(--checkout-muted); }
-    .receipt-info-box strong { color: #fff; }
-
-    .btn-whatsapp-group {
-      width: 100%;
-      background: #25d366;
-      color: #fff;
-      box-shadow: 0 12px 28px rgba(37, 211, 102, 0.25);
-      margin-top: 14px;
-      font-size: 1rem;
-    }
-    .btn-whatsapp-group:hover {
-      background: #1eb855;
-    }
-
-    /* RESPONSIVIDADE */
-    @media (max-width: 900px) {
-      .checkout-grid {
-        grid-template-columns: 1fr;
-      }
-      .order-summary-card {
-        position: static;
-      }
-    }
-  </style>
 </head>
 <body>
 
@@ -529,9 +33,14 @@
           <span>IEAD Monte Sião</span>
         </div>
       </a>
-      <div class="security-badge-header">
-        <i class="fa-solid fa-lock"></i>
-        <span>Checkout 100% Seguro</span>
+      <div class="checkout-header-actions">
+        <button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <div class="security-badge-header">
+          <i class="fa-solid fa-lock"></i>
+          <span>Checkout 100% Seguro</span>
+        </div>
       </div>
     </div>
   </header>
@@ -543,7 +52,7 @@
         
         <!-- LADO ESQUERDO: RESUMO DA INSCRIÇÃO / CONTRIBUIÇÃO -->
         <aside class="order-summary-card">
-          <span class="eyebrow" style="color: var(--yellow);">Resumo do Pedido</span>
+          <span class="eyebrow">Resumo do Pedido</span>
           <h2 id="summaryEventTitle">Inscrição na Equipe</h2>
           
           <div class="event-info-box">
@@ -627,7 +136,7 @@
                   <span style="color: #64748b; font-size: .88rem; font-weight: 600;">Gerando QR Code...</span>
                 </div>
 
-                <p style="font-size: .86rem; color: var(--checkout-muted); max-width: 360px; margin: 0 auto 14px;">
+                <p style="font-size: .86rem; color: var(--text-muted); max-width: 360px; margin: 0 auto 14px;">
                   Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code, ou utilize o código Copia e Cola:
                 </p>
 
@@ -701,8 +210,8 @@
           <!-- TELA DE SUCESSO UNIFICADA (TRANSICIONADA AUTOMATICAMENTE) -->
           <div class="success-screen-card" id="successScreen">
             <div class="success-icon-badge">✓</div>
-            <h2 style="color: #fff; margin-bottom: 8px;">Pagamento Confirmado!</h2>
-            <p style="color: var(--checkout-muted); font-size: .95rem; margin-bottom: 20px;">
+            <h2>Pagamento Confirmado!</h2>
+            <p style="color: var(--text-muted); font-size: .95rem; margin-bottom: 20px;">
               Sua inscrição na Equipe do Trânsito foi confirmada com sucesso.
             </p>
 
@@ -711,10 +220,10 @@
               <div><span>Forma de Pagamento:</span> <strong id="resMethod">-</strong></div>
               <div><span>Valor Confirmado:</span> <strong id="resAmount">-</strong></div>
               <div><span>Data de Aprovação:</span> <strong id="resDate">-</strong></div>
-              <div><span>Comprovante enviado para:</span> <strong id="resEmail" style="color: #93c5fd;">-</strong></div>
+              <div><span>Comprovante enviado para:</span> <strong id="resEmail" style="color: var(--blue);">-</strong></div>
             </div>
 
-            <p style="color: #34d399; font-weight: 700; font-size: .9rem;">
+            <p style="color: #10b981; font-weight: 700; font-size: .9rem;">
               <i class="fa-solid fa-circle-check"></i> Enviamos o comprovante oficial completo para o seu e-mail.
             </p>
 
@@ -722,7 +231,7 @@
               <i class="fa-brands fa-whatsapp"></i> Entrar no Grupo Oficial do WhatsApp
             </a>
 
-            <a href="./" class="button button-secondary" style="width: 100%; margin-top: 12px; background: transparent; color: #fff; border-color: var(--checkout-card-border);">
+            <a href="./" class="button button-secondary" style="width: 100%; margin-top: 12px;">
               Voltar à Página Inicial
             </a>
           </div>
@@ -733,6 +242,7 @@
     </div>
   </main>
 
+  <script src="js/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>

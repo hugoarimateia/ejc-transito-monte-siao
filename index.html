@@ -1,4 +1,13 @@
 <!DOCTYPE html><html lang="pt-BR"><head>
+<script>
+(function(){
+  try {
+    var s = localStorage.getItem("ejc_theme");
+    var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", s || (d ? "dark" : "light"));
+  } catch(e) {}
+})();
+</script>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1" name="viewport">
 <meta content="#282b30" name="theme-color">
@@ -17,10 +26,6 @@
 <a aria-label="Página inicial" class="brand" href="#topo">
 <img alt="Logo EJC Equipe do Trânsito" src="images/logo1.png">
 </a>
-<button aria-controls="menu" aria-expanded="false" class="menu-button" type="button">
-<span></span><span></span><span></span>
-<span class="sr-only">Abrir menu</span>
-</button>
 <nav aria-label="Navegação principal" class="nav" id="menu">
 <a href="#equipe">Equipe</a>
 <a href="#inscricoes">Inscrições</a>
@@ -29,6 +34,15 @@
 <a href="#calendario">Calendário</a>
 <a class="nav-cta" href="https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0" rel="noopener" target="_blank">WhatsApp</a>
 </nav>
+<div class="nav-actions">
+<button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+<i class="fa-solid fa-moon"></i>
+</button>
+<button aria-controls="menu" aria-expanded="false" class="menu-button" type="button">
+<span></span><span></span><span></span>
+<span class="sr-only">Abrir menu</span>
+</button>
+</div>
 </div>
 </header>
 <main id="conteudo">
@@ -484,6 +498,7 @@
 <img alt="Calendário ampliado" src="images/calendario-ensaios.png">
 </dialog>
 
+<script src="js/theme.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/env-config.js"></script>
 <script src="js/supabase-config.js"></script>
