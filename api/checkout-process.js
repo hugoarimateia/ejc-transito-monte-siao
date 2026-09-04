@@ -3,6 +3,9 @@
 // Processamento centralizado do Checkout Unificado (Pix e Cartão de Crédito)
 // ==============================================================================
 
+const settingsStore = require("./_settings-store");
+
+
 function calcularCRC16(str) {
   let crc = 0xFFFF;
   for (let i = 0; i < str.length; i++) {
@@ -95,32 +98,25 @@ module.exports = async (req, res) => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Busca configuração financeira ativa oficial no banco (Preço oficial vigente e Chave PIX)
+    // Busca configuração financeira ativa oficial garantida pelo settingsStore
     let officialPrice = Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00);
     let chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
     let beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
     let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     let loteAtual = "1º Lote";
 
-    if (supabaseUrl && supabaseKey) {
-      try {
-        const finRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-        });
-        if (finRes.ok) {
-          const finData = await finRes.json();
-          if (finData && finData.length > 0) {
-            const conf = finData[0];
-            officialPrice = Number(conf.valor_inscricao || officialPrice);
-            chavePix = conf.pix_chave || chavePix;
-            beneficiario = conf.pix_beneficiario || beneficiario;
-            cidade = conf.pix_cidade || cidade;
-            loteAtual = conf.lote_atual || loteAtual;
-          }
-        }
-      } catch (err) {
-        console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
+    try {
+      const activeData = await settingsStore.getActiveSettings();
+      if (activeData && activeData.settings) {
+        const conf = activeData.settings;
+        officialPrice = Number(conf.valor_inscricao || officialPrice);
+        chavePix = conf.pix_chave || chavePix;
+        beneficiario = conf.pix_beneficiario || beneficiario;
+        cidade = conf.pix_cidade || cidade;
+        loteAtual = conf.lote_atual || loteAtual;
       }
+    } catch (err) {
+      console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
     }
 
     // SEGURANÇA: Para inscrições, o valor OFICIAL ativo no backend é obrigatório (não confia no valor enviado pelo navegador)

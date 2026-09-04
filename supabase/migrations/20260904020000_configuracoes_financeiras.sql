@@ -320,3 +320,14 @@ CREATE POLICY "Leitura de historico de auditoria financeira"
 ON public.historico_configuracoes_financeiras 
 FOR SELECT 
 USING (true);
+
+-- 7. CONCESSÃO EXPLÍCITA DE PRIVILÉGIOS (GRANTS)
+GRANT ALL ON TABLE public.configuracoes_financeiras TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.lotes_inscricao TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.historico_configuracoes_financeiras TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION public.obter_configuracao_financeira_ativa() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.atualizar_configuracao_financeira(
+    TEXT, TEXT, NUMERIC, NUMERIC, NUMERIC, INT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT
+) TO anon, authenticated, service_role;
+

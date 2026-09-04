@@ -1,7 +1,11 @@
 // ==============================================================================
 // VERCEL SERVERLESS FUNCTION: /api/payment-settings
 // Gestão administrativa centralizada de configurações financeiras, preços e PIX
+// Integração direta com o store unificado multi-camadas (_settings-store.js)
+// TOLERÂNCIA ZERO A FALSO SUCESSO (Zero Fake Success)
 // ==============================================================================
+
+const settingsStore = require("./_settings-store");
 
 const VALID_KEY_TYPES = ["EMAIL", "CPF", "CNPJ", "TELEFONE", "ALEATORIA"];
 
@@ -92,98 +96,47 @@ module.exports = async (req, res) => {
 
   const userRole = validPasswords[providedPass] || (providedPass === envAdminPass ? "superadmin" : "comum");
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
+  // ==============================================================================
   // 1. CONSULTA DE CONFIGURAÇÕES (GET)
+  // ==============================================================================
   if (req.method === "GET") {
-    let settings = {
-      lote_atual: "1º Lote",
-      valor_inscricao: Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00),
-      valor_promocional: null,
-      taxa_adicional: 0.0,
-      max_parcelas: 12,
-      pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com",
-      pix_tipo_chave: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "EMAIL",
-      pix_beneficiario: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO",
-      pix_documento: "",
-      pix_cidade: process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE",
-      atualizado_em: new Date().toISOString(),
-      atualizado_por: "sistema"
-    };
+    try {
+      const activeData = await settingsStore.getActiveSettings();
+      const settings = activeData.settings;
+      const canEdit = ["superadmin", "financeiro"].includes(userRole);
+      const maskedKey = mascararChave(settings.pix_chave, settings.pix_tipo_chave);
 
-    let historico = [];
-    let lotes = [{ nome: "1º Lote", valor: settings.valor_inscricao, ativo: true }];
-
-    if (supabaseUrl && supabaseKey) {
-      try {
-        // Busca configuração ativa
-        const configRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-        });
-        if (configRes.ok) {
-          const configData = await configRes.json();
-          if (configData && configData.length > 0) {
-            settings = configData[0];
-          }
+      return res.status(200).json({
+        success: true,
+        settings: {
+          ...settings,
+          pix_chave_mascarada: maskedKey,
+          // Chave completa só enviada para papéis autorizados
+          pix_chave: canEdit ? settings.pix_chave : maskedKey
+        },
+        lotes: activeData.lotes || [],
+        historico: activeData.historico || [],
+        whatsapp: activeData.whatsapp || {},
+        permissions: {
+          canEdit: canEdit,
+          role: userRole,
+          allowedActions: canEdit
+            ? ["finance.view", "finance.edit", "payment.settings.edit", "pix.settings.edit", "whatsapp.edit", "payments.approve"]
+            : ["finance.view"]
         }
-
-        // Busca lotes
-        const lotesRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/lotes_inscricao?order=criado_em.asc`, {
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-        });
-        if (lotesRes.ok) {
-          const lotesData = await lotesRes.json();
-          if (lotesData && lotesData.length > 0) lotes = lotesData;
-        }
-
-        // Busca histórico de auditoria
-        const histRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/historico_configuracoes_financeiras?order=criado_em.desc&limit=50`, {
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-        });
-        if (histRes.ok) {
-          const histData = await histRes.json();
-          if (histData) historico = histData;
-        }
-      } catch (err) {
-        console.warn("[Payment Settings GET] Supabase indisponível, retornando fallback:", err.message);
-      }
+      });
+    } catch (err) {
+      console.error("[Payment Settings GET Error]", err);
+      return res.status(500).json({ error: "Erro ao consultar configurações financeiras ativas." });
     }
-
-    const canEdit = ["superadmin", "financeiro"].includes(userRole);
-    const maskedKey = mascararChave(settings.pix_chave, settings.pix_tipo_chave);
-
-    return res.status(200).json({
-      success: true,
-      settings: {
-        ...settings,
-        pix_chave_mascarada: maskedKey,
-        // Chave completa só enviada para papéis autorizados
-        pix_chave: canEdit ? settings.pix_chave : maskedKey
-      },
-      lotes: lotes,
-      historico: historico,
-      permissions: {
-        canEdit: canEdit,
-        role: userRole,
-        allowedActions: canEdit
-          ? ["finance.view", "finance.edit", "payment.settings.edit", "pix.settings.edit"]
-          : ["finance.view"]
-      }
-    });
   }
 
+  // ==============================================================================
   // 2. ATUALIZAÇÃO DE CONFIGURAÇÕES (POST / PUT)
+  // ==============================================================================
   if (req.method === "POST" || req.method === "PUT") {
-    // Validação estrita de permissões de escrita
-    if (!["superadmin", "financeiro"].includes(userRole)) {
-      return res.status(403).json({
-        error: "Permissão insuficiente. Apenas administradores financeiros ou coordenadores gerais podem editar dados financeiros."
-      });
-    }
-
     const {
-      action, // 'update_prices' ou 'update_pix'
+      action, // 'update_prices', 'update_pix', 'update_whatsapp', 'approve_payment'
       usuario,
       motivo,
       // Dados para preços
@@ -197,11 +150,24 @@ module.exports = async (req, res) => {
       pix_tipo_chave,
       pix_beneficiario,
       pix_documento,
-      pix_cidade
+      pix_cidade,
+      // Dados para WhatsApp
+      subs,
+      // Dados para aprovação de pagamento
+      identificador
     } = req.body || {};
 
     const clientIp = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1";
     const adminUser = usuario || userRole || "admin";
+
+    // Validação de permissões para ações financeiras estritas
+    if (["update_prices", "update_pix"].includes(action)) {
+      if (!["superadmin", "financeiro"].includes(userRole)) {
+        return res.status(403).json({
+          error: "Permissão insuficiente. Apenas administradores financeiros ou coordenadores gerais podem editar dados financeiros."
+        });
+      }
+    }
 
     // Ação A: Atualizar Preços
     if (action === "update_prices") {
@@ -210,53 +176,34 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "O valor da inscrição deve ser um número positivo e maior que zero." });
       }
 
-      const valorFinal = Number(valorNumerico.toFixed(2));
-      const promoFinal = valor_promocional ? Number(Number(valor_promocional).toFixed(2)) : null;
+      try {
+        const result = await settingsStore.updatePriceSettings({
+          usuario: adminUser,
+          lote_atual: lote_atual || "1º Lote",
+          valor_inscricao: valorNumerico,
+          valor_promocional: valor_promocional,
+          taxa_adicional: taxa_adicional,
+          max_parcelas: max_parcelas,
+          motivo: motivo,
+          ip: String(clientIp)
+        });
 
-      if (supabaseUrl && supabaseKey) {
-        try {
-          const rpcRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/atualizar_configuracao_financeira`, {
-            method: "POST",
-            headers: {
-              "apikey": supabaseKey,
-              "Authorization": `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              p_usuario: adminUser,
-              p_lote_atual: lote_atual || "1º Lote",
-              p_valor_inscricao: valorFinal,
-              p_valor_promocional: promoFinal,
-              p_taxa_adicional: Number(taxa_adicional || 0),
-              p_max_parcelas: Number(max_parcelas || 12),
-              p_motivo: motivo || "Atualização de preço pelo painel administrativo",
-              p_ip: String(clientIp)
-            })
-          });
-
-          if (!rpcRes.ok) {
-            const errText = await rpcRes.text();
-            console.error("[RPC Error update_prices]", errText);
-            return res.status(500).json({ error: "Falha ao gravar alteração de preço no banco remoto." });
-          }
-
-          const rpcData = await rpcRes.json();
-          return res.status(200).json({
-            success: true,
-            message: `Valor da inscrição atualizado para R$ ${valorFinal.toFixed(2).replace('.', ',')} com sucesso.`,
-            data: rpcData
-          });
-        } catch (dbErr) {
-          console.error("[DB Error update_prices]", dbErr);
-          return res.status(500).json({ error: "Erro interno de comunicação com o banco de dados." });
-        }
+        return res.status(200).json({
+          success: true,
+          persisted: true,
+          message: result.message,
+          novo_valor: result.settings.valor_inscricao,
+          lote_atual: result.settings.lote_atual,
+          versao: result.settings.versao,
+          settings: result.settings
+        });
+      } catch (err) {
+        console.error("[Update Prices Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao persistir novos preços no servidor."
+        });
       }
-
-      return res.status(200).json({
-        success: true,
-        message: `Valor simulado para R$ ${valorFinal.toFixed(2).replace('.', ',')}.`,
-        novo_valor: valorFinal
-      });
     }
 
     // Ação B: Atualizar Dados do Recebedor PIX
@@ -271,7 +218,6 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: validacaoChave.erro });
       }
 
-      const chaveLimpa = String(pix_chave).trim();
       const beneficiarioLimpo = String(pix_beneficiario || "").trim();
       const cidadeLimpa = String(pix_cidade || "").trim();
 
@@ -282,55 +228,74 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "A cidade da conta é obrigatória para conformidade BACEN EMV." });
       }
 
-      if (supabaseUrl && supabaseKey) {
-        try {
-          const rpcRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/atualizar_configuracao_financeira`, {
-            method: "POST",
-            headers: {
-              "apikey": supabaseKey,
-              "Authorization": `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              p_usuario: adminUser,
-              p_lote_atual: lote_atual || null,
-              p_valor_inscricao: valor_inscricao ? Number(valor_inscricao) : 50.00,
-              p_pix_chave: chaveLimpa,
-              p_pix_tipo_chave: tipoChave,
-              p_pix_beneficiario: beneficiarioLimpo,
-              p_pix_documento: pix_documento || null,
-              p_pix_cidade: cidadeLimpa,
-              p_motivo: motivo || "Atualização dos dados do recebedor PIX",
-              p_ip: String(clientIp)
-            })
-          });
+      try {
+        const result = await settingsStore.updatePixSettings({
+          usuario: adminUser,
+          pix_chave: pix_chave,
+          pix_tipo_chave: tipoChave,
+          pix_beneficiario: beneficiarioLimpo,
+          pix_documento: pix_documento,
+          pix_cidade: cidadeLimpa,
+          motivo: motivo,
+          ip: String(clientIp)
+        });
 
-          if (!rpcRes.ok) {
-            const errText = await rpcRes.text();
-            console.error("[RPC Error update_pix]", errText);
-            return res.status(500).json({ error: "Falha ao gravar alteração de PIX no banco remoto." });
-          }
-
-          const rpcData = await rpcRes.json();
-          return res.status(200).json({
-            success: true,
-            message: `Chave PIX atualizada para ${mascararChave(chaveLimpa, tipoChave)} com sucesso.`,
-            data: rpcData
-          });
-        } catch (dbErr) {
-          console.error("[DB Error update_pix]", dbErr);
-          return res.status(500).json({ error: "Erro interno de comunicação com o banco de dados." });
-        }
+        return res.status(200).json({
+          success: true,
+          persisted: true,
+          message: result.message,
+          nova_chave_mascarada: mascararChave(result.settings.pix_chave, tipoChave),
+          versao: result.settings.versao,
+          settings: result.settings
+        });
+      } catch (err) {
+        console.error("[Update Pix Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao persistir novos dados PIX no servidor."
+        });
       }
-
-      return res.status(200).json({
-        success: true,
-        message: `Chave PIX atualizada localmente para ${mascararChave(chaveLimpa, tipoChave)}.`,
-        nova_chave_mascarada: mascararChave(chaveLimpa, tipoChave)
-      });
     }
 
-    return res.status(400).json({ error: "Ação não informada ou inválida. Use 'update_prices' ou 'update_pix'." });
+    // Ação C: Atualizar Links de WhatsApp dos Sub Grupos
+    if (action === "update_whatsapp") {
+      try {
+        const result = await settingsStore.updateWhatsAppSettings({
+          subsData: subs,
+          usuario: adminUser,
+          ip: String(clientIp)
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        console.error("[Update WhatsApp Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao persistir links do WhatsApp no servidor."
+        });
+      }
+    }
+
+    // Ação D: Aprovação Manual de Pagamento
+    if (action === "approve_payment") {
+      try {
+        const result = await settingsStore.approvePayment({
+          identificador: identificador,
+          usuario: adminUser,
+          ip: String(clientIp)
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        console.error("[Approve Payment Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao aprovar pagamento no servidor."
+        });
+      }
+    }
+
+    return res.status(400).json({
+      error: "Ação não informada ou inválida. Use 'update_prices', 'update_pix', 'update_whatsapp' ou 'approve_payment'."
+    });
   }
 
   return res.status(405).json({ error: "Método HTTP não permitido." });

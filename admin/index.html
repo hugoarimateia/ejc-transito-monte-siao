@@ -898,7 +898,7 @@
       `).join("");
     }
 
-    // Salvar links de WhatsApp
+    // Salvar links de WhatsApp com persistência real no servidor
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
       const subs = ["Verde", "Vermelho", "Amarelo", "Azul", "Geral"];
       subs.forEach(sub => {
@@ -908,30 +908,41 @@
         }
       });
 
-      // Salva localmente
-      localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
-
-      // Salva no Supabase se disponível
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
-        try {
-          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-          for (const sub of subs) {
-            await client.from("configuracoes_whatsapp").upsert({
-              sub: sub,
-              link_grupo: wppLinksData[sub],
-              ativo: true,
-              atualizado_em: new Date().toISOString()
-            }, { onConflict: "sub" });
-          }
-        } catch(e) {
-          console.warn("Erro ao salvar no Supabase configuracoes_whatsapp:", e);
-        }
-      }
-
       const feedback = document.getElementById("wppSaveFeedback");
-      feedback.textContent = "✓ Links do WhatsApp atualizados com sucesso!";
+      feedback.textContent = "Salvando links...";
+      feedback.style.color = "#023284";
       feedback.style.display = "block";
-      setTimeout(() => { feedback.style.display = "none"; }, 3000);
+
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify({
+            action: "update_whatsapp",
+            subs: wppLinksData,
+            usuario: currentUserRole,
+            admin_pass: currentAdminPass
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+          feedback.textContent = "✓ Links do WhatsApp atualizados e persistidos no servidor!";
+          feedback.style.color = "#16a34a";
+          setTimeout(() => { feedback.style.display = "none"; }, 4000);
+        } else {
+          feedback.textContent = `Erro: ${data.error || 'Falha ao salvar no servidor'}`;
+          feedback.style.color = "#dc2626";
+        }
+      } catch(err) {
+        console.error("Erro ao salvar links de WhatsApp:", err);
+        feedback.textContent = "Erro de conexão ao salvar links.";
+        feedback.style.color = "#dc2626";
+      }
     });
 
     window.verDetalhes = function(whatsapp) {
@@ -955,21 +966,46 @@
       document.getElementById("detailModal").showModal();
     };
 
-    window.confirmarPagamentoInscricao = function(whatsapp) {
+    window.confirmarPagamentoInscricao = async function(whatsapp) {
       if (!confirm("Deseja confirmar manualmente o pagamento desta inscrição?")) return;
       
-      const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-      const idx = local.findIndex(i => i.whatsapp === whatsapp);
-      if (idx !== -1) {
-        local[idx].pagamento_status = "confirmado";
-        localStorage.setItem("ejc_inscricoes", JSON.stringify(local));
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify({
+            action: "approve_payment",
+            identificador: whatsapp,
+            usuario: currentUserRole,
+            admin_pass: currentAdminPass
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+          const idx = local.findIndex(i => i.whatsapp === whatsapp);
+          if (idx !== -1) {
+            local[idx].pagamento_status = "confirmado";
+            localStorage.setItem("ejc_inscricoes", JSON.stringify(local));
+          }
+
+          const cur = inscricoesData.find(i => i.whatsapp === whatsapp);
+          if (cur) cur.pagamento_status = "confirmado";
+
+          renderizarTudo();
+          alert("✓ Pagamento confirmado e persistido com sucesso!");
+        } else {
+          alert(`Erro ao confirmar pagamento: ${data.error || 'Falha no servidor'}`);
+        }
+      } catch (err) {
+        console.error("Erro ao aprovar pagamento:", err);
+        alert("Erro de comunicação ao confirmar pagamento no servidor.");
       }
-
-      const cur = inscricoesData.find(i => i.whatsapp === whatsapp);
-      if (cur) cur.pagamento_status = "confirmado";
-
-      renderizarTudo();
-      alert("Pagamento da inscrição confirmado com sucesso!");
     };
 
     // Detalhes & Auditoria do Pagamento
@@ -1184,9 +1220,9 @@
         });
       }
 
-      // Tenta buscar via API /api/payment-settings
+      // Tenta buscar via API /api/payment-settings com anti-cache
       try {
-        const res = await fetch("/api/payment-settings", {
+        const res = await fetch(`/api/payment-settings?_t=${Date.now()}`, {
           headers: {
             "Authorization": `Bearer ${currentAdminPass}`,
             "x-admin-token": currentAdminPass
@@ -1194,18 +1230,23 @@
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.settings) {
-            configFinanceiraAtiva = data.settings;
-            localStorage.setItem("ejc_config_financeira", JSON.stringify(data.settings));
+          if (data && data.settings && data.settings.valor_inscricao !== undefined) {
+            configFinanceiraAtiva = {
+              ...configFinanceiraAtiva,
+              ...data.settings,
+              valor_inscricao: Number(data.settings.valor_inscricao)
+            };
+            localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
           }
-          if (data.historico) {
+          if (data && data.historico && Array.isArray(data.historico)) {
             historicoFinanceiroData = data.historico;
             localStorage.setItem("ejc_historico_financeiro", JSON.stringify(data.historico));
           }
-          if (data.permissions) {
+          if (data && data.permissions) {
             canUserEditFinance = Boolean(data.permissions.canEdit);
           }
         } else {
+          console.warn("[Admin Financeiro] Status não-200 retornado:", res.status);
           carregarFallbackConfigFinanceira();
         }
       } catch (err) {
@@ -1422,35 +1463,16 @@
         });
 
         const data = await res.json();
-        if (res.ok && data.success) {
+        if (res.ok && data.success && data.persisted) {
           document.getElementById("modalConfirmarPrecos").close();
-          alert("✓ Valores de inscrição atualizados com sucesso! Os novos valores já estão ativos no checkout.");
+          alert("✓ Valores de inscrição atualizados e persistidos com sucesso no servidor! Os novos valores já estão vigentes no checkout.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Erro ao salvar preços: ${data.error || 'Falha na comunicação com o servidor'}`);
+          alert(`Erro ao salvar preços: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
         }
       } catch (err) {
-        console.warn("[Admin Preços] Fallback local:", err);
-        configFinanceiraAtiva.lote_atual = pendingPricePayload.lote_atual;
-        configFinanceiraAtiva.valor_inscricao = pendingPricePayload.valor_inscricao;
-        configFinanceiraAtiva.valor_promocional = pendingPricePayload.valor_promocional;
-        configFinanceiraAtiva.max_parcelas = pendingPricePayload.max_parcelas;
-        configFinanceiraAtiva.versao = (configFinanceiraAtiva.versao || 1) + 1;
-        localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
-
-        historicoFinanceiroData.unshift({
-          tipo_alteracao: "PRICE_UPDATED",
-          usuario_responsavel: currentUserRole,
-          motivo: pendingPricePayload.motivo,
-          valores_anteriores: { lote_atual: configFinanceiraAtiva.lote_atual, valor_inscricao: configFinanceiraAtiva.valor_inscricao },
-          valores_novos: { lote_atual: pendingPricePayload.lote_atual, valor_inscricao: pendingPricePayload.valor_inscricao },
-          criado_em: new Date().toISOString()
-        });
-        localStorage.setItem("ejc_historico_financeiro", JSON.stringify(historicoFinanceiroData));
-
-        document.getElementById("modalConfirmarPrecos").close();
-        alert("✓ Preços atualizados no cache local!");
-        carregarConfiguracoesFinanceiras();
+        console.error("[Admin Preços] Erro na requisição:", err);
+        alert(`Erro ao salvar preços: ${err.message || 'Não foi possível comunicar com o servidor'}. Os valores digitados foram preservados para nova tentativa.`);
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Aplicar Preços`;
@@ -1568,36 +1590,16 @@
         });
 
         const data = await res.json();
-        if (res.ok && data.success) {
+        if (res.ok && data.success && data.persisted) {
           document.getElementById("modalConfirmarPix").close();
-          alert("✓ Dados do PIX atualizados com sucesso! A nova chave já está em uso nos checkouts.");
+          alert("✓ Dados do PIX atualizados e persistidos com sucesso no servidor! A nova chave já está em uso nos checkouts.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Erro ao salvar configurações do PIX: ${data.error || 'Falha na comunicação com o servidor'}`);
+          alert(`Erro ao salvar configurações do PIX: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
         }
       } catch (err) {
-        console.warn("[Admin PIX] Fallback local:", err);
-        configFinanceiraAtiva.pix_chave = pendingPixPayload.pix_chave;
-        configFinanceiraAtiva.pix_tipo_chave = pendingPixPayload.pix_tipo_chave;
-        configFinanceiraAtiva.pix_beneficiario = pendingPixPayload.pix_beneficiario;
-        configFinanceiraAtiva.pix_documento = pendingPixPayload.pix_documento;
-        configFinanceiraAtiva.pix_cidade = pendingPixPayload.pix_cidade;
-        configFinanceiraAtiva.versao = (configFinanceiraAtiva.versao || 1) + 1;
-        localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
-
-        historicoFinanceiroData.unshift({
-          tipo_alteracao: "PIX_KEY_UPDATED",
-          usuario_responsavel: currentUserRole,
-          motivo: pendingPixPayload.motivo,
-          valores_anteriores: { pix_chave: configFinanceiraAtiva.pix_chave, pix_beneficiario: configFinanceiraAtiva.pix_beneficiario },
-          valores_novos: { pix_chave: pendingPixPayload.pix_chave, pix_beneficiario: pendingPixPayload.pix_beneficiario },
-          criado_em: new Date().toISOString()
-        });
-        localStorage.setItem("ejc_historico_financeiro", JSON.stringify(historicoFinanceiroData));
-
-        document.getElementById("modalConfirmarPix").close();
-        alert("✓ Dados do PIX atualizados no cache local!");
-        carregarConfiguracoesFinanceiras();
+        console.error("[Admin PIX] Erro na requisição:", err);
+        alert(`Erro ao salvar dados do PIX: ${err.message || 'Não foi possível comunicar com o servidor'}. Os valores digitados foram preservados para nova tentativa.`);
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX`;

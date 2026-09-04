@@ -1,0 +1,49 @@
+{
+  "settings": {
+    "versao": 1,
+    "ativo": true,
+    "lote_atual": "1º Lote",
+    "valor_inscricao": 50,
+    "valor_promocional": null,
+    "taxa_adicional": 0,
+    "max_parcelas": 12,
+    "pix_chave": "leoeuler03@gmail.com",
+    "pix_tipo_chave": "EMAIL",
+    "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
+    "pix_documento": "",
+    "pix_cidade": "CAMPINA GRANDE",
+    "pix_instituicao": "",
+    "motivo_alteracao": "Configuração oficial padrão inicial",
+    "atualizado_por": "sistema",
+    "atualizado_em": "2026-09-04T12:00:00.000Z"
+  },
+  "lotes": [
+    {
+      "id": "lote-1",
+      "nome": "1º Lote",
+      "valor": 50,
+      "ativo": true,
+      "criado_em": "2026-09-04T12:00:00.000Z"
+    }
+  ],
+  "historico": [
+    {
+      "id": "hist-0",
+      "acao": "SYSTEM_INITIALIZED",
+      "usuario": "sistema",
+      "campo_afetado": "inicializacao",
+      "valor_anterior": null,
+      "valor_novo": "R$ 50.00 - leoeuler03@gmail.com",
+      "motivo": "Criação e inicialização do repositório persistente oficial",
+      "ip_origem: ": "127.0.0.1",
+      "criado_em": "2026-09-04T12:00:00.000Z"
+    }
+  ],
+  "whatsapp": {
+    "verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
+    "vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
+    "amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+    "azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+    "geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
+  }
+}
