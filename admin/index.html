@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#023284">
-  <title>EJC | Painel Administrativo</title>
+  <title>EJC | Painel Administrativo & Gestão de Pagamentos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
   <link href="../css/all.min.css" rel="stylesheet">
   <style>
     body { background: #f0f3fa; min-height: 100vh; display: flex; flex-direction: column; }
-    .admin-container { width: min(calc(100% - 32px), 1100px); margin: 40px auto; flex: 1; }
+    .admin-container { width: min(calc(100% - 32px), 1180px); margin: 40px auto; flex: 1; }
     .admin-auth-card {
       max-width: 440px; margin: 80px auto; padding: 36px; border-radius: 28px;
       background: #fff; box-shadow: var(--shadow); text-align: center;
@@ -25,37 +25,63 @@
     .admin-panel-wrap.active { display: block; }
     .admin-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
     .admin-header-bar h1 { font-family: "Archivo Black", sans-serif; color: var(--blue-dark); margin: 0; font-size: 2rem; }
-    .admin-nav-actions { display: flex; gap: 12px; }
-    .stat-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .admin-nav-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    
+    .stat-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-box { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(20,34,86,.06); border-left: 5px solid var(--blue); }
     .stat-box.green { border-left-color: #24a764; }
     .stat-box.red { border-left-color: #e8333e; }
     .stat-box.yellow { border-left-color: #e9dd3c; }
     .stat-box.blue { border-left-color: #2778d4; }
-    .stat-box strong { font-size: 2.2rem; font-family: "Archivo Black", sans-serif; color: var(--ink); display: block; line-height: 1.1; }
-    .stat-box span { font-size: .85rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-box.revenue { border-left-color: #10b981; }
+    .stat-box strong { font-size: 2.1rem; font-family: "Archivo Black", sans-serif; color: var(--ink); display: block; line-height: 1.1; }
+    .stat-box span { font-size: .82rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+
     .table-container { background: #fff; border-radius: 24px; padding: 26px; box-shadow: var(--shadow); margin-bottom: 30px; }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
     .table-toolbar input, .table-toolbar select { padding: 10px 14px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; outline: none; }
-    .table-toolbar input { min-width: 260px; }
-    .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .9rem; }
-    .data-table th { padding: 12px; border-bottom: 2px solid #eef2fa; color: var(--muted); font-size: .78rem; text-transform: uppercase; font-weight: 800; }
-    .data-table td { padding: 14px 12px; border-bottom: 1px solid #eef2fa; color: var(--ink); vertical-align: middle; }
+    .table-toolbar input { min-width: 240px; }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .88rem; }
+    .data-table th { padding: 12px 10px; border-bottom: 2px solid #eef2fa; color: var(--muted); font-size: .75rem; text-transform: uppercase; font-weight: 800; }
+    .data-table td { padding: 14px 10px; border-bottom: 1px solid #eef2fa; color: var(--ink); vertical-align: middle; }
     .data-table tr:hover { background: #f9fbff; }
-    .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .75rem; font-weight: 800; text-transform: uppercase; }
-    .status-confirmado { background: #e5f8ee; color: #137442; }
-    .status-pendente { background: #fff8db; color: #8a5a00; }
-    .status-informado { background: #e6f0ff; color: #1755a0; }
+
+    .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .74rem; font-weight: 800; text-transform: uppercase; }
+    .status-confirmado, .status-approved { background: #e5f8ee; color: #137442; }
+    .status-pendente, .status-pending { background: #fff8db; color: #8a5a00; }
+    .status-informado, .status-processing { background: #e6f0ff; color: #1755a0; }
+    .status-recusado, .status-rejected { background: #ffe4e6; color: #9f1239; }
+    .status-expirado, .status-expired { background: #f1f5f9; color: #475569; }
+
+    .method-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; font-size: .78rem; font-weight: 700; background: #eef2fa; color: #1e293b; }
+    .method-badge.pix { background: rgba(50, 188, 173, 0.15); color: #0d9488; }
+    .method-badge.card { background: rgba(8, 125, 249, 0.15); color: #0284c7; }
+
     .sub-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: .78rem; font-weight: 700; }
     .sub-tag.Verde { background: #e5f8ee; color: #137442; }
     .sub-tag.Vermelho { background: #ffeaec; color: #a61f29; }
     .sub-tag.Amarelo { background: #ffffda; color: #8a7300; }
     .sub-tag.Azul { background: #e6f0ff; color: #1755a0; }
-    .action-btn { padding: 6px 12px; border: none; border-radius: 8px; font-weight: 700; font-size: .8rem; cursor: pointer; transition: .2s; }
+
+    .action-btn { padding: 6px 11px; border: none; border-radius: 8px; font-weight: 700; font-size: .78rem; cursor: pointer; transition: .2s; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px; }
     .action-btn.confirm { background: #24a764; color: #fff; }
-    .action-btn.view { background: #eef2fa; color: var(--blue-dark); margin-right: 4px; }
-    .modal-detail { max-width: 500px; padding: 24px; border: 0; border-radius: 20px; box-shadow: var(--shadow); }
+    .action-btn.view { background: #eef2fa; color: var(--blue-dark); }
+    .action-btn.email { background: #3b82f6; color: #fff; }
+    .action-btn:hover { opacity: .9; transform: translateY(-1px); }
+
+    .modal-detail { max-width: 580px; width: 90%; padding: 26px; border: 0; border-radius: 20px; box-shadow: var(--shadow); }
     .modal-detail::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+
+    .audit-timeline { margin-top: 16px; border-left: 2px solid #e2e8f0; padding-left: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .audit-item { position: relative; font-size: .82rem; }
+    .audit-item::before { content: ""; position: absolute; left: -19px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+    .audit-item small { color: var(--muted); display: block; font-size: .74rem; }
+
+    .whatsapp-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+    .wpp-setting-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
+    .wpp-setting-card label { display: block; font-size: .82rem; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .wpp-setting-card input[type="url"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: .85rem; box-sizing: border-box; }
+    .wpp-toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .8rem; color: #64748b; }
   </style>
 </head>
 <body>
@@ -65,7 +91,7 @@
     <div class="admin-auth-card" id="authCard">
       <img src="../images/logo1.png" alt="Logo EJC" style="width: 80px; margin: 0 auto; border-radius: 14px;">
       <h2>Área da Coordenação</h2>
-      <p>Informe a senha de acesso para gerenciar as inscrições e contribuições.</p>
+      <p>Informe a senha de acesso para gerenciar as inscrições e o checkout de pagamentos.</p>
       <form id="authForm">
         <input type="password" id="adminPassword" placeholder="Senha da Coordenação" required autofocus>
         <button type="submit" class="button button-primary" style="width: 100%;">Entrar no Painel</button>
@@ -79,18 +105,21 @@
       <div class="admin-header-bar">
         <div>
           <span class="eyebrow">EJC Trânsito Monte Sião</span>
-          <h1>Painel da Coordenação</h1>
+          <h1>Painel da Coordenação & Checkout</h1>
         </div>
         <div class="admin-nav-actions">
-          <button class="button button-secondary" id="exportBtn" style="min-height: 44px; font-size: .85rem;">📥 Exportar CSV</button>
-          <button class="button button-primary" id="logoutBtn" style="min-height: 44px; font-size: .85rem;">Sair</button>
+          <a href="/checkout" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Checkout
+          </a>
+          <button class="button button-secondary" id="exportBtn" style="min-height: 42px; font-size: .84rem;">📥 Exportar CSV</button>
+          <button class="button button-primary" id="logoutBtn" style="min-height: 42px; font-size: .84rem;">Sair</button>
         </div>
       </div>
 
       <!-- CARDS DE ESTATÍSTICAS -->
       <div class="stat-card-grid">
         <div class="stat-box">
-          <span id="statTotalLabel">Total Inscritos</span>
+          <span>Total Inscritos</span>
           <strong id="statTotalInscritos">0</strong>
         </div>
         <div class="stat-box green">
@@ -109,18 +138,26 @@
           <span>Sub Azul</span>
           <strong id="statSubAzul">0 / 50</strong>
         </div>
-        <div class="stat-box" style="border-left-color: var(--yellow);">
-          <span>Total Pix Arrecadado</span>
+        <div class="stat-box revenue">
+          <span>Total Arrecadado</span>
+          <strong id="statTotalGeral">R$ 0,00</strong>
+        </div>
+        <div class="stat-box" style="border-left-color: #0d9488;">
+          <span>Total via Pix</span>
           <strong id="statTotalPix">R$ 0,00</strong>
+        </div>
+        <div class="stat-box" style="border-left-color: #0284c7;">
+          <span>Total via Cartão</span>
+          <strong id="statTotalCard">R$ 0,00</strong>
         </div>
       </div>
 
-      <!-- TABELA DE INSCRIÇÕES -->
+      <!-- TABELA 1: INSCRIÇÕES DA EQUIPE -->
       <div class="table-container">
         <div class="table-toolbar">
-          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">Inscrições da Equipe</h3>
+          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">Inscrições da Equipe</h3>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <input type="text" id="searchInput" placeholder="Buscar por nome ou telefone...">
+            <input type="text" id="searchInput" placeholder="Buscar por nome, e-mail ou WhatsApp...">
             <select id="subFilter">
               <option value="">Todos os Subs</option>
               <option value="Verde">Sub Verde</option>
@@ -144,7 +181,7 @@
                 <th>Data</th>
                 <th>Nome Completo</th>
                 <th>Sub</th>
-                <th>WhatsApp</th>
+                <th>Contato</th>
                 <th>Camisa</th>
                 <th>Pagamento</th>
                 <th>Ações</th>
@@ -159,43 +196,104 @@
         </div>
       </div>
 
-      <!-- TABELA DE CONTRIBUIÇÕES PIX AVULSAS -->
+      <!-- TABELA 2: GESTÃO CENTRALIZADA DE PAGAMENTOS (PIX & CARTÃO) -->
       <div class="table-container">
         <div class="table-toolbar">
-          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">Contribuições Pix</h3>
-          <span style="font-size: .85rem; color: var(--muted);" id="pixCountLabel">0 contribuições registradas</span>
+          <div>
+            <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">Checkout & Pagamentos Unificados</h3>
+            <span style="font-size: .84rem; color: var(--muted);" id="payCountLabel">0 transações registradas</span>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" id="searchPayInput" placeholder="Buscar por pagador, e-mail ou TXID...">
+            <select id="methodFilter">
+              <option value="">Todos os Meios</option>
+              <option value="pix">Pix</option>
+              <option value="credit_card">Cartão de Crédito</option>
+            </select>
+            <select id="payStatusFilter">
+              <option value="">Todos os Status</option>
+              <option value="approved">Aprovado / Confirmado</option>
+              <option value="pending">Pendente</option>
+              <option value="rejected">Recusado</option>
+              <option value="expired">Expirado</option>
+            </select>
+          </div>
         </div>
+
         <div style="overflow-x: auto;">
           <table class="data-table">
             <thead>
               <tr>
                 <th>Data/Hora</th>
-                <th>Contribuinte</th>
-                <th>WhatsApp</th>
+                <th>Pagador</th>
+                <th>E-mail</th>
+                <th>Meio de Pagamento</th>
+                <th>Tipo</th>
                 <th>Valor</th>
-                <th>Código Transação (txid)</th>
+                <th>Código (TXID)</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
-            <tbody id="pixTableBody">
+            <tbody id="payTableBody">
               <tr>
-                <td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">Nenhuma contribuição registrada ainda.</td>
+                <td colspan="9" style="text-align: center; color: var(--muted); padding: 26px;">Nenhum pagamento registrado ainda.</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      <!-- PAINEL 3: CONFIGURAÇÃO DE LINKS DO WHATSAPP ADMINISTRÁVEIS -->
+      <div class="table-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;">
+          <div>
+            <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.25rem; color: var(--blue-dark);">
+              <i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> Links dos Grupos de WhatsApp
+            </h3>
+            <p style="margin: 0; color: var(--muted); font-size: .88rem;">Altere os links dos grupos por Sub em tempo real. As alterações refletem imediatamente no checkout e na inscrição.</p>
+          </div>
+          <button type="button" class="button button-primary" id="btnSaveWppLinks" style="min-height: 42px; font-size: .85rem;">
+            💾 Salvar Links do WhatsApp
+          </button>
+        </div>
+
+        <div class="whatsapp-settings-grid" id="wppSettingsGrid">
+          <!-- Gerado dinamicamente via script -->
+        </div>
+        <p id="wppSaveFeedback" style="display: none; margin-top: 14px; font-weight: 700; color: #10b981; font-size: .88rem;"></p>
+      </div>
+
     </div>
   </div>
 
-  <!-- MODAL DE DETALHES -->
+  <!-- MODAL DE DETALHES DE INSCRIÇÃO -->
   <dialog class="modal-detail" id="detailModal">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
       <h3 id="modalName" style="margin: 0; font-family: 'Archivo Black', sans-serif; color: var(--blue-dark);">Detalhes do Inscrito</h3>
       <button type="button" onclick="document.getElementById('detailModal').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
     </div>
     <div id="modalContent" style="font-size: .9rem; line-height: 1.6; color: var(--ink);"></div>
+  </dialog>
+
+  <!-- MODAL DE AUDITORIA E DETALHES DO PAGAMENTO -->
+  <dialog class="modal-detail" id="payModal">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <div>
+        <h3 id="payModalTitle" style="margin: 0; font-family: 'Archivo Black', sans-serif; color: var(--blue-dark);">Transação de Pagamento</h3>
+        <span id="payModalSubtitle" style="color: var(--muted); font-size: .82rem;">Detalhes e Trilha de Auditoria</span>
+      </div>
+      <button type="button" onclick="document.getElementById('payModal').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+    <div id="payModalContent" style="font-size: .88rem; line-height: 1.6; color: var(--ink);"></div>
+    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="action-btn email" id="btnModalResendEmail" style="padding: 10px 16px; font-size: .85rem;">
+        <i class="fa-regular fa-paper-plane"></i> Reenviar Comprovante por E-mail
+      </button>
+      <button type="button" class="button button-secondary" onclick="document.getElementById('payModal').close()" style="min-height: 38px; font-size: .85rem;">
+        Fechar
+      </button>
+    </div>
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -211,7 +309,17 @@
     const logoutBtn = document.getElementById("logoutBtn");
 
     let inscricoesData = [];
-    let pagamentosPixData = [];
+    let pagamentosData = [];
+    let auditoriaData = [];
+    let wppLinksData = {
+      "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
+      "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
+      "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+      "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+      "Geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
+    };
+
+    let activeModalTxid = null;
 
     // Checa sessão
     if (sessionStorage.getItem("ejc_admin_auth") === "true") {
@@ -240,39 +348,78 @@
     }
 
     function carregarDados() {
-      // 1. Carrega inscrições locais
+      // 1. Carrega dados do localStorage
       const localInscricoes = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-      const localPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
+      const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
+      const localLegacyPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
+      const localAuditoria = JSON.parse(localStorage.getItem("ejc_auditoria") || "[]");
+      const localWpp = JSON.parse(localStorage.getItem("ejc_whatsapp_links") || "null");
+
+      if (localWpp) Object.assign(wppLinksData, localWpp);
+
+      // Unifica transações locais
+      const existingTxids = new Set(localPagamentos.map(p => p.txid));
+      localLegacyPix.forEach(pix => {
+        if (!existingTxids.has(pix.txid)) {
+          localPagamentos.push({
+            ...pix,
+            metodo: "pix",
+            status: pix.status === "confirmado" ? "approved" : (pix.status || "pending")
+          });
+        }
+      });
 
       inscricoesData = localInscricoes;
-      pagamentosPixData = localPix;
+      pagamentosData = localPagamentos;
+      auditoriaData = localAuditoria;
 
       renderizarTudo();
 
-      // 2. Se houver Supabase configurado, tenta buscar
+      // 2. Tenta buscar no Supabase se conectado
       if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+          
+          // Inscrições
           client.from("inscricoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
             if (!error && data && data.length > 0) {
-              // Mescla com locais evitando duplicidades por whatsapp
-              const existingPhones = new Set(data.map(d => d.whatsapp));
-              const nonDuplicatedLocal = localInscricoes.filter(l => !existingPhones.has(l.whatsapp));
+              const remotePhones = new Set(data.map(d => d.whatsapp));
+              const nonDuplicatedLocal = localInscricoes.filter(l => !remotePhones.has(l.whatsapp));
               inscricoesData = [...data, ...nonDuplicatedLocal];
               renderizarTudo();
             }
           });
 
-          client.from("pagamentos_pix").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
+          // Pagamentos Unificados
+          client.from("pagamentos").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
             if (!error && data && data.length > 0) {
-              const existingTxids = new Set(data.map(d => d.txid));
-              const nonDuplicatedPix = localPix.filter(l => !existingTxids.has(l.txid));
-              pagamentosPixData = [...data, ...nonDuplicatedPix];
+              const remoteTxids = new Set(data.map(d => d.txid));
+              const nonDuplicated = pagamentosData.filter(l => !remoteTxids.has(l.txid));
+              pagamentosData = [...data, ...nonDuplicated];
               renderizarTudo();
             }
           });
+
+          // Auditoria
+          client.from("auditoria_transacoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              auditoriaData = data;
+            }
+          });
+
+          // Links de WhatsApp
+          client.from("configuracoes_whatsapp").select("*").then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              data.forEach(item => {
+                if (item.sub && item.link_grupo) {
+                  wppLinksData[item.sub] = item.link_grupo;
+                }
+              });
+              renderizarPainelWhatsApp();
+            }
+          });
         } catch(e) {
-          console.warn("Supabase remoto não disponível, operando em modo local.", e);
+          console.warn("Supabase remoto indisponível, usando persistência resiliente.", e);
         }
       }
     }
@@ -280,7 +427,12 @@
     function renderizarTudo() {
       renderizarEstatisticas();
       renderizarTabelaInscricoes();
-      renderizarTabelaPix();
+      renderizarTabelaPagamentos();
+      renderizarPainelWhatsApp();
+    }
+
+    function isApproved(status) {
+      return status === "approved" || status === "confirmado";
     }
 
     function renderizarEstatisticas() {
@@ -295,21 +447,38 @@
       document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 50`;
       document.getElementById("statSubAzul").textContent = `${subs.Azul} / 50`;
 
-      // Total Pix
-      const totalPixConfirmado = pagamentosPixData
-        .filter(p => p.status === "confirmado")
-        .reduce((sum, p) => sum + Number(p.valor || 0), 0);
-      document.getElementById("statTotalPix").textContent = totalPixConfirmado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      // Cálculos financeiros
+      let totalGeral = 0;
+      let totalPix = 0;
+      let totalCard = 0;
+
+      pagamentosData.forEach(p => {
+        if (isApproved(p.status)) {
+          const val = Number(p.valor || 0);
+          totalGeral += val;
+          if (p.metodo === "credit_card") {
+            totalCard += val;
+          } else {
+            totalPix += val;
+          }
+        }
+      });
+
+      document.getElementById("statTotalGeral").textContent = totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      document.getElementById("statTotalPix").textContent = totalPix.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      document.getElementById("statTotalCard").textContent = totalCard.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
 
     function renderizarTabelaInscricoes() {
       const tbody = document.getElementById("tableBody");
-      const search = document.getElementById("searchInput").value.toLowerCase();
+      const search = (document.getElementById("searchInput").value || "").toLowerCase();
       const subFilter = document.getElementById("subFilter").value;
       const statusFilter = document.getElementById("statusFilter").value;
 
       const filtered = inscricoesData.filter(item => {
-        const matchSearch = (item.nome_completo || "").toLowerCase().includes(search) || (item.whatsapp || "").includes(search);
+        const matchSearch = (item.nome_completo || "").toLowerCase().includes(search) ||
+          (item.whatsapp || "").includes(search) ||
+          (item.email || "").toLowerCase().includes(search);
         const matchSub = !subFilter || item.sub === subFilter;
         const matchStatus = !statusFilter || item.pagamento_status === statusFilter;
         return matchSearch && matchSub && matchStatus;
@@ -323,42 +492,132 @@
       tbody.innerHTML = filtered.map(item => `
         <tr>
           <td>${new Date(item.criado_em || Date.now()).toLocaleDateString("pt-BR")}</td>
-          <td><strong>${item.nome_completo || "Sem nome"}</strong></td>
+          <td>
+            <strong>${item.nome_completo || "Sem nome"}</strong>
+            ${item.email ? `<br><small style="color:var(--muted);">${item.email}</small>` : ''}
+          </td>
           <td><span class="sub-tag ${item.sub || ''}">${item.sub || '-'}</span></td>
           <td>${item.whatsapp || '-'}</td>
           <td>${item.tamanho_camisa || '-'} (${item.modelo_camisa || 'Tradicional'})</td>
           <td><span class="status-badge status-${item.pagamento_status || 'pendente'}">${item.pagamento_status || 'pendente'}</span></td>
           <td>
-            <button class="action-btn view" onclick="verDetalhes('${item.whatsapp}')">Detalhes</button>
-            ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')">Confirmar</button>` : ''}
+            <button class="action-btn view" onclick="verDetalhes('${item.whatsapp}')"><i class="fa-regular fa-eye"></i> Detalhes</button>
+            ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')"><i class="fa-solid fa-check"></i> Aprovar</button>` : ''}
           </td>
         </tr>
       `).join("");
     }
 
-    function renderizarTabelaPix() {
-      const tbody = document.getElementById("pixTableBody");
-      document.getElementById("pixCountLabel").textContent = `${pagamentosPixData.length} contribuições registradas`;
+    function renderizarTabelaPagamentos() {
+      const tbody = document.getElementById("payTableBody");
+      const search = (document.getElementById("searchPayInput").value || "").toLowerCase();
+      const methodFilter = document.getElementById("methodFilter").value;
+      const statusFilter = document.getElementById("payStatusFilter").value;
 
-      if (pagamentosPixData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">Nenhuma contribuição Pix registrada ainda.</td></tr>`;
+      const filtered = pagamentosData.filter(p => {
+        const matchSearch = (p.nome_pagador || "").toLowerCase().includes(search) ||
+          (p.email || "").toLowerCase().includes(search) ||
+          (p.txid || "").toLowerCase().includes(search);
+        const matchMethod = !methodFilter || p.metodo === methodFilter;
+        const matchStatus = !statusFilter || (statusFilter === "approved" ? isApproved(p.status) : p.status === statusFilter);
+        return matchSearch && matchMethod && matchStatus;
+      });
+
+      document.getElementById("payCountLabel").textContent = `${filtered.length} de ${pagamentosData.length} transações`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--muted); padding: 26px;">Nenhum pagamento correspondente aos filtros.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = pagamentosPixData.map(pix => `
-        <tr>
-          <td>${new Date(pix.criado_em || Date.now()).toLocaleString("pt-BR")}</td>
-          <td><strong>${pix.nome_pagador || 'Anônimo'}</strong></td>
-          <td>${pix.whatsapp_pagador || '-'}</td>
-          <td><strong>R$ ${Number(pix.valor || 0).toFixed(2).replace('.', ',')}</strong></td>
-          <td><code style="font-size: .78rem; background: #eee; padding: 2px 6px; border-radius: 4px;">${pix.txid}</code></td>
-          <td><span class="status-badge status-${pix.status}">${pix.status}</span></td>
-          <td>
-            ${pix.status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPixManual('${pix.txid}')">Aprovar</button>` : '<span style="color: #24a764; font-weight:800; font-size:.8rem;">✓ Concluído</span>'}
-          </td>
-        </tr>
+      tbody.innerHTML = filtered.map(p => {
+        const isPix = p.metodo !== "credit_card";
+        const methodBadge = isPix
+          ? `<span class="method-badge pix"><i class="fa-brands fa-pix"></i> Pix</span>`
+          : `<span class="method-badge card"><i class="fa-solid fa-credit-card"></i> Cartão ${p.cartao_bandeira ? `(${p.cartao_bandeira} *${p.cartao_ultimos_digitos || ''})` : ''} ${p.parcelas > 1 ? `${p.parcelas}x` : ''}</span>`;
+
+        const statusClass = isApproved(p.status) ? "status-approved" : `status-${p.status || 'pending'}`;
+        const statusLabel = isApproved(p.status) ? "Aprovado" : (p.status === "rejected" ? "Recusado" : (p.status === "expired" ? "Expirado" : "Pendente"));
+
+        return `
+          <tr>
+            <td>${new Date(p.criado_em || Date.now()).toLocaleString("pt-BR")}</td>
+            <td><strong>${p.nome_pagador || 'Anônimo'}</strong></td>
+            <td>${p.email || '<span style="color:var(--muted); font-style:italic;">Não informado</span>'}</td>
+            <td>${methodBadge}</td>
+            <td><span style="font-size:.78rem; text-transform:uppercase; font-weight:700; color:var(--muted);">${p.tipo || 'Inscrição'}</span></td>
+            <td><strong>R$ ${Number(p.valor || 0).toFixed(2).replace('.', ',')}</strong></td>
+            <td><code style="font-size: .74rem; background: #e2e8f0; padding: 2px 5px; border-radius: 4px;">${p.txid}</code></td>
+            <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+            <td>
+              <button class="action-btn view" onclick="verDetalhesPagamento('${p.txid}')" title="Ver auditoria e detalhes">
+                <i class="fa-solid fa-list-check"></i>
+              </button>
+              <button class="action-btn email" onclick="reenviarComprovanteEmail('${p.txid}')" title="Reenviar comprovante por e-mail">
+                <i class="fa-regular fa-envelope"></i>
+              </button>
+              ${!isApproved(p.status) ? `
+                <button class="action-btn confirm" onclick="aprovarTransacaoManual('${p.txid}')" title="Aprovar manualmente">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+              ` : ''}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderizarPainelWhatsApp() {
+      const grid = document.getElementById("wppSettingsGrid");
+      const subs = ["Verde", "Vermelho", "Amarelo", "Azul", "Geral"];
+
+      grid.innerHTML = subs.map(sub => `
+        <div class="wpp-setting-card">
+          <label for="wppLink_${sub}">Grupo Sub ${sub}:</label>
+          <input type="url" id="wppLink_${sub}" value="${wppLinksData[sub] || ''}" placeholder="https://chat.whatsapp.com/...">
+          <div class="wpp-toggle-row">
+            <input type="checkbox" id="wppActive_${sub}" checked>
+            <label for="wppActive_${sub}" style="margin:0; font-size:.8rem;">Link ativo</label>
+          </div>
+        </div>
       `).join("");
     }
+
+    // Salvar links de WhatsApp
+    document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
+      const subs = ["Verde", "Vermelho", "Amarelo", "Azul", "Geral"];
+      subs.forEach(sub => {
+        const input = document.getElementById(`wppLink_${sub}`);
+        if (input && input.value) {
+          wppLinksData[sub] = input.value.trim();
+        }
+      });
+
+      // Salva localmente
+      localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+
+      // Salva no Supabase se disponível
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
+        try {
+          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+          for (const sub of subs) {
+            await client.from("configuracoes_whatsapp").upsert({
+              sub: sub,
+              link_grupo: wppLinksData[sub],
+              ativo: true,
+              atualizado_em: new Date().toISOString()
+            }, { onConflict: "sub" });
+          }
+        } catch(e) {
+          console.warn("Erro ao salvar no Supabase configuracoes_whatsapp:", e);
+        }
+      }
+
+      const feedback = document.getElementById("wppSaveFeedback");
+      feedback.textContent = "✓ Links do WhatsApp atualizados com sucesso!";
+      feedback.style.display = "block";
+      setTimeout(() => { feedback.style.display = "none"; }, 3000);
+    });
 
     window.verDetalhes = function(whatsapp) {
       const item = inscricoesData.find(i => i.whatsapp === whatsapp);
@@ -368,6 +627,7 @@
       document.getElementById("modalContent").innerHTML = `
         <p><strong>Sub Grupo:</strong> ${item.sub}</p>
         <p><strong>WhatsApp:</strong> ${item.whatsapp}</p>
+        <p><strong>E-mail:</strong> ${item.email || 'Não informado'}</p>
         <p><strong>Tamanho da Camisa:</strong> ${item.tamanho_camisa} (${item.modelo_camisa || 'Tradicional'})</p>
         <p><strong>Camisa Adicional:</strong> ${item.quer_camisa_adicional ? `Sim (${item.quantidade_camisas_adicionais || 1}x - ${item.tamanho_camisa_adicional || ''})` : 'Não'}</p>
         <p><strong>Talento:</strong> ${item.talento || 'Nenhum informado'}</p>
@@ -390,7 +650,6 @@
         localStorage.setItem("ejc_inscricoes", JSON.stringify(local));
       }
 
-      // Atualiza também no array atual
       const cur = inscricoesData.find(i => i.whatsapp === whatsapp);
       if (cur) cur.pagamento_status = "confirmado";
 
@@ -398,54 +657,175 @@
       alert("Pagamento da inscrição confirmado com sucesso!");
     };
 
-    window.confirmarPixManual = function(txid) {
-      if (!confirm(`Deseja aprovar manualmente o recebimento do Pix txid ${txid}?`)) return;
+    // Detalhes & Auditoria do Pagamento
+    window.verDetalhesPagamento = function(txid) {
+      activeModalTxid = txid;
+      const p = pagamentosData.find(item => item.txid === txid);
+      if (!p) return;
 
-      const localPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
-      const idx = localPix.findIndex(p => p.txid === txid);
-      if (idx !== -1) {
-        localPix[idx].status = "confirmado";
-        localPix[idx].pago_em = new Date().toISOString();
-        localStorage.setItem("ejc_pagamentos_pix", JSON.stringify(localPix));
+      document.getElementById("payModalTitle").textContent = `Transação ${txid}`;
+      document.getElementById("payModalSubtitle").textContent = `Registrada em ${new Date(p.criado_em || Date.now()).toLocaleString("pt-BR")}`;
+
+      // Filtra auditoria
+      const audits = auditoriaData.filter(a => a.transacao_id === txid);
+
+      let auditHtml = "";
+      if (audits.length > 0) {
+        auditHtml = audits.map(a => `
+          <div class="audit-item">
+            <strong>${a.acao.toUpperCase()}</strong> por <em>${a.executado_por || 'sistema'}</em>
+            <small>${new Date(a.criado_em).toLocaleString("pt-BR")}</small>
+          </div>
+        `).join("");
+      } else {
+        auditHtml = `
+          <div class="audit-item">
+            <strong>CRIADO</strong> por <em>checkout</em>
+            <small>${new Date(p.criado_em || Date.now()).toLocaleString("pt-BR")}</small>
+          </div>
+          ${isApproved(p.status) ? `
+          <div class="audit-item">
+            <strong>APROVADO</strong> por <em>${p.gateway || 'gateway'}</em>
+            <small>${new Date(p.pago_em || p.criado_em || Date.now()).toLocaleString("pt-BR")}</small>
+          </div>` : ''}
+        `;
       }
 
-      const cur = pagamentosPixData.find(p => p.txid === txid);
-      if (cur) {
-        cur.status = "confirmado";
-        cur.pago_em = new Date().toISOString();
+      document.getElementById("payModalContent").innerHTML = `
+        <div style="background: #f8fafc; padding: 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 6px;"><strong>Pagador:</strong> ${p.nome_pagador || 'Anônimo'}</p>
+          <p style="margin: 0 0 6px;"><strong>E-mail:</strong> ${p.email || 'Não informado'}</p>
+          <p style="margin: 0 0 6px;"><strong>WhatsApp:</strong> ${p.whatsapp_pagador || '-'}</p>
+          <p style="margin: 0 0 6px;"><strong>Meio:</strong> ${p.metodo === 'credit_card' ? `Cartão de Crédito (${p.cartao_bandeira || ''} final ${p.cartao_ultimos_digitos || ''}, ${p.parcelas || 1}x)` : 'Pix Instantâneo'}</p>
+          <p style="margin: 0 0 6px;"><strong>Valor:</strong> R$ ${Number(p.valor || 0).toFixed(2).replace('.', ',')}</p>
+          <p style="margin: 0 0 6px;"><strong>Status Atual:</strong> <span class="status-badge ${isApproved(p.status) ? 'status-approved' : 'status-' + p.status}">${p.status}</span></p>
+          ${p.pago_em ? `<p style="margin: 0;"><strong>Aprovado em:</strong> ${new Date(p.pago_em).toLocaleString("pt-BR")}</p>` : ''}
+        </div>
+        <h4 style="margin: 14px 0 6px; font-size: .88rem; text-transform: uppercase; color: var(--muted); letter-spacing: .05em;">Trilha de Auditoria</h4>
+        <div class="audit-timeline">
+          ${auditHtml}
+        </div>
+      `;
+
+      document.getElementById("payModal").showModal();
+    };
+
+    // Reenvio de comprovante por e-mail com 1 clique
+    window.reenviarComprovanteEmail = async function(txid) {
+      const p = pagamentosData.find(item => item.txid === txid);
+      if (!p) return;
+
+      const emailDestino = p.email || prompt("Informe o e-mail para envio do comprovante:");
+      if (!emailDestino || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDestino)) {
+        alert("E-mail inválido.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/email-comprovante", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            txid: p.txid,
+            nome: p.nome_pagador,
+            email: emailDestino,
+            valor: p.valor,
+            metodo: p.metodo,
+            executado_por: "admin_coordenacao"
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✓ Comprovante reenviado com sucesso para ${emailDestino}!`);
+          // Adiciona à auditoria local
+          auditoriaData.unshift({
+            transacao_id: txid,
+            acao: "comprovante_enviado",
+            executado_por: "admin_coordenacao",
+            criado_em: new Date().toISOString()
+          });
+        } else {
+          alert(`Erro ao enviar comprovante: ${data.error || 'Falha no envio'}`);
+        }
+      } catch(err) {
+        alert("Comprovante registrado para despacho.");
+      }
+    };
+
+    document.getElementById("btnModalResendEmail").addEventListener("click", () => {
+      if (activeModalTxid) {
+        reenviarComprovanteEmail(activeModalTxid);
+      }
+    });
+
+    // Aprovação manual de transação
+    window.aprovarTransacaoManual = function(txid) {
+      if (!confirm(`Deseja aprovar manualmente a transação ${txid}?`)) return;
+
+      const p = pagamentosData.find(item => item.txid === txid);
+      if (p) {
+        p.status = "approved";
+        p.pago_em = new Date().toISOString();
+      }
+
+      // Persiste no localStorage
+      localStorage.setItem("ejc_pagamentos", JSON.stringify(pagamentosData));
+
+      // Auditoria
+      auditoriaData.unshift({
+        transacao_id: txid,
+        acao: "status_alterado_admin",
+        executado_por: "admin_coordenacao",
+        criado_em: new Date().toISOString()
+      });
+      localStorage.setItem("ejc_auditoria", JSON.stringify(auditoriaData));
+
+      // Tenta RPC no Supabase
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
+        const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+        client.rpc("confirmar_pagamento_unificado", {
+          p_txid: txid,
+          p_gateway: "admin_manual",
+          p_executado_por: "admin_coordenacao"
+        }).catch(err => console.warn("Supabase RPC:", err));
       }
 
       renderizarTudo();
-      alert("Contribuição Pix aprovada!");
+      alert("Transação aprovada com sucesso!");
     };
 
-    // Filtros e busca
+    // Event listeners para filtros e busca
     document.getElementById("searchInput").addEventListener("input", renderizarTabelaInscricoes);
     document.getElementById("subFilter").addEventListener("change", renderizarTabelaInscricoes);
     document.getElementById("statusFilter").addEventListener("change", renderizarTabelaInscricoes);
 
+    document.getElementById("searchPayInput").addEventListener("input", renderizarTabelaPagamentos);
+    document.getElementById("methodFilter").addEventListener("change", renderizarTabelaPagamentos);
+    document.getElementById("payStatusFilter").addEventListener("change", renderizarTabelaPagamentos);
+
     // Exportar CSV
     document.getElementById("exportBtn").addEventListener("click", () => {
-      if (inscricoesData.length === 0) {
-        alert("Não há dados de inscrições para exportar.");
+      if (inscricoesData.length === 0 && pagamentosData.length === 0) {
+        alert("Não há dados para exportar.");
         return;
       }
-      const headers = ["Data", "Nome Completo", "Sub", "WhatsApp", "Camisa", "Status Pagamento", "Talento"];
+      const headers = ["Data", "Nome Completo", "Sub", "WhatsApp", "E-mail", "Camisa", "Status Pagamento"];
       const rows = inscricoesData.map(i => [
         `"${new Date(i.criado_em || Date.now()).toLocaleDateString("pt-BR")}"`,
         `"${(i.nome_completo || "").replace(/"/g, '""')}"`,
         `"${i.sub || ''}"`,
         `"${i.whatsapp || ''}"`,
+        `"${i.email || ''}"`,
         `"${i.tamanho_camisa || ''} ${i.modelo_camisa || ''}"`,
-        `"${i.pagamento_status || ''}"`,
-        `"${(i.talento || '').replace(/"/g, '""')}"`
+        `"${i.pagamento_status || ''}"`
       ]);
       const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map(r => r.join(";"))].join("\r\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `inscricoes_ejc_transito_${new Date().toISOString().slice(0,10)}.csv`;
+      a.download = `inscricoes_ejc_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     });

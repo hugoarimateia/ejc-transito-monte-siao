@@ -33,23 +33,71 @@ module.exports = async (req, res) => {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (supabaseUrl && supabaseServiceKey) {
-      const dbResponse = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_pix`, {
-        method: "POST",
-        headers: {
-          "apikey": supabaseServiceKey,
-          "Authorization": `Bearer ${supabaseServiceKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          p_txid: String(txid),
-          p_gateway: "vercel_webhook",
-          p_payload: payload
-        })
-      });
+      let confirmed = false;
+      try {
+        const dbResponse = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+          method: "POST",
+          headers: {
+            "apikey": supabaseServiceKey,
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            p_txid: String(txid),
+            p_gateway: "pix_webhook",
+            p_executado_por: "gateway_webhook",
+            p_payload: payload
+          })
+        });
 
-      if (!dbResponse.ok) {
-        const errText = await dbResponse.text();
-        console.error("[Webhook DB Error]", errText);
+        if (dbResponse.ok) {
+          confirmed = true;
+        } else {
+          // Fallback para RPC legado caso migração ainda não tenha rodado
+          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_pix`, {
+            method: "POST",
+            headers: {
+              "apikey": supabaseServiceKey,
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              p_txid: String(txid),
+              p_gateway: "vercel_webhook",
+              p_payload: payload
+            })
+          });
+        }
+      } catch (dbErr) {
+        console.error("[Webhook DB Error]", dbErr.message);
+      }
+
+      // Se confirmado, busca dados do pagamento para disparar comprovante por e-mail
+      try {
+        const payRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(txid)}&select=txid,nome_pagador,email,valor,metodo`, {
+          headers: { "apikey": supabaseServiceKey, "Authorization": `Bearer ${supabaseServiceKey}` }
+        });
+        if (payRes.ok) {
+          const payData = await payRes.json();
+          if (payData && payData.length > 0 && payData[0].email) {
+            const p = payData[0];
+            const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+            fetch(`${baseUrl}/api/email-comprovante`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                txid: p.txid,
+                nome: p.nome_pagador,
+                email: p.email,
+                valor: p.valor,
+                metodo: p.metodo,
+                executado_por: "webhook_automatico"
+              })
+            }).catch(() => {});
+          }
+        }
+      } catch (emailTriggerErr) {
+        console.warn("[Webhook Email Trigger]", emailTriggerErr.message);
       }
     }
 

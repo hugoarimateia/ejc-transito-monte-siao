@@ -329,15 +329,24 @@ if (signupForm) {
       return;
     }
 
-    const paymentReported = formData.get("pagamento_informado") === "true";
-    const paymentMethod = paymentReported ? String(formData.get("forma_pagamento") || "") : null;
+    const emailValue = String(formData.get("email") || "").trim().toLowerCase();
+    if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      setFeedback("Por favor, informe um endereço de e-mail válido para recebimento do comprovante.", "error");
+      return;
+    }
+
+    const paymentChoice = formData.get("pagamento_informado");
+    const isCheckout = paymentChoice === "checkout";
+    const paymentReported = paymentChoice === "true";
+    const paymentMethod = paymentReported ? String(formData.get("forma_pagamento") || "") : (isCheckout ? "checkout_online" : null);
     const proof = formData.get("comprovante");
+
     if (paymentReported && !["pix", "especie"].includes(paymentMethod)) {
       setFeedback("Informe se o pagamento foi feito por Pix ou em espécie.", "error");
       return;
     }
     if (paymentReported && paymentMethod === "pix" && (!(proof instanceof File) || !proof.size)) {
-      setFeedback("Para pagamento por Pix, o comprovante é obrigatório.", "error");
+      setFeedback("Para pagamento por Pix informado, o comprovante é obrigatório.", "error");
       return;
     }
     if (paymentReported && proof instanceof File && proof.size) {
@@ -351,7 +360,7 @@ if (signupForm) {
     if (submitSignup) submitSignup.disabled = true;
     if (whatsappSuccess) whatsappSuccess.hidden = true;
     if (whatsappGroupButton) whatsappGroupButton.removeAttribute("href");
-    setFeedback("Verificando cadastro e processando os arquivos...", "loading");
+    setFeedback("Verificando cadastro e processando...", "loading");
 
     const normalizedName = String(formData.get("nome_completo") || "").trim();
     const normalizedPhone = String(formData.get("whatsapp") || "").trim();
@@ -359,9 +368,11 @@ if (signupForm) {
     const wantsExtraShirt = formData.get("quer_camisa_adicional") === "true";
     const [shirtSize, shirtModel = "Tradicional"] = String(formData.get("tamanho_camisa") || "").split("|");
     const [extraShirtSizeValue, extraShirtModel = "Tradicional"] = String(formData.get("tamanho_camisa_adicional") || "").split("|");
-    const paymentObservation = paymentReported
-      ? "Pagamento informado pelo inscrito; aguardando conferência da coordenação."
-      : "Pagamento pendente; deverá ser realizado até a data limite da coordenação.";
+    const paymentObservation = isCheckout
+      ? "Redirecionado para o Checkout Oficial (Pix/Cartão)."
+      : (paymentReported
+        ? "Pagamento informado pelo inscrito; aguardando conferência da coordenação."
+        : "Pagamento pendente; deverá ser realizado até a data limite da coordenação.");
 
     let photoPath = null;
     let proofPath = null;
@@ -410,6 +421,10 @@ if (signupForm) {
         if (!insertError) {
           registrationSuccess = true;
           if (registrationResult?.token) userToken = registrationResult.token;
+          // Se tiver coluna email no Supabase inscricoes, atualiza
+          if (registrationResult?.id) {
+            supabaseClient.from("inscricoes").update({ email: emailValue }).eq("id", registrationResult.id).catch(() => {});
+          }
         }
       } catch (err) {
         console.warn("Falha no envio ao Supabase remoto, acionando persistência resiliente.", err);
@@ -442,6 +457,7 @@ if (signupForm) {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         criado_em: new Date().toISOString(),
         nome_completo: normalizedName,
+        email: emailValue,
         sub: chosenSub,
         whatsapp: normalizedPhone,
         modelo_camisa: shirtModel,
@@ -469,12 +485,27 @@ if (signupForm) {
     }
 
     if (registrationSuccess) {
-      setFeedback(
-        paymentReported
-          ? "Inscrição realizada com sucesso! Pagamento registrado para conferência da coordenação."
-          : "Inscrição realizada com sucesso! Pagamento registrado como pendente até a data limite.",
-        "success"
-      );
+      const checkoutUrl = `/checkout?tipo=inscricao&valor=50&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}`;
+
+      const btnPayAfterSignup = document.getElementById("btnPayAfterSignup");
+      if (btnPayAfterSignup) {
+        btnPayAfterSignup.href = checkoutUrl;
+        btnPayAfterSignup.style.display = "flex";
+      }
+
+      if (isCheckout) {
+        setFeedback("Inscrição realizada! Redirecionando para o Checkout Oficial...", "success");
+        setTimeout(() => {
+          window.location.href = checkoutUrl;
+        }, 1000);
+      } else {
+        setFeedback(
+          paymentReported
+            ? "Inscrição realizada com sucesso! Pagamento registrado para conferência da coordenação."
+            : "Inscrição realizada com sucesso! Pagamento registrado como pendente até a data limite.",
+          "success"
+        );
+      }
 
       // Redirecionamento individual e seguro para o grupo do WhatsApp do Sub
       const subWhatsAppUrls = window.EJC_WHATSAPP_SUBS || {
@@ -528,258 +559,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==============================================================================
-// MOTOR OFICIAL DO PIX DINÂMICO (PADRÃO BANCO CENTRAL DO BRASIL / EMVCO)
+// REDIRECIONAMENTO PARA O CHECKOUT OFICIAL CENTRALIZADO (PIX & CARTÃO)
 // ==============================================================================
-
-function calcularCRC16(str) {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= (str.charCodeAt(i) << 8);
-    for (let j = 0; j < 8; j++) {
-      if ((crc & 0x8000) !== 0) {
-        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
-      } else {
-        crc = (crc << 1) & 0xFFFF;
-      }
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
-
-function emvFormat(id, value) {
-  const len = String(value.length).padStart(2, "0");
-  return `${id}${len}${value}`;
-}
-
-function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
-  const cleanChave = chave.trim();
-  const cleanNome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 25).toUpperCase();
-  const cleanCidade = cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 15).toUpperCase();
-  const cleanTxid = (txid || "EJCTRANSITO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
-  const formattedValor = Number(valor).toFixed(2);
-
-  // 26: Merchant Account Information
-  let merchantInfo = emvFormat("00", "br.gov.bcb.pix");
-  merchantInfo += emvFormat("01", cleanChave);
-  if (info) merchantInfo += emvFormat("02", info.slice(0, 40));
-
-  // 62: Additional Data Field Template
-  const additionalData = emvFormat("05", cleanTxid);
-
-  let payload = "";
-  payload += emvFormat("00", "01");                     // Payload Format Indicator
-  payload += emvFormat("26", merchantInfo);              // Merchant Account Information
-  payload += emvFormat("52", "0000");                    // Merchant Category Code
-  payload += emvFormat("53", "986");                     // Transaction Currency (BRL)
-  payload += emvFormat("54", formattedValor);            // Transaction Amount
-  payload += emvFormat("58", "BR");                      // Country Code
-  payload += emvFormat("59", cleanNome);                 // Merchant Name
-  payload += emvFormat("60", cleanCidade);               // Merchant City
-  payload += emvFormat("62", additionalData);            // Additional Data (txid)
-  payload += "6304";                                     // CRC16 placeholder
-
-  const crc = calcularCRC16(payload);
-  return `${payload}${crc}`;
-}
-
-// CHECKOUT PIX INTERATIVO
-const pixModal = document.getElementById("pixModal");
-const closePixModalBtn = document.getElementById("closePixModalBtn");
-const pixModalTypeTag = document.getElementById("pixModalTypeTag");
-const pixModalValueText = document.getElementById("pixModalValueText");
-const pixCountdown = document.getElementById("pixCountdown");
-const pixQrContainer = document.getElementById("pixQrContainer");
-const pixPayloadInput = document.getElementById("pixPayloadInput");
-const btnCopyPixPayload = document.getElementById("btnCopyPixPayload");
-const pixStatusText = document.getElementById("pixStatusText");
-const pixActiveState = document.getElementById("pixActiveState");
-const pixSuccessState = document.getElementById("pixSuccessState");
-const receiptTxidText = document.getElementById("receiptTxidText");
-const receiptValText = document.getElementById("receiptValText");
-const receiptTimeText = document.getElementById("receiptTimeText");
-const btnFinishPixSuccess = document.getElementById("btnFinishPixSuccess");
-
-let pixTimerInterval = null;
-let pixPollingInterval = null;
-let activeTxid = null;
-
-function fecharModalPix() {
-  if (pixModal) pixModal.close();
-  if (pixTimerInterval) clearInterval(pixTimerInterval);
-  if (pixPollingInterval) clearInterval(pixPollingInterval);
-  activeTxid = null;
-}
-
-if (closePixModalBtn) closePixModalBtn.addEventListener("click", fecharModalPix);
-if (btnFinishPixSuccess) btnFinishPixSuccess.addEventListener("click", fecharModalPix);
-if (pixModal) {
-  pixModal.addEventListener("click", (e) => {
-    if (e.target === pixModal) fecharModalPix();
-  });
-}
-
-function abrirCheckoutPix({ tipo, valor, pagadorNome, pagadorWhatsapp }) {
-  if (!pixModal) return;
-
-  const config = window.EJC_PIX_CONFIG || {
-    chave: "leoeuler03@gmail.com",
-    beneficiario: "EJC TRANSITO MONTE SIAO",
-    cidade: "CAMPINA GRANDE",
-    tempoExpiracaoMinutos: 15
-  };
-
-  const cleanValor = Math.max(1, Number(valor || 50));
-  const txid = "EJC" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-  activeTxid = txid;
-
-  // Gera payload BR Code oficial do BACEN
-  const payloadPix = gerarPayloadPixBACEN({
-    chave: config.chave,
-    nome: config.beneficiario,
-    cidade: config.cidade,
-    valor: cleanValor,
-    txid: txid,
-    info: tipo === "inscricao" ? "TAXA EQUIPE EJC TRANSITO" : "CONTRIBUICAO EJC TRANSITO"
-  });
-
-  // Atualiza UI
-  if (pixModalTypeTag) {
-    pixModalTypeTag.textContent = tipo === "inscricao" ? "Taxa de Inscrição da Equipe" : "Contribuição da Equipe";
-  }
-  if (pixModalValueText) {
-    pixModalValueText.textContent = cleanValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
-  if (pixPayloadInput) {
-    pixPayloadInput.value = payloadPix;
-  }
-  if (btnCopyPixPayload) {
-    btnCopyPixPayload.textContent = "Copiar Código Pix";
-  }
-
-  // Renderiza QR Code dinâmico nítido
-  if (pixQrContainer) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(payloadPix)}`;
-    pixQrContainer.innerHTML = `<img src="${qrUrl}" alt="QR Code Pix Dinâmico" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">`;
-  }
-
-  // Reseta estados
-  if (pixActiveState) pixActiveState.style.display = "block";
-  if (pixSuccessState) pixSuccessState.style.display = "none";
-  if (pixStatusText) pixStatusText.textContent = "Aguardando confirmação do banco...";
-
-  // Salva no registro de pagamentos Pix (local e tenta Supabase)
-  const novoPagamento = {
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    criado_em: new Date().toISOString(),
-    txid: txid,
-    valor: cleanValor,
-    tipo: tipo,
-    nome_pagador: pagadorNome || "Anônimo",
-    whatsapp_pagador: pagadorWhatsapp || null,
-    status: "pendente",
-    pix_copia_e_cola: payloadPix,
-    expiracao: new Date(Date.now() + config.tempoExpiracaoMinutos * 60000).toISOString()
-  };
-
-  const localPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
-  localPix.unshift(novoPagamento);
-  localStorage.setItem("ejc_pagamentos_pix", JSON.stringify(localPix));
-
-  if (supabaseClient) {
-    supabaseClient.rpc("registrar_pagamento_pix", {
-      p_txid: txid,
-      p_nome_pagador: novoPagamento.nome_pagador,
-      p_whatsapp_pagador: novoPagamento.whatsapp_pagador,
-      p_cpf_pagador: null,
-      p_valor: cleanValor,
-      p_tipo: tipo,
-      p_pix_copia_e_cola: payloadPix,
-      p_qr_code_base64: null,
-      p_expiracao: novoPagamento.expiracao
-    }).catch(err => console.warn("Supabase não alcançado para registrar Pix:", err));
-  }
-
-  // Inicia contador regressivo de 15 minutos
-  let segundosRestantes = (config.tempoExpiracaoMinutos || 15) * 60;
-  if (pixTimerInterval) clearInterval(pixTimerInterval);
-
-  pixTimerInterval = setInterval(() => {
-    segundosRestantes--;
-    const min = String(Math.floor(segundosRestantes / 60)).padStart(2, "0");
-    const sec = String(segundosRestantes % 60).padStart(2, "0");
-    if (pixCountdown) pixCountdown.textContent = `${min}:${sec}`;
-
-    if (segundosRestantes <= 0) {
-      clearInterval(pixTimerInterval);
-      if (pixStatusText) pixStatusText.textContent = "Tempo de pagamento expirado. Gere um novo código.";
-    }
-  }, 1000);
-
-  // Inicia monitoramento de status da transação (Polling inteligente com fallback)
-  if (pixPollingInterval) clearInterval(pixPollingInterval);
-  pixPollingInterval = setInterval(async () => {
-    // 1. Checa no localStorage (caso admin aprove na mesma máquina)
-    const currentLocal = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
-    const item = currentLocal.find(p => p.txid === txid);
-    if (item && item.status === "confirmado") {
-      confirmarSucessoPix(item);
-      return;
-    }
-
-    // 2. Checa no Supabase se disponível
-    if (supabaseClient) {
-      try {
-        const { data } = await supabaseClient.rpc("consultar_status_pix", { p_txid: txid });
-        if (data && data.status === "confirmado") {
-          confirmarSucessoPix(data);
-        }
-      } catch (e) {
-        // Silêncio no polling de rede
-      }
-    }
-  }, 3000);
-
-  pixModal.showModal();
-}
-
-function confirmarSucessoPix(pagamento) {
-  if (pixTimerInterval) clearInterval(pixTimerInterval);
-  if (pixPollingInterval) clearInterval(pixPollingInterval);
-
-  if (pixActiveState) pixActiveState.style.display = "none";
-  if (pixSuccessState) pixSuccessState.style.display = "block";
-
-  if (receiptTxidText) receiptTxidText.textContent = pagamento.txid || activeTxid;
-  if (receiptValText) receiptValText.textContent = Number(pagamento.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  if (receiptTimeText) receiptTimeText.textContent = new Date().toLocaleString("pt-BR");
-}
-
-// Botão Copiar Código Pix
-if (btnCopyPixPayload) {
-  btnCopyPixPayload.addEventListener("click", () => {
-    if (pixPayloadInput) {
-      pixPayloadInput.select();
-      navigator.clipboard.writeText(pixPayloadInput.value).then(() => {
-        btnCopyPixPayload.textContent = "✓ Código PIX Copiado!";
-        setTimeout(() => {
-          btnCopyPixPayload.textContent = "Copiar Código Pix";
-        }, 2500);
-      }).catch(() => {
-        document.execCommand("copy");
-        btnCopyPixPayload.textContent = "✓ Copiado!";
-      });
-    }
-  });
-}
-
-// Botões para abrir Pix Dinâmico
-document.querySelectorAll(".btn-open-pix-dinamico").forEach(btn => {
+document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(btn => {
   btn.addEventListener("click", () => {
     const valor = Number(btn.dataset.valor || 50);
     const tipo = btn.dataset.tipo || "inscricao";
     const nome = document.querySelector("#full-name")?.value || "";
+    const email = document.querySelector("#email")?.value || "";
     const wpp = document.querySelector("#whatsapp")?.value || "";
-    abrirCheckoutPix({ tipo, valor, pagadorNome: nome, pagadorWhatsapp: wpp });
+    const sub = document.querySelector("#selected-sub")?.value || "Verde";
+    window.location.href = `/checkout?tipo=${tipo}&valor=${valor}&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&whatsapp=${encodeURIComponent(wpp)}&sub=${encodeURIComponent(sub)}`;
   });
 });
 
@@ -796,10 +586,10 @@ presetButtons.forEach(btn => {
   });
 });
 
-// Submissão da Contribuição Online
-const btnSubmitContributionPix = document.getElementById("btnSubmitContributionPix");
-if (btnSubmitContributionPix) {
-  btnSubmitContributionPix.addEventListener("click", () => {
+// Submissão da Contribuição -> Direciona ao Checkout Oficial Seguro
+const btnSubmitContributionCheckout = document.getElementById("btnSubmitContributionCheckout") || document.getElementById("btnSubmitContributionPix");
+if (btnSubmitContributionCheckout) {
+  btnSubmitContributionCheckout.addEventListener("click", () => {
     const customInput = document.getElementById("customContributeValue");
     const nameInput = document.getElementById("contributorName");
     let valorFinal = selectedPresetVal;
@@ -809,10 +599,6 @@ if (btnSubmitContributionPix) {
     }
 
     const contributorName = nameInput?.value.trim() || "Amigo da Equipe do Trânsito";
-    abrirCheckoutPix({
-      tipo: "contribuicao",
-      valor: valorFinal,
-      pagadorNome: contributorName
-    });
+    window.location.href = `/checkout?tipo=contribuicao&valor=${valorFinal}&nome=${encodeURIComponent(contributorName)}`;
   });
 }

@@ -33,7 +33,24 @@ module.exports = async (req, res) => {
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0 && data[0].sub) {
-          const targetUrl = SUB_GROUPS[data[0].sub] || SUB_GROUPS["Geral"];
+          const subName = data[0].sub;
+          // Tenta obter o link administrável do Sub
+          try {
+            const confRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=eq.${encodeURIComponent(subName)}&select=link_grupo,ativo`, {
+              headers: {
+                "apikey": supabaseKey,
+                "Authorization": `Bearer ${supabaseKey}`
+              }
+            });
+            if (confRes.ok) {
+              const confData = await confRes.json();
+              if (confData && confData.length > 0 && confData[0].ativo && confData[0].link_grupo) {
+                return res.redirect(302, confData[0].link_grupo);
+              }
+            }
+          } catch(e) {}
+
+          const targetUrl = SUB_GROUPS[subName] || SUB_GROUPS["Geral"];
           return res.redirect(302, targetUrl);
         }
       }

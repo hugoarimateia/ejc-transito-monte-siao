@@ -147,19 +147,24 @@
 </div>
 <div class="payment-notice reveal" role="note">
 <div class="payment-copy">
-<span class="eyebrow">Pagamento da equipe</span>
-<h3>Você pode concluir sua inscrição mesmo sem pagar agora</h3>
-<p>Queremos incentivar o pagamento o quanto antes. Caso ainda não seja possível, a inscrição será salva normalmente com o status <strong>Pendente</strong>.</p>
-<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela coordenação.</span></div></div>
-<dl class="pix-details">
-<div><dt>Pix Copia e Cola</dt><dd><textarea id="pixCode" readonly="" style="width:100%;min-height:76px;resize:none;">leoeuler03@gmail.com</textarea><br><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"><button onclick="navigator.clipboard.writeText(document.getElementById('pixCode').value);this.textContent='PIX copiado!';setTimeout(()=>this.textContent='Copiar chave PIX',2000);" type="button" style="flex:1;min-height:40px;border-radius:8px;border:1px solid #cdd5e5;background:#fff;font-weight:700;cursor:pointer;">Copiar chave PIX</button><button type="button" class="btn-open-pix-dinamico" data-tipo="inscricao" data-valor="50" style="flex:1;min-height:40px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-weight:700;cursor:pointer;">Pagar com Pix Dinâmico</button></div></dd></div>
-<div><dt>Favorecido</dt><dd>Coordenação EJC Trânsito Monte Sião</dd></div>
-<div><dt>Chave Oficial</dt><dd>leoeuler03@gmail.com (E-mail)</dd></div>
-</dl>
+<span class="eyebrow">Checkout Oficial da Equipe</span>
+<h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
+<p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu Sub.</p>
+<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span>Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
+<div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
+<a href="/checkout?tipo=inscricao&valor=50" class="button button-primary" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
+  <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
+</a>
 </div>
-<figure class="pix-figure">
-<img alt="QR Code Pix Oficial da Coordenação para pagamento da equipe" src="images/pix-qrcode-caixa.jpeg">
-<figcaption>Leia o QR Code no aplicativo do seu banco ou utilize o botão <strong>Pagar com Pix Dinâmico</strong> para confirmação imediata.</figcaption>
+</div>
+<figure class="pix-figure" style="background: rgba(2, 50, 132, 0.06); border: 2px dashed rgba(2, 50, 132, 0.2); border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+<div style="font-size: 2.4rem; color: var(--blue); margin-bottom: 10px;">
+  <i class="fa-brands fa-pix" style="color: #32bcad; margin-right: 8px;"></i>
+  <i class="fa-solid fa-credit-card" style="color: var(--blue);"></i>
+</div>
+<strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout Transparente</strong>
+<p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com aprovação em segundos e todas as principais bandeiras de cartão.</p>
+<a href="/checkout?tipo=inscricao&valor=50" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
 </figure>
 </div>
 <div aria-label="Subs disponíveis" class="sub-choice-grid">
@@ -206,6 +211,9 @@
 </label>
 <label class="field">WhatsApp
                 <input autocomplete="tel" id="whatsapp" name="whatsapp" placeholder="(83) 99999-9999" required="" type="tel">
+</label>
+<label class="field">E-mail para comprovante
+                <input autocomplete="email" id="email" name="email" placeholder="seuemail@exemplo.com" required="" type="email">
 </label>
 <label class="field">Tamanho da camisa
                 <select id="shirt-size" name="tamanho_camisa" required="">
@@ -266,13 +274,14 @@
 </label>
 <div class="form-step-title field-wide">
 <span>3</span>
-<div><strong>Pagamento</strong><small>O pagamento não é obrigatório para concluir a inscrição.</small></div>
+<div><strong>Pagamento da Inscrição</strong><small>Você pode pagar agora pelo Checkout Oficial ou registrar pendência.</small></div>
 </div>
 <fieldset class="field field-wide choice-field payment-choice">
-<legend>Você já efetuou o pagamento?</legend>
-<div class="inline-options">
-<label><input name="pagamento_informado" required="" type="radio" value="true"> Já realizei</label>
-<label><input name="pagamento_informado" required="" type="radio" value="false"> Vou pagar depois</label>
+<legend>Como você deseja pagar a taxa de inscrição (R$ 50,00)?</legend>
+<div class="inline-options" style="flex-direction: column; gap: 8px; align-items: flex-start;">
+<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="checkout" checked> <span>⚡ <strong>Pagar no Checkout Oficial</strong> (Pix instantâneo ou Cartão em até 12x)</span></label>
+<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="true"> <span>✓ Já realizei o pagamento anteriormente à coordenação</span></label>
+<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="false"> <span>⏳ Vou pagar depois (Salvar inscrição com pagamento pendente)</span></label>
 </div>
 </fieldset>
 <div class="field-wide" hidden="" id="paid-fields">
@@ -305,9 +314,12 @@
 <button class="button button-primary submit-signup" disabled="" type="submit">Finalizar inscrição</button>
 <p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
 <div class="whatsapp-success" hidden="" id="whatsapp-success">
-<strong>Inscrição concluída!</strong>
-<span>Entre agora no grupo do WhatsApp da sua Sub.</span>
+<strong>Inscrição concluída com sucesso!</strong>
+<span>Entre agora no grupo do WhatsApp da sua Sub:</span>
 <a class="button button-whatsapp" href="#" id="whatsapp-group-button" rel="noopener" target="_blank">Entrar no grupo do WhatsApp</a>
+<a class="button button-primary" href="#" id="btnPayAfterSignup" style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+  <i class="fa-solid fa-credit-card"></i> Pagar Taxa de Inscrição no Checkout Oficial
+</a>
 <small>Este acesso é individual e de uso único.</small>
 </div>
 </form>
@@ -380,11 +392,11 @@
 <strong>R$ 50,00</strong>
 <small>Materiais e organização da Equipe do Trânsito</small>
 <div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até 15 dias antes do encontro</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela coordenação.</small></div>
-<button type="button" class="button button-light btn-open-pix-dinamico" data-tipo="taxa_equipe" data-valor="50" style="margin-top: 18px; width: 100%; font-weight: 800;">Pagar Taxa de R$ 50 via Pix</button>
+<a href="/checkout?tipo=inscricao&valor=50" class="button button-light" style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar Taxa de R$ 50 (Pix ou Cartão)</a>
 </div>
 <div class="expense-card contribution-interactive-card">
 <h3>Fazer uma contribuição avulsa</h3>
-<p style="color: var(--muted); margin: 0 0 14px; font-size: .92rem;">Apoie a Equipe do Trânsito com qualquer valor via Pix dinâmico com confirmação instantânea:</p>
+<p style="color: var(--muted); margin: 0 0 14px; font-size: .92rem;">Apoie a Equipe do Trânsito com qualquer valor no Checkout Oficial com confirmação instantânea:</p>
 <div class="preset-values">
 <button type="button" class="preset-val-btn active" data-val="25">R$ 25</button>
 <button type="button" class="preset-val-btn" data-val="50">R$ 50</button>
@@ -398,7 +410,7 @@
 <label for="contributorName" style="font-size: .85rem; color: var(--ink);">Seu nome (opcional):</label>
 <input type="text" id="contributorName" placeholder="Ex.: Maria Silva" style="padding: 10px 12px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; width: 100%;">
 </div>
-<button type="button" class="button button-primary" id="btnSubmitContributionPix" style="width: 100%; min-height: 48px;">Gerar Pix de Contribuição</button>
+<button type="button" class="button button-primary" id="btnSubmitContributionCheckout" style="width: 100%; min-height: 48px;">Ir para o Checkout Seguro (Pix ou Cartão)</button>
 </div>
 <div class="expense-card">
 <h3>Para que será utilizado?</h3>
@@ -472,59 +484,6 @@
 <img alt="Calendário ampliado" src="images/calendario-ensaios.png">
 </dialog>
 
-<!-- MODAL CHECKOUT PIX DINÂMICO INTERATIVO -->
-<dialog class="pix-modal" id="pixModal">
-<div class="pix-modal-content">
-<div class="pix-modal-header">
-<div>
-<span class="eyebrow" id="pixModalTypeTag">Contribuição EJC</span>
-<h3 id="pixModalValueText">R$ 50,00</h3>
-</div>
-<button type="button" class="pix-close-btn" id="closePixModalBtn" aria-label="Fechar checkout">×</button>
-</div>
-
-<div class="pix-modal-body" id="pixActiveState">
-<div class="pix-timer-box">
-<span>Tempo restante para pagar:</span>
-<strong id="pixCountdown">15:00</strong>
-</div>
-
-<div class="pix-qrcode-display">
-<div id="pixQrContainer" class="pix-qr-frame">
-<!-- QR Code SVG/Canvas -->
-<div class="pix-loading-spinner">Gerando QR Code seguro...</div>
-</div>
-<p class="pix-qr-hint">Abra o aplicativo do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code acima, ou copie o código abaixo:</p>
-</div>
-
-<div class="pix-copy-section">
-<label for="pixPayloadInput">Código Pix Copia e Cola:</label>
-<div class="pix-input-group">
-<textarea id="pixPayloadInput" readonly></textarea>
-<button type="button" class="button button-primary" id="btnCopyPixPayload">Copiar Código Pix</button>
-</div>
-</div>
-
-<div class="pix-status-monitor">
-<div class="status-pulse-dot"></div>
-<span id="pixStatusText">Aguardando confirmação do banco...</span>
-</div>
-</div>
-
-<!-- ESTADO DE SUCESSO DO PIX -->
-<div class="pix-success-screen" id="pixSuccessState" style="display: none;">
-<div class="pix-success-badge">✓</div>
-<h3>Pagamento Confirmado!</h3>
-<p>Recebemos sua contribuição com sucesso. Muito obrigado pelo seu apoio à Equipe do Trânsito do EJC!</p>
-<div class="pix-receipt-details">
-<div><span>Identificador:</span> <strong id="receiptTxidText">-</strong></div>
-<div><span>Valor Recebido:</span> <strong id="receiptValText">R$ 50,00</strong></div>
-<div><span>Data de Confirmação:</span> <strong id="receiptTimeText">-</strong></div>
-</div>
-<button type="button" class="button button-primary" id="btnFinishPixSuccess" style="width: 100%; margin-top: 18px;">Concluir e Voltar</button>
-</div>
-</div>
-</dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/env-config.js"></script>
 <script src="js/supabase-config.js"></script>

@@ -10,6 +10,14 @@
     {
       "source": "/admin/",
       "destination": "/admin/index.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/checkout.html"
+    },
+    {
+      "source": "/checkout/",
+      "destination": "/checkout.html"
     }
   ],
   "headers": [

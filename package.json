@@ -7,7 +7,7 @@
     "dev": "node scripts/build-env.js && npx --yes serve -l 3000 .",
     "build": "node scripts/build-env.js",
     "start": "npx --yes serve -l 3000 .",
-    "test": "node -c js/script.js && node -c js/supabase-config.js && node scripts/build-env.js"
+    "test": "node -c js/script.js && node -c js/supabase-config.js && node -c api/checkout-process.js && node -c api/email-comprovante.js && node -c api/pix-create.js && node -c api/pix-webhook.js && node -c api/whatsapp.js && node scripts/build-env.js"
   },
   "keywords": [
     "ejc",
