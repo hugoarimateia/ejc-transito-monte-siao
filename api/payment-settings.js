@@ -12,6 +12,7 @@ const VALID_KEY_TYPES = ["EMAIL", "CPF", "CNPJ", "TELEFONE", "ALEATORIA"];
 function validarFormatoChavePix(chave, tipo) {
   const c = String(chave || "").trim();
   if (!c) return { valido: false, erro: "A chave PIX não pode ser vazia." };
+  if (c.includes("***")) return { valido: true, mascarada: true };
 
   switch (tipo) {
     case "EMAIL":

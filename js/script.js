@@ -173,7 +173,8 @@ const hasSupabaseConfig = Boolean(
   window.EJC_SUPABASE_URL &&
   window.EJC_SUPABASE_ANON_KEY &&
   !window.EJC_SUPABASE_URL.includes("COLE_AQUI") &&
-  !window.EJC_SUPABASE_ANON_KEY.includes("COLE_AQUI")
+  !window.EJC_SUPABASE_ANON_KEY.includes("COLE_AQUI") &&
+  !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr") // Evita ERR_NAME_NOT_RESOLVED para host offline
 );
 
 const supabaseClient = (hasSupabaseConfig && window.supabase)
@@ -570,10 +571,23 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==============================================================================
 window.EJC_ACTIVE_PRICE = 50.00;
 window.EJC_ACTIVE_LOTE = "1º Lote";
+window.EJC_ACTIVE_VERSION = 0;
 
 function aplicarConfiguracaoNaPagina(cfg) {
   if (!cfg) return;
   const pixData = cfg.pix || cfg;
+  const incomingVersion = Number(cfg.versao || pixData.versao || 0);
+  const currentVersion = Number(window.EJC_ACTIVE_VERSION || 0);
+
+  // Proteção anti-downgrade: impede que réplica serverless fria reverta para build antigo
+  if (currentVersion > 0 && incomingVersion > 0 && incomingVersion < currentVersion) {
+    console.warn(`[Landing] Ignorando payload desatualizado v${incomingVersion} < v${currentVersion}`);
+    return;
+  }
+  if (incomingVersion > 0) {
+    window.EJC_ACTIVE_VERSION = incomingVersion;
+  }
+
   const valorInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || 50.00);
   const lote = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || "1º Lote";
   const promo = (pixData.valorPromocional !== undefined && pixData.valorPromocional !== null)
@@ -610,6 +624,11 @@ function aplicarConfiguracaoNaPagina(cfg) {
     mainFeePriceDisplay.textContent = valorFormatado;
   }
 
+  const paymentLegend = document.getElementById("paymentLegendTitle");
+  if (paymentLegend) {
+    paymentLegend.textContent = `Como você deseja pagar a taxa de inscrição (${valorFormatado})?`;
+  }
+
   const btnPayFeeSection = document.getElementById("btnPayFeeSection");
   if (btnPayFeeSection) {
     btnPayFeeSection.textContent = `Pagar Taxa de ${valorFormatado} (Pix ou Cartão)`;
@@ -625,10 +644,18 @@ function carregarConfiguracaoPublica() {
     }
   } catch (e) {}
 
-  // 2. Busca remota no servidor com headers anti-cache estritos
+  // 2. Busca remota no servidor com headers anti-cache estritos e versão do cliente
+  const headers = {
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache"
+  };
+  if (window.EJC_ACTIVE_VERSION) {
+    headers["x-client-version"] = String(window.EJC_ACTIVE_VERSION);
+  }
+
   fetch(`/api/config?_t=${Date.now()}`, {
     cache: "no-store",
-    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+    headers: headers
   })
     .then(res => res.ok ? res.json() : null)
     .then(data => {

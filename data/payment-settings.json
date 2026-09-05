@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 21,
+    "versao": 41,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -11,10 +11,10 @@
     "pix_tipo_chave": "EMAIL",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_cidade": "CAMPINA GRANDE",
-    "atualizado_em": "2026-09-05T03:58:18.326Z",
+    "atualizado_em": "2026-09-05T04:27:43.958Z",
     "pix_documento": "",
-    "motivo_alteracao": "Restauração pós-teste de integração",
-    "atualizado_por": "sistema",
+    "motivo_alteracao": "Teste de chave PIX ciclo 10",
+    "atualizado_por": "test_runner",
     "preco_efetivo": 50
   },
   "lotes": [
@@ -37,9 +37,402 @@
       "valor": 60,
       "ativo": true,
       "criado_em": "2026-09-04T21:15:01.586Z"
+    },
+    {
+      "id": "lote-1788582463288",
+      "nome": "2º Lote Promocional",
+      "valor": 60,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.280Z"
+    },
+    {
+      "id": "lote-1788582463370",
+      "nome": "1º Lote Oficial",
+      "valor": 50,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.369Z"
+    },
+    {
+      "id": "lote-1788582463510",
+      "nome": "3º Lote Especial",
+      "valor": 75,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.510Z"
+    },
+    {
+      "id": "lote-1788582463557",
+      "nome": "Lote Relâmpago",
+      "valor": 50,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.557Z"
+    },
+    {
+      "id": "lote-1788582463596",
+      "nome": "2º Lote",
+      "valor": 65,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.595Z"
+    },
+    {
+      "id": "lote-1788582463647",
+      "nome": "Lote Amigos",
+      "valor": 55,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.646Z"
+    },
+    {
+      "id": "lote-1788582463814",
+      "nome": "Último Lote",
+      "valor": 80,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.812Z"
+    },
+    {
+      "id": "lote-1788582463887",
+      "nome": "Super Promo",
+      "valor": 50,
+      "ativo": true,
+      "criado_em": "2026-09-05T04:27:43.886Z"
     }
   ],
   "historico": [
+    {
+      "id": "audit-1788582470642-mjf2",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "superadmin_teste",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: CARDMTNVTMU9ZIT8",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:50.630Z",
+      "detalhes": {
+        "identificador": "CARDMTNVTMU9ZIT8",
+        "txid": "CARDMTNVTMU9ZIT8",
+        "email": "mariana.teste@ejctransito.com.br",
+        "email_enviado": true
+      }
+    },
+    {
+      "id": "audit-1788582463958-cht7",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "coordenacao@ejc.com (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 10",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.958Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 41
+      }
+    },
+    {
+      "id": "audit-1788582463944-c2gs",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (Super Promo)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Teste de ciclo 10",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.944Z",
+      "detalhes": {
+        "versao": 40,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788582463897-4wc7",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "financeiro@ejc.com (EMAIL)",
+      "valor_novo": "coordenacao@ejc.com (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 9",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.897Z",
+      "detalhes": {
+        "beneficiario": "EJC 9",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 39
+      }
+    },
+    {
+      "id": "audit-1788582463886-hpfu",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 80.00 (Último Lote)",
+      "valor_novo": "R$ 50.00 (Super Promo)",
+      "motivo": "Teste de ciclo 9",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.886Z",
+      "detalhes": {
+        "versao": 38,
+        "lote": "Super Promo",
+        "valor_promocional": 35
+      }
+    },
+    {
+      "id": "audit-1788582463831-of7h",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83999998888 (TELEFONE)",
+      "valor_novo": "financeiro@ejc.com (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 8",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.831Z",
+      "detalhes": {
+        "beneficiario": "EJC 8",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 37
+      }
+    },
+    {
+      "id": "audit-1788582463813-p0fw",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 55.00 (Lote Amigos)",
+      "valor_novo": "R$ 80.00 (Último Lote)",
+      "motivo": "Teste de ciclo 8",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.812Z",
+      "detalhes": {
+        "versao": 36,
+        "lote": "Último Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788582463737-drqq",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "83999998888 (TELEFONE)",
+      "motivo": "Teste de chave PIX ciclo 7",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.737Z",
+      "detalhes": {
+        "beneficiario": "EJC 7",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 35
+      }
+    },
+    {
+      "id": "audit-1788582463646-shrx",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 65.00 (2º Lote)",
+      "valor_novo": "R$ 55.00 (Lote Amigos)",
+      "motivo": "Teste de ciclo 7",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.646Z",
+      "detalhes": {
+        "versao": 34,
+        "lote": "Lote Amigos",
+        "valor_promocional": 49.9
+      }
+    },
+    {
+      "id": "audit-1788582463607-khyp",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "contato@ejctransito.com.br (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 6",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.607Z",
+      "detalhes": {
+        "beneficiario": "EJC 6",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 33
+      }
+    },
+    {
+      "id": "audit-1788582463595-0nz2",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (Lote Relâmpago)",
+      "valor_novo": "R$ 65.00 (2º Lote)",
+      "motivo": "Teste de ciclo 6",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.595Z",
+      "detalhes": {
+        "versao": 32,
+        "lote": "2º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788582463570-q7ql",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "a1b2c3d4-e5f6-7890-abcd-ef1234567890 (ALEATORIA)",
+      "valor_novo": "contato@ejctransito.com.br (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 5",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.570Z",
+      "detalhes": {
+        "beneficiario": "EJC 5",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 31
+      }
+    },
+    {
+      "id": "audit-1788582463557-b4zj",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 75.00 (3º Lote Especial)",
+      "valor_novo": "R$ 50.00 (Lote Relâmpago)",
+      "motivo": "Teste de ciclo 5",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.557Z",
+      "detalhes": {
+        "versao": 30,
+        "lote": "Lote Relâmpago",
+        "valor_promocional": 40
+      }
+    },
+    {
+      "id": "audit-1788582463532-3bl8",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83988887777 (TELEFONE)",
+      "valor_novo": "a1b2c3d4-e5f6-7890-abcd-ef1234567890 (ALEATORIA)",
+      "motivo": "Teste de chave PIX ciclo 4",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.532Z",
+      "detalhes": {
+        "beneficiario": "EJC 4",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 29
+      }
+    },
+    {
+      "id": "audit-1788582463510-ryen",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote Oficial)",
+      "valor_novo": "R$ 75.00 (3º Lote Especial)",
+      "motivo": "Teste de ciclo 4",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.510Z",
+      "detalhes": {
+        "versao": 28,
+        "lote": "3º Lote Especial",
+        "valor_promocional": 65
+      }
+    },
+    {
+      "id": "audit-1788582463453-nfou",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "12345678901 (CPF)",
+      "valor_novo": "83988887777 (TELEFONE)",
+      "motivo": "Teste de chave PIX ciclo 3",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.453Z",
+      "detalhes": {
+        "beneficiario": "EJC 3",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 27
+      }
+    },
+    {
+      "id": "audit-1788582463369-x8ox",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 60.00 (2º Lote Promocional)",
+      "valor_novo": "R$ 50.00 (1º Lote Oficial)",
+      "motivo": "Teste de ciclo 3",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.369Z",
+      "detalhes": {
+        "versao": 26,
+        "lote": "1º Lote Oficial",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788582463304-o09v",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "financeiro1@ejctransito.com.br (EMAIL)",
+      "valor_novo": "12345678901 (CPF)",
+      "motivo": "Teste de chave PIX ciclo 2",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.304Z",
+      "detalhes": {
+        "beneficiario": "EJC 2",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 25
+      }
+    },
+    {
+      "id": "audit-1788582463280-s0pe",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 55.00 (1º Lote)",
+      "valor_novo": "R$ 60.00 (2º Lote Promocional)",
+      "motivo": "Teste de ciclo 2",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.280Z",
+      "detalhes": {
+        "versao": 24,
+        "lote": "2º Lote Promocional",
+        "valor_promocional": 45
+      }
+    },
+    {
+      "id": "audit-1788582463174-vbff",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "financeiro1@ejctransito.com.br (EMAIL)",
+      "motivo": "Teste de chave PIX ciclo 1",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:43.174Z",
+      "detalhes": {
+        "beneficiario": "EJC 1",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 23
+      }
+    },
+    {
+      "id": "audit-1788582463029-8fte",
+      "acao": "PRICE_UPDATED",
+      "usuario": "test_runner",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 55.00 (1º Lote)",
+      "motivo": "Teste de ciclo 1",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T04:27:42.767Z",
+      "detalhes": {
+        "versao": 22,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
     {
       "id": "audit-1788580708502-1lfu",
       "acao": "PAYMENT_MANUALLY_APPROVED",
@@ -422,6 +815,179 @@
     "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
   },
   "pagamentos": [
+    {
+      "txid": "CARDMTNVTMU9ZIT8",
+      "nome_pagador": "Mariana Souza",
+      "email": "mariana.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83977776666",
+      "valor": 50,
+      "metodo": "credit_card",
+      "status": "approved",
+      "tipo": "inscricao",
+      "parcelas": 3,
+      "cartao_ultimos_digitos": "4242",
+      "cartao_bandeira": "Visa",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-05T04:27:50.630Z",
+      "criado_em": "2026-09-05T04:27:50.628Z"
+    },
+    {
+      "txid": "PIXMTNVTM7JEA2U",
+      "nome_pagador": "Gabriel Silva Teste",
+      "email": "participante.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83988887777",
+      "valor": 50,
+      "metodo": "pix",
+      "status": "approved",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0120leoeuler03@gmail.com0225TAXA EJC TRANSITO 1º LOTE520400005303986540550.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62190515PIXMTNVTM7JEA2U63043D79",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:49.812Z",
+      "pago_em": "2026-09-05T04:27:49.830Z"
+    },
+    {
+      "txid": "PIXMTNVTHQBQB4M",
+      "nome_pagador": "Participante Ciclo 10",
+      "email": "teste.ciclo10@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 50,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0120leoeuler03@gmail.com0225TAXA EJC TRANSITO 1º LOTE520400005303986540550.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62190515PIXMTNVTHQBQB4M6304C4ED",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:44.007Z"
+    },
+    {
+      "txid": "PIXMTNVTHODI8OD",
+      "nome_pagador": "Participante Ciclo 9",
+      "email": "teste.ciclo9@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 35,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126740014br.gov.bcb.pix0119coordenacao@ejc.com0229TAXA EJC TRANSITO SUPER PROMO520400005303986540535.005802BR5905EJC 96014CAMPINA GRANDE62190515PIXMTNVTHODI8OD6304A1D6",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.935Z"
+    },
+    {
+      "txid": "PIXMTNVTHMQIVHU",
+      "nome_pagador": "Participante Ciclo 8",
+      "email": "teste.ciclo8@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 80,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126730014br.gov.bcb.pix0118financeiro@ejc.com0229TAXA EJC TRANSITO ÚLTIMO LOTE520400005303986540580.005802BR5905EJC 86014CAMPINA GRANDE62190515PIXMTNVTHMQIVHU63042B16",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.875Z"
+    },
+    {
+      "txid": "PIXMTNVTHJLK3KO",
+      "nome_pagador": "Participante Ciclo 7",
+      "email": "teste.ciclo7@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 49.9,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126660014br.gov.bcb.pix0111839999988880229TAXA EJC TRANSITO LOTE AMIGOS520400005303986540549.905802BR5905EJC 76014CAMPINA GRANDE62190515PIXMTNVTHJLK3KO6304710A",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.764Z"
+    },
+    {
+      "txid": "PIXMTNVTHFLFIA8",
+      "nome_pagador": "Participante Ciclo 6",
+      "email": "teste.ciclo6@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 65,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0120leoeuler03@gmail.com0225TAXA EJC TRANSITO 2º LOTE520400005303986540565.005802BR5905EJC 66014CAMPINA GRANDE62190515PIXMTNVTHFLFIA863048610",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.619Z"
+    },
+    {
+      "txid": "PIXMTNVTHEKFRWR",
+      "nome_pagador": "Participante Ciclo 5",
+      "email": "teste.ciclo5@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 40,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126840014br.gov.bcb.pix0126contato@ejctransito.com.br0232TAXA EJC TRANSITO LOTE RELÂMPAGO520400005303986540540.005802BR5905EJC 56014CAMPINA GRANDE62190515PIXMTNVTHEKFRWR6304100B",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.581Z"
+    },
+    {
+      "txid": "PIXMTNVTHDK8FDH",
+      "nome_pagador": "Participante Ciclo 4",
+      "email": "teste.ciclo4@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 65,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126960014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef12345678900234TAXA EJC TRANSITO 3º LOTE ESPECIAL520400005303986540565.005802BR5905EJC 46014CAMPINA GRANDE62190515PIXMTNVTHDK8FDH6304CFF5",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.546Z"
+    },
+    {
+      "txid": "PIXMTNVTHBJZW1B",
+      "nome_pagador": "Participante Ciclo 3",
+      "email": "teste.ciclo3@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 50,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126700014br.gov.bcb.pix0111839888877770233TAXA EJC TRANSITO 1º LOTE OFICIAL520400005303986540550.005802BR5905EJC 36014CAMPINA GRANDE62190515PIXMTNVTHBJZW1B63048FE8",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.473Z"
+    },
+    {
+      "txid": "PIXMTNVTH8C1XHV",
+      "nome_pagador": "Participante Ciclo 2",
+      "email": "teste.ciclo2@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 45,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126740014br.gov.bcb.pix0111123456789010237TAXA EJC TRANSITO 2º LOTE PROMOCIONAL520400005303986540545.005802BR5905EJC 26014CAMPINA GRANDE62190515PIXMTNVTH8C1XHV63048052",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.357Z"
+    },
+    {
+      "txid": "PIXMTNVTH4OQLO4",
+      "nome_pagador": "Participante Ciclo 1",
+      "email": "teste.ciclo1@ejctransito.com.br",
+      "whatsapp_pagador": null,
+      "valor": 55,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126810014br.gov.bcb.pix0130financeiro1@ejctransito.com.br0225TAXA EJC TRANSITO 1º LOTE520400005303986540555.005802BR5905EJC 16014CAMPINA GRANDE62190515PIXMTNVTH4OQLO463049F94",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T04:27:43.238Z"
+    },
     {
       "txid": "CARDMTNURV5EJ6DT",
       "nome_pagador": "Mariana Souza",

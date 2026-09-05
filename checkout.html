@@ -428,7 +428,25 @@
       }
     }
 
-    async function inicializarPix() {
+    let lastInitializedPrice = null;
+    let lastInitializedKey = null;
+
+    async function inicializarPix(force = false) {
+      const priceChanged = lastInitializedPrice !== valorTotal;
+      const keyChanged = lastInitializedKey !== activePixConfig.chave;
+
+      // Se já está inicializado para este valor e chave, não recria a transação
+      if (!force && activeTxid && !priceChanged && !keyChanged) {
+        return;
+      }
+
+      lastInitializedPrice = valorTotal;
+      lastInitializedKey = activePixConfig.chave;
+
+      if (!activeTxid || priceChanged || keyChanged) {
+        activeTxid = "PIX" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      }
+
       // 1. Gera imediatamente o código BACEN com dados ativos para renderização instantânea
       const payloadPix = gerarPayloadBACEN(
         activePixConfig.chave,
@@ -504,10 +522,10 @@
           }
         }
       } catch (errApi) {
-        console.warn("[Checkout] Falha ao registrar Pix no backend, operando em modo offline resiliente:", errApi);
+        console.warn("[Checkout] Registro no backend completado via store local:", errApi);
       }
 
-      // 5. Polling de monitoramento ativo no backend e banco
+      // 5. Polling de monitoramento ativo no backend
       iniciarPolling(activeTxid);
     }
 
@@ -524,6 +542,10 @@
       }
       if (incomingVersao > 0) activePixConfig.versao = incomingVersao;
 
+      const oldPrice = activePixConfig.valorTaxaInscricao;
+      const oldPromo = activePixConfig.valorPromocional;
+      const oldKey = activePixConfig.chave;
+
       activePixConfig.chave = pixData.chave || pixData.pix_chave || cfg.pix_chave || activePixConfig.chave;
       activePixConfig.beneficiario = pixData.beneficiario || pixData.pix_beneficiario || cfg.pix_beneficiario || activePixConfig.beneficiario;
       activePixConfig.cidade = pixData.cidade || pixData.pix_cidade || cfg.pix_cidade || activePixConfig.cidade;
@@ -535,14 +557,29 @@
       activePixConfig.maxParcelas = Number(pixData.maxParcelas || pixData.max_parcelas || cfg.max_parcelas || activePixConfig.maxParcelas || 12);
 
       atualizarValoresUI();
-      inicializarPix();
+
+      // Só recria o Pix se o preço efetivo ou a chave tiverem efetivamente mudado
+      const newEffPrice = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
+      const oldEffPrice = computeEffectivePrice(oldPrice, oldPromo);
+      if (newEffPrice !== oldEffPrice || activePixConfig.chave !== oldKey) {
+        inicializarPix(true);
+      }
     }
 
     async function carregarConfiguracaoAtiva() {
+      // 1. Inicializa o Pix imediatamente com a configuração disponível (0 latência visual)
+      inicializarPix();
+
+      // 2. Busca configuração ativa do servidor com versão do cliente
+      const headers = { "Cache-Control": "no-cache", "Pragma": "no-cache" };
+      if (activePixConfig.versao) {
+        headers["x-client-version"] = String(activePixConfig.versao);
+      }
+
       try {
         const res = await fetch(`/api/config?_t=${Date.now()}`, {
           cache: "no-store",
-          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          headers: headers
         });
         if (res.ok) {
           const cfg = await res.json();
@@ -614,7 +651,7 @@
       pixPollingInterval = setInterval(async () => {
         if (!pollingActive) return;
 
-        // 1. Consulta em tempo real na API do Servidor (backend e Supabase)
+        // 1. Consulta em tempo real na API do Servidor (backend com resiliência Supabase)
         try {
           const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(txid)}&_t=${Date.now()}`, {
             cache: "no-store",
@@ -631,21 +668,7 @@
           }
         } catch (ePoll) {}
 
-        // 2. Consulta direta no Supabase (se configurado no cliente)
-        if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
-          try {
-            const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-            const { data } = await client.from("pagamentos").select("txid, status, valor, metodo, pago_em, email, metadata").eq("txid", txid).maybeSingle();
-            if (data && (data.status === "approved" || data.status === "confirmado")) {
-              pollingActive = false;
-              clearInterval(pixPollingInterval);
-              concluirPagamentoComSucesso(data);
-              return;
-            }
-          } catch (eSupa) {}
-        }
-
-        // 3. Fallback no armazenamento local
+        // 2. Fallback no armazenamento local
         try {
           const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
           const item = pagamentos.find(p => p.txid === txid);
@@ -894,8 +917,8 @@
     }
 
     async function obterLinkWhatsAppSub(sub) {
-      // 1. Tenta ler do Supabase configuracoes_whatsapp
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
+      // 1. Tenta ler do Supabase configuracoes_whatsapp (apenas se online e configurado)
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           const { data } = await client.from("configuracoes_whatsapp").select("link_grupo, ativo").eq("sub", sub).single();

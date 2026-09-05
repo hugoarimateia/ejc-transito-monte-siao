@@ -710,8 +710,8 @@
 
       renderizarTudo();
 
-      // 2. Tenta buscar no Supabase se conectado
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
+      // 2. Tenta buscar no Supabase se conectado (apenas se não for o host offline de placeholder)
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI") && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           
@@ -1179,8 +1179,8 @@
         console.warn("[Admin] Falha ao acionar API payment-settings:", errApi);
       }
 
-      // Tenta RPC direta no Supabase como garantia adicional
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
+      // Tenta RPC direta no Supabase como garantia adicional (apenas se online)
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           await client.rpc("confirmar_pagamento_unificado", {
@@ -1571,6 +1571,7 @@
     function validarChavePixFrontend(chave, tipo) {
       const c = chave.trim();
       if (!c) return "A chave PIX não pode ser vazia.";
+      if (c.includes("***")) return null; // Preserva chave ativa existente
       if (tipo === "EMAIL" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) {
         return "Formato de e-mail inválido para chave PIX.";
       }
