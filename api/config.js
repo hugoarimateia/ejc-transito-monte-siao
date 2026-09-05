@@ -33,6 +33,7 @@ module.exports = async (req, res) => {
 
   const s = activeData.settings;
   const w = activeData.whatsapp || {};
+  const precoEfetivo = settingsStore.getEffectivePrice(s);
 
   const pixConfig = {
     chave: s.pix_chave,
@@ -41,11 +42,16 @@ module.exports = async (req, res) => {
     cidade: s.pix_cidade,
     valorTaxaInscricao: Number(s.valor_inscricao),
     valor_inscricao: Number(s.valor_inscricao),
+    precoEfetivo: Number(precoEfetivo),
+    preco_efetivo: Number(precoEfetivo),
     loteAtual: s.lote_atual,
     lote_atual: s.lote_atual,
-    valorPromocional: s.valor_promocional,
+    valorPromocional: s.valor_promocional ? Number(s.valor_promocional) : null,
+    valor_promocional: s.valor_promocional ? Number(s.valor_promocional) : null,
     taxaAdicional: Number(s.taxa_adicional || 0),
+    taxa_adicional: Number(s.taxa_adicional || 0),
     maxParcelas: Number(s.max_parcelas || 12),
+    max_parcelas: Number(s.max_parcelas || 12),
     versao: s.versao,
     tempoExpiracaoMinutos: Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15)
   };
@@ -62,7 +68,12 @@ module.exports = async (req, res) => {
     success: true,
     supabaseUrl,
     supabaseAnonKey,
+    preco_efetivo: precoEfetivo,
+    precoEfetivo: precoEfetivo,
     valor_inscricao: pixConfig.valor_inscricao,
+    valor_promocional: pixConfig.valor_promocional,
+    taxa_adicional: pixConfig.taxa_adicional,
+    max_parcelas: pixConfig.max_parcelas,
     lote_atual: pixConfig.lote_atual,
     pix_chave: pixConfig.chave,
     pix_beneficiario: pixConfig.beneficiario,

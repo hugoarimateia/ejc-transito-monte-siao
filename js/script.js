@@ -567,17 +567,31 @@ window.EJC_ACTIVE_LOTE = "1º Lote";
 
 function aplicarConfiguracaoNaPagina(cfg) {
   if (!cfg) return;
-  const valor = Number(cfg.valor_inscricao || (cfg.pix && cfg.pix.valorTaxaInscricao) || cfg.valorTaxaInscricao || 50.00);
-  const lote = cfg.lote_atual || (cfg.pix && cfg.pix.loteAtual) || cfg.loteAtual || "1º Lote";
+  const pixData = cfg.pix || cfg;
+  const valorInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || 50.00);
+  const lote = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || "1º Lote";
+  const promo = (pixData.valorPromocional !== undefined && pixData.valorPromocional !== null)
+    ? Number(pixData.valorPromocional)
+    : (cfg.valor_promocional !== undefined && cfg.valor_promocional !== null ? Number(cfg.valor_promocional) : null);
+  
+  const precoEfetivo = (cfg.preco_efetivo || cfg.precoEfetivo || pixData.preco_efetivo || pixData.precoEfetivo)
+    ? Number(cfg.preco_efetivo || cfg.precoEfetivo || pixData.preco_efetivo || pixData.precoEfetivo)
+    : ((promo !== null && !isNaN(promo) && promo > 0 && promo < valorInscricao) ? promo : valorInscricao);
 
-  window.EJC_ACTIVE_PRICE = valor;
+  window.EJC_ACTIVE_PRICE = precoEfetivo;
   window.EJC_ACTIVE_LOTE = lote;
 
-  const valorFormatado = valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorFormatado = precoEfetivo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorOriginalFormatado = valorInscricao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const hasPromo = promo !== null && promo < valorInscricao && promo > 0;
 
   const heroFeeText = document.getElementById("heroFeeText");
   if (heroFeeText) {
-    heroFeeText.textContent = `Taxa única de ${valorFormatado} (${lote}). Cartão de crédito em até 12x ou Pix com baixa imediata.`;
+    if (hasPromo) {
+      heroFeeText.innerHTML = `Taxa promocional de <strong>${valorFormatado}</strong> <del style="opacity: 0.7;">${valorOriginalFormatado}</del> (${lote}). Cartão ou Pix com baixa imediata.`;
+    } else {
+      heroFeeText.textContent = `Taxa única de ${valorFormatado} (${lote}). Cartão de crédito em até 12x ou Pix com baixa imediata.`;
+    }
   }
 
   const feeLotBadge = document.getElementById("feeLotBadge");

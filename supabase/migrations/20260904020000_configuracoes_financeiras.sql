@@ -172,19 +172,22 @@ BEGIN
         RETURN json_build_object('success', false, 'message', 'O valor da inscrição deve ser positivo.');
     END IF;
 
-    -- Localiza a configuração ativa atual com lock
+    -- Localiza a configuração ativa atual mais recente com lock
     SELECT * INTO v_atual 
     FROM public.configuracoes_financeiras 
     WHERE ativo = true 
+    ORDER BY versao DESC 
+    LIMIT 1
     FOR UPDATE;
 
-    IF FOUND THEN
-        v_nova_versao := v_atual.versao + 1;
-        -- Desativa a versão anterior
-        UPDATE public.configuracoes_financeiras 
-        SET ativo = false, atualizado_em = now() 
-        WHERE id = v_atual.id;
-    END IF;
+    -- Garante versão estritamente monotônica e crescente
+    SELECT COALESCE(MAX(versao), 0) + 1 INTO v_nova_versao 
+    FROM public.configuracoes_financeiras;
+
+    -- Desativa categoricamente todas as versões ativas anteriores para manter um único registro ativo
+    UPDATE public.configuracoes_financeiras 
+    SET ativo = false, atualizado_em = now() 
+    WHERE ativo = true;
 
     -- Insere a nova versão ativa
     INSERT INTO public.configuracoes_financeiras (

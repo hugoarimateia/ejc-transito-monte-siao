@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 13,
+    "versao": 17,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -11,10 +11,11 @@
     "pix_tipo_chave": "EMAIL",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_cidade": "CAMPINA GRANDE",
-    "atualizado_em": "2026-09-04T21:32:09.122Z",
+    "atualizado_em": "2026-09-05T02:42:46.859Z",
     "pix_documento": "",
-    "motivo_alteracao": "Restauração",
-    "atualizado_por": "admin_test"
+    "motivo_alteracao": "Restauração pós-teste de integração",
+    "atualizado_por": "sistema",
+    "preco_efetivo": 50
   },
   "lotes": [
     {
@@ -33,12 +34,76 @@
     {
       "id": "lote-1788556501588",
       "nome": "2º Lote Especial",
-      "valor": 65,
+      "valor": 60,
       "ativo": true,
       "criado_em": "2026-09-04T21:15:01.586Z"
     }
   ],
   "historico": [
+    {
+      "id": "audit-1788576166859-s64i",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "sistema",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "financeiro.ejc@igreja.org.br (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Restauração pós-teste de integração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T02:42:46.859Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 17
+      }
+    },
+    {
+      "id": "audit-1788576166830-rfeg",
+      "acao": "PRICE_UPDATED",
+      "usuario": "sistema",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 60.00 (2º Lote Especial)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Restauração pós-teste de integração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T02:42:46.830Z",
+      "detalhes": {
+        "versao": 16,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788576166720-gkzt",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "financeiro.ejc@igreja.org.br (EMAIL)",
+      "motivo": "Atualização de chave de teste",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T02:42:46.720Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO TESTE",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 15
+      }
+    },
+    {
+      "id": "audit-1788576166649-853m",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 60.00 (2º Lote Especial)",
+      "motivo": "Teste de sincronização cross-module",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T02:42:46.293Z",
+      "detalhes": {
+        "versao": 14,
+        "lote": "2º Lote Especial",
+        "valor_promocional": 45
+      }
+    },
     {
       "id": "audit-1788557529122-xx9t",
       "acao": "PIX_KEY_UPDATED",
@@ -255,10 +320,7 @@
     }
   ],
   "whatsapp": {
-    "verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-    "vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-    "amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-    "azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
-    "geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
+    "verde": "https://chat.whatsapp.com/TESTE_VERDE_NOVO",
+    "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
   }
 }

@@ -105,16 +105,18 @@ module.exports = async (req, res) => {
     let beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
     let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     let loteAtual = "1º Lote";
+    let maxParcelasAllowed = 12;
 
     try {
       const activeData = await settingsStore.getActiveSettings();
       if (activeData && activeData.settings) {
         const conf = activeData.settings;
-        officialPrice = Number(conf.valor_inscricao || officialPrice);
+        officialPrice = settingsStore.getEffectivePrice(conf);
         chavePix = conf.pix_chave || chavePix;
         beneficiario = conf.pix_beneficiario || beneficiario;
         cidade = conf.pix_cidade || cidade;
         loteAtual = conf.lote_atual || loteAtual;
+        maxParcelasAllowed = Number(conf.max_parcelas || 12);
       }
     } catch (err) {
       console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
@@ -125,7 +127,7 @@ module.exports = async (req, res) => {
     if (tipo === "inscricao") {
       valorNumerico = officialPrice;
     } else {
-      valorNumerico = Number(valor || 50);
+      valorNumerico = Number(valor || officialPrice);
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da contribuição inválido." });
       }
@@ -195,7 +197,7 @@ module.exports = async (req, res) => {
     if (metodo === "credit_card") {
       const ultimosDigitos = cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : "0000";
       const bandeira = cartao_bandeira || "Cartão";
-      const totalParcelas = Math.min(12, Math.max(1, Number(parcelas || 1)));
+      const totalParcelas = Math.min(maxParcelasAllowed, Math.max(1, Number(parcelas || 1)));
 
       // Simulação de aprovação segura de gateway
       const statusFinal = "approved";

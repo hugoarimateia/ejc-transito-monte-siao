@@ -70,6 +70,10 @@
               <span id="labelExtraShirt">Camisa Adicional</span>
               <span id="valExtraShirt">R$ 0,00</span>
             </div>
+            <div class="price-row" id="rowDescontoPromo" style="display: none;">
+              <span><i class="fa-solid fa-tag" style="color: #34d399; margin-right: 4px;"></i> Desconto Promocional</span>
+              <span id="valDescontoPromo" style="color: #34d399; font-weight: 700;">- R$ 0,00</span>
+            </div>
             <div class="price-row">
               <span>Taxa de Processamento</span>
               <span style="color: #34d399; font-weight: 700;">Grátis</span>
@@ -265,36 +269,64 @@
       if (stored) localConfig = JSON.parse(stored);
     } catch (e) {}
 
+    function computeEffectivePrice(regular, promo) {
+      if (promo !== null && promo !== undefined && !isNaN(promo) && promo > 0 && promo < regular) {
+        return promo;
+      }
+      return regular;
+    }
+
     let activePixConfig = {
       chave: (localConfig && localConfig.pix_chave) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.chave) || "leoeuler03@gmail.com",
       beneficiario: (localConfig && localConfig.pix_beneficiario) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.beneficiario) || "EJC TRANSITO MONTE SIAO",
       cidade: (localConfig && localConfig.pix_cidade) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.cidade) || "CAMPINA GRANDE",
       loteAtual: (localConfig && localConfig.lote_atual) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "1º Lote",
-      valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00)
+      valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00),
+      valorPromocional: (localConfig && localConfig.valor_promocional !== undefined && localConfig.valor_promocional !== null) ? Number(localConfig.valor_promocional) : null,
+      maxParcelas: Number((localConfig && localConfig.max_parcelas) || 12)
     };
 
     let valorBase;
     if (tipoCheckout === "inscricao") {
-      valorBase = activePixConfig.valorTaxaInscricao;
+      valorBase = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
     } else {
       valorBase = Math.max(1, Number(urlParams.get("valor") || 50));
     }
     let valorTotal = valorBase;
 
+    function atualizarValoresUI() {
+      if (tipoCheckout === "inscricao") {
+        const precoEfetivo = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
+        valorTotal = precoEfetivo;
+        document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
+        document.getElementById("labelItemTaxa").textContent = "Taxa de Inscrição";
+        document.getElementById("valItemTaxa").textContent = activePixConfig.valorTaxaInscricao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+        const rowPromo = document.getElementById("rowDescontoPromo");
+        if (rowPromo) {
+          if (activePixConfig.valorPromocional && activePixConfig.valorPromocional > 0 && activePixConfig.valorPromocional < activePixConfig.valorTaxaInscricao) {
+            const desconto = activePixConfig.valorTaxaInscricao - activePixConfig.valorPromocional;
+            document.getElementById("valDescontoPromo").textContent = `- ${desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+            rowPromo.style.display = "flex";
+          } else {
+            rowPromo.style.display = "none";
+          }
+        }
+        document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      } else {
+        document.getElementById("summaryEventTitle").textContent = "Contribuição da Equipe";
+        document.getElementById("labelItemTaxa").textContent = "Valor Contribuído";
+        document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      }
+      atualizarOpcoesParcelas(valorTotal, activePixConfig.maxParcelas);
+    }
+
     // Elementos do Resumo
     document.getElementById("summaryParticipantName").textContent = nomeParticipante;
     document.getElementById("summarySubTag").textContent = `Sub ${subSelecionado}`;
     document.getElementById("summarySubTag").className = `event-tag sub-${subSelecionado.toLowerCase()}`;
-    document.getElementById("valItemTaxa").textContent = valorBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    
-    if (tipoCheckout === "inscricao") {
-      document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
-      document.getElementById("labelItemTaxa").textContent = "Taxa de Inscrição";
-    } else if (tipoCheckout === "contribuicao") {
-      document.getElementById("summaryEventTitle").textContent = "Contribuição da Equipe";
-      document.getElementById("labelItemTaxa").textContent = "Valor Contribuído";
-    }
+    atualizarValoresUI();
 
     const emailInput = document.getElementById("checkoutEmail");
     if (emailParam) emailInput.value = emailParam;
@@ -380,11 +412,12 @@
       return p + calcularCRC16(p);
     }
 
-    function atualizarOpcoesParcelas(valor) {
+    function atualizarOpcoesParcelas(valor, maxParcelas) {
       const select = document.getElementById("cardInstallments");
       if (!select) return;
       select.innerHTML = "";
-      for (let i = 1; i <= 12; i++) {
+      const maxLimit = Math.min(12, Math.max(1, Number(maxParcelas || activePixConfig.maxParcelas || 12)));
+      for (let i = 1; i <= maxLimit; i++) {
         const valParcela = (valor / i).toFixed(2).replace('.', ',');
         const option = document.createElement("option");
         option.value = i;
@@ -434,6 +467,23 @@
       iniciarPolling(activeTxid);
     }
 
+    function aplicarConfiguracao(cfg) {
+      if (!cfg) return;
+      const pixData = cfg.pix || cfg;
+      activePixConfig.chave = pixData.chave || pixData.pix_chave || cfg.pix_chave || activePixConfig.chave;
+      activePixConfig.beneficiario = pixData.beneficiario || pixData.pix_beneficiario || cfg.pix_beneficiario || activePixConfig.beneficiario;
+      activePixConfig.cidade = pixData.cidade || pixData.pix_cidade || cfg.pix_cidade || activePixConfig.cidade;
+      activePixConfig.loteAtual = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || activePixConfig.loteAtual;
+      activePixConfig.valorTaxaInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || activePixConfig.valorTaxaInscricao);
+      
+      const rawPromo = pixData.valorPromocional !== undefined ? pixData.valorPromocional : (pixData.valor_promocional !== undefined ? pixData.valor_promocional : cfg.valor_promocional);
+      activePixConfig.valorPromocional = (rawPromo !== undefined && rawPromo !== null && rawPromo !== "") ? Number(rawPromo) : null;
+      activePixConfig.maxParcelas = Number(pixData.maxParcelas || pixData.max_parcelas || cfg.max_parcelas || activePixConfig.maxParcelas || 12);
+
+      atualizarValoresUI();
+      inicializarPix();
+    }
+
     async function carregarConfiguracaoAtiva() {
       try {
         const res = await fetch(`/api/config?_t=${Date.now()}`, {
@@ -442,27 +492,11 @@
         });
         if (res.ok) {
           const cfg = await res.json();
-          const pixData = cfg.pix || cfg;
-          if (pixData) {
-            activePixConfig.chave = pixData.chave || pixData.pix_chave || activePixConfig.chave;
-            activePixConfig.beneficiario = pixData.beneficiario || pixData.pix_beneficiario || activePixConfig.beneficiario;
-            activePixConfig.cidade = pixData.cidade || pixData.pix_cidade || activePixConfig.cidade;
-            activePixConfig.loteAtual = pixData.loteAtual || pixData.lote_atual || activePixConfig.loteAtual;
-            activePixConfig.valorTaxaInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || activePixConfig.valorTaxaInscricao);
-
-            if (tipoCheckout === "inscricao") {
-              valorTotal = activePixConfig.valorTaxaInscricao;
-              document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
-              document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-              document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            }
-          }
+          aplicarConfiguracao(cfg);
         }
       } catch (e) {
         console.warn("Falha ao buscar /api/config, usando fallback:", e);
       }
-      atualizarOpcoesParcelas(valorTotal);
-      inicializarPix();
     }
 
     // Ouvinte para propagação instantânea entre abas abertas no mesmo navegador
@@ -470,20 +504,7 @@
       if (e.key === "ejc_config_financeira" && e.newValue) {
         try {
           const newCfg = JSON.parse(e.newValue);
-          activePixConfig.chave = newCfg.pix_chave || activePixConfig.chave;
-          activePixConfig.beneficiario = newCfg.pix_beneficiario || activePixConfig.beneficiario;
-          activePixConfig.cidade = newCfg.pix_cidade || activePixConfig.cidade;
-          activePixConfig.loteAtual = newCfg.lote_atual || activePixConfig.loteAtual;
-          activePixConfig.valorTaxaInscricao = Number(newCfg.valor_inscricao || activePixConfig.valorTaxaInscricao);
-
-          if (tipoCheckout === "inscricao") {
-            valorTotal = activePixConfig.valorTaxaInscricao;
-            document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
-            document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-            document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-          }
-          atualizarOpcoesParcelas(valorTotal);
-          inicializarPix();
+          aplicarConfiguracao(newCfg);
         } catch (err) {
           console.warn("[Storage Sync Error]", err);
         }

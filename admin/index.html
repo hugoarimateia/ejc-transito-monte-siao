@@ -652,14 +652,34 @@
             if (secPay) secPay.style.display = "block";
             if (secFin) secFin.style.display = "block";
             if (secWpp) secWpp.style.display = "block";
+            try { history.replaceState(null, "", window.location.pathname); } catch (e) {}
           } else {
             if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
             if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
             if (secFin) secFin.style.display = (targetTab === "financeiro") ? "block" : "none";
             if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
+            try { history.replaceState(null, "", `#${targetTab}`); } catch (e) {}
           }
         });
       });
+
+      // Auto-seleciona a aba caso acesse diretamente /admin/financeiro ou #financeiro
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase().replace("#", "");
+      let autoTab = null;
+      if (path.endsWith("/financeiro") || hash === "financeiro" || hash === "fin") {
+        autoTab = "financeiro";
+      } else if (path.endsWith("/pagamentos") || hash === "pagamentos") {
+        autoTab = "pagamentos";
+      } else if (path.endsWith("/inscricoes") || hash === "inscricoes") {
+        autoTab = "inscricoes";
+      } else if (path.endsWith("/whatsapp") || hash === "whatsapp") {
+        autoTab = "whatsapp";
+      }
+      if (autoTab) {
+        const btn = document.querySelector(`.admin-tab-btn[data-tab="${autoTab}"]`);
+        if (btn) btn.click();
+      }
     }
 
     function carregarDados() {

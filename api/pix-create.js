@@ -84,9 +84,9 @@ module.exports = async (req, res) => {
 
     let valorNumerico;
     if (tipo === "inscricao") {
-      valorNumerico = Number(activeSettings.valor_inscricao || 50);
+      valorNumerico = settingsStore.getEffectivePrice(activeSettings);
     } else {
-      valorNumerico = Number(valor || 50);
+      valorNumerico = Number(valor || settingsStore.getEffectivePrice(activeSettings));
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da cobrança inválido" });
       }

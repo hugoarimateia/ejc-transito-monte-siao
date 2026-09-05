@@ -17,6 +17,40 @@ const TMP_FILE = path.join(os.tmpdir(), "ejc-payment-settings.json");
 // Cache em memória compartilhado durante o ciclo de vida da instância serverless
 let memoryStore = null;
 
+// Helper: calcula o preço efetivo considerando promoção ativa
+function getEffectivePrice(settings) {
+  if (!settings) return 50.00;
+  const promo = settings.valor_promocional !== null && settings.valor_promocional !== undefined
+    ? Number(settings.valor_promocional)
+    : null;
+  const regular = Number(settings.valor_inscricao || 50.00);
+  if (promo !== null && !isNaN(promo) && promo > 0 && promo < regular) {
+    return promo;
+  }
+  return regular;
+}
+
+// Helper: gera versão estritamente crescente entre todas as fontes (anti-shadowing)
+function getNextMonotonicVersion(knownCurrent = 0) {
+  let maxV = Number(knownCurrent || 0);
+  try {
+    if (fs.existsSync(PRIMARY_FILE)) {
+      const p = JSON.parse(fs.readFileSync(PRIMARY_FILE, "utf-8"));
+      if (p?.settings?.versao) maxV = Math.max(maxV, Number(p.settings.versao));
+    }
+  } catch (e) {}
+  try {
+    if (fs.existsSync(TMP_FILE)) {
+      const t = JSON.parse(fs.readFileSync(TMP_FILE, "utf-8"));
+      if (t?.settings?.versao) maxV = Math.max(maxV, Number(t.settings.versao));
+    }
+  } catch (e) {}
+  if (memoryStore?.settings?.versao) {
+    maxV = Math.max(maxV, Number(memoryStore.settings.versao));
+  }
+  return maxV + 1;
+}
+
 // Configurações padrão de fábrica (somente usadas se não houver dados gravados)
 function getDefaultSettings() {
   return {
@@ -270,6 +304,8 @@ async function getActiveSettings() {
     }
   }
 
+  localData.settings.preco_efetivo = getEffectivePrice(localData.settings);
+
   return {
     settings: localData.settings,
     lotes: localData.lotes || [],
@@ -301,7 +337,7 @@ async function updatePriceSettings({
   const currentSettings = activeData.settings;
   const valorAnterior = currentSettings.valor_inscricao;
   const loteAnterior = currentSettings.lote_atual;
-  const novaVersao = (Number(currentSettings.versao) || 1) + 1;
+  const novaVersao = getNextMonotonicVersion(currentSettings.versao);
   const agora = new Date().toISOString();
 
   const novoSettings = {
@@ -316,6 +352,7 @@ async function updatePriceSettings({
     atualizado_por: usuario || "admin",
     atualizado_em: agora
   };
+  novoSettings.preco_efetivo = getEffectivePrice(novoSettings);
 
   const auditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -510,7 +547,7 @@ async function updatePixSettings({
   const activeData = await getActiveSettings();
   const currentSettings = activeData.settings;
   const chaveAnterior = currentSettings.pix_chave;
-  const novaVersao = (Number(currentSettings.versao) || 1) + 1;
+  const novaVersao = getNextMonotonicVersion(currentSettings.versao);
   const agora = new Date().toISOString();
 
   // Preserva rigorosamente o valor de inscrição e lote ativos! Não reseta para padrão!
@@ -526,6 +563,7 @@ async function updatePixSettings({
     atualizado_por: usuario || "admin",
     atualizado_em: agora
   };
+  novoSettings.preco_efetivo = getEffectivePrice(novoSettings);
 
   const auditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -816,6 +854,8 @@ async function approvePayment({ identificador, usuario, ip }) {
 
 module.exports = {
   getActiveSettings,
+  getEffectivePrice,
+  getNextMonotonicVersion,
   updatePriceSettings,
   updatePixSettings,
   updateWhatsAppSettings,
