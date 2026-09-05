@@ -58,6 +58,9 @@
           <a href="/checkout" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Checkout
           </a>
+          <a href="/confirmacao-pagamento" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-receipt"></i> Consultar Confirmação
+          </a>
           <button class="button button-secondary" id="exportBtn" style="min-height: 42px; font-size: .84rem;">📥 Exportar CSV</button>
           <button class="button button-primary" id="logoutBtn" style="min-height: 42px; font-size: .84rem;">Sair</button>
         </div>
@@ -878,7 +881,10 @@
           <tr>
             <td>${new Date(p.criado_em || Date.now()).toLocaleString("pt-BR")}</td>
             <td><strong>${p.nome_pagador || 'Anônimo'}</strong></td>
-            <td>${p.email || '<span style="color:var(--muted); font-style:italic;">Não informado</span>'}</td>
+            <td>
+              ${p.email || '<span style="color:var(--muted); font-style:italic;">Não informado</span>'}
+              <br><small style="color:${p.comprovante_email_enviado ? '#10b981' : '#f59e0b'}; font-weight:600;"><i class="fa-solid ${p.comprovante_email_enviado ? 'fa-circle-check' : 'fa-clock'}"></i> ${p.comprovante_email_enviado ? 'Comprovante Enviado' : 'E-mail Pendente'}</small>
+            </td>
             <td>${methodBadge}</td>
             <td><span style="font-size:.78rem; text-transform:uppercase; font-weight:700; color:var(--muted);">${p.tipo || 'Inscrição'}</span></td>
             <td><strong>R$ ${Number(p.valor || 0).toFixed(2).replace('.', ',')}</strong></td>
@@ -891,6 +897,9 @@
               <button class="action-btn email" onclick="reenviarComprovanteEmail('${p.txid}')" title="Reenviar comprovante por e-mail">
                 <i class="fa-regular fa-envelope"></i>
               </button>
+              <a href="../confirmacao-pagamento.html?txid=${p.txid}&email=${encodeURIComponent(p.email || '')}&nome=${encodeURIComponent(p.nome_pagador || '')}" target="_blank" class="action-btn" title="Acompanhar confirmação do participante" style="display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
               ${!isApproved(p.status) ? `
                 <button class="action-btn confirm" onclick="aprovarTransacaoManual('${p.txid}')" title="Aprovar manualmente">
                   <i class="fa-solid fa-check"></i>

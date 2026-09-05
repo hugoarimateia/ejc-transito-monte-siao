@@ -22,6 +22,22 @@
     {
       "source": "/checkout/",
       "destination": "/checkout.html"
+    },
+    {
+      "source": "/confirmacao-pagamento",
+      "destination": "/confirmacao-pagamento.html"
+    },
+    {
+      "source": "/confirmacao-pagamento/",
+      "destination": "/confirmacao-pagamento.html"
+    },
+    {
+      "source": "/checkout/confirmacao",
+      "destination": "/confirmacao-pagamento.html"
+    },
+    {
+      "source": "/checkout/confirmacao/",
+      "destination": "/confirmacao-pagamento.html"
     }
   ],
   "headers": [

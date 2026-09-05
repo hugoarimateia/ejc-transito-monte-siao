@@ -153,6 +153,11 @@
                   <div class="pulse-indicator-dot"></div>
                   <span>Aguardando confirmação do pagamento...</span>
                 </div>
+
+                <a href="./confirmacao-pagamento.html" id="linkGoToConfirmation" class="btn-track-confirmation" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; font-size: .88rem; color: var(--blue); text-decoration: none; padding: 10px 14px; border: 1px dashed var(--border-color); border-radius: 10px; transition: all .2s ease; background: var(--bg-surface);">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span>Acompanhar confirmação em página exclusiva</span>
+                </a>
               </div>
             </div>
 
@@ -593,6 +598,13 @@
 
       // 5. Polling de monitoramento ativo no backend
       iniciarPolling(activeTxid);
+
+      // 6. Atualiza link para a página exclusiva de confirmação
+      const linkConf = document.getElementById("linkGoToConfirmation");
+      if (linkConf) {
+        const curEmail = emailInput ? emailInput.value.trim() : emailParam;
+        linkConf.href = `./confirmacao-pagamento.html?txid=${encodeURIComponent(activeTxid)}&email=${encodeURIComponent(curEmail)}&nome=${encodeURIComponent(nomeParticipante)}&sub=${encodeURIComponent(subSelecionado)}`;
+      }
     }
 
     function aplicarConfiguracao(cfg) {

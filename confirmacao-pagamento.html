@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <script>
+  (function(){
+    try {
+      var s = localStorage.getItem("ejc_theme");
+      var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", s || (d ? "dark" : "light"));
+    } catch(e) {}
+  })();
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#023284">
+  <meta name="description" content="Acompanhamento e Confirmação Oficial de Pagamento - EJC Trânsito Monte Sião.">
+  <title>Confirmação de Pagamento | EJC Equipe do Trânsito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/all.min.css" rel="stylesheet">
+  <style>
+    .conf-page-container {
+      max-width: 820px;
+      margin: 40px auto 80px;
+      padding: 0 20px;
+    }
+    .conf-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 24px;
+      transition: all .3s ease;
+    }
+    .conf-header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 16px;
+    }
+    .badge-identificando { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-processing { background: rgba(147, 51, 234, 0.15); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); }
+    .badge-approved { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-expired { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
+    .badge-error { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
+
+    .conf-status-hero {
+      text-align: center;
+      padding: 24px 16px;
+    }
+    .conf-status-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+    }
+    .icon-pending { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 2px dashed #f59e0b; animation: spin-slow 12s linear infinite; }
+    .icon-approved { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 2px solid #10b981; animation: pop-in .4s cubic-bezier(.175,.885,.32,1.275); }
+    .icon-processing { background: rgba(147, 51, 234, 0.15); color: #9333ea; border: 2px solid #9333ea; }
+    .icon-rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 2px solid #ef4444; }
+    .icon-expired { background: rgba(100, 116, 139, 0.15); color: #64748b; border: 2px solid #64748b; }
+    .icon-error { background: rgba(220, 38, 38, 0.15); color: #dc2626; border: 2px solid #dc2626; }
+
+    @keyframes pop-in {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes spin-slow {
+      100% { transform: rotate(360deg); }
+    }
+
+    .conf-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0 0 10px;
+      letter-spacing: -.5px;
+    }
+    .conf-subtitle {
+      color: var(--text-muted);
+      font-size: .95rem;
+      max-width: 540px;
+      margin: 0 auto 24px;
+      line-height: 1.5;
+    }
+
+    .conf-details-table {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 18px 22px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .conf-details-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: .92rem;
+    }
+    .conf-details-row:last-child {
+      border-bottom: none;
+      padding-top: 14px;
+    }
+    .conf-details-label {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .conf-details-value {
+      font-weight: 700;
+      color: var(--text-main);
+      text-align: right;
+    }
+    .conf-highlight-val {
+      font-size: 1.35rem;
+      color: #38bdf8;
+      font-weight: 800;
+    }
+
+    .conf-input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) {
+      .conf-input-group { grid-template-columns: 1fr; }
+    }
+    .conf-field label {
+      display: block;
+      font-size: .84rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .conf-field input {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-main);
+      font-size: .95rem;
+      outline: none;
+      transition: all .2s ease;
+    }
+    .conf-field input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.18);
+    }
+
+    .conf-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-whatsapp-conf {
+      background: #25d366;
+      color: #ffffff !important;
+      font-weight: 800;
+      font-size: 1.05rem;
+      padding: 16px 24px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.25);
+      transition: all .2s ease;
+    }
+    .btn-whatsapp-conf:hover {
+      background: #20ba59;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35);
+    }
+    .btn-resend-email {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .2s ease;
+    }
+    .btn-resend-email:hover:not(:disabled) {
+      background: var(--bg-surface);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .btn-resend-email:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .pulse-dot-live {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 0 rgba(245, 158, 11, 0.7);
+      animation: pulse-ring 1.8s infinite;
+      display: inline-block;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .pulse-dot-green {
+      background: #10b981;
+      animation: pulse-ring-green 2s infinite;
+    }
+    @keyframes pulse-ring-green {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .banner-notification {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: .88rem;
+      font-weight: 600;
+      margin-top: 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .banner-success { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+    .banner-info { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+    .banner-warning { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO DA PÁGINA DE CONFIRMAÇÃO -->
+  <header class="checkout-header">
+    <div class="container checkout-nav">
+      <a href="./" class="checkout-brand" title="Voltar ao início">
+        <img src="images/logo1.png" alt="Logo EJC">
+        <div>
+          <strong>EJC — Equipe do Trânsito</strong>
+          <span>IEAD Monte Sião</span>
+        </div>
+      </a>
+      <div class="checkout-header-actions">
+        <button type="button" class="theme-toggle-btn" aria-label="Alternar tema" title="Alternar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <div class="security-badge-header">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Autenticação Oficial</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="conf-page-container">
+    
+    <!-- CARD 1: FORMULÁRIO DE IDENTIFICAÇÃO DO PARTICIPANTE -->
+    <section class="conf-card" id="identificationCard">
+      <div class="conf-header-badge badge-identificando">
+        <i class="fa-solid fa-user-check"></i>
+        <span>Identificação do Participante</span>
+      </div>
+      <h1 class="conf-title" style="font-size: 1.45rem;">Localizar Confirmação de Pagamento</h1>
+      <p class="conf-subtitle" style="margin: 0 0 20px; text-align: left;">
+        Informe seu <strong>Nome Completo</strong> e <strong>E-mail</strong> para acompanhar o status em tempo real ou resgatar seu comprovante e grupo do WhatsApp.
+      </p>
+
+      <form id="formIdentification" novalidate>
+        <div class="conf-input-group">
+          <div class="conf-field">
+            <label for="inputNome">Nome Completo</label>
+            <input type="text" id="inputNome" placeholder="Ex: Lucas Gabriel" required>
+          </div>
+          <div class="conf-field">
+            <label for="inputEmail">E-mail Cadastrado</label>
+            <input type="email" id="inputEmail" placeholder="seuemail@exemplo.com" required>
+          </div>
+        </div>
+
+        <div class="conf-field" style="margin-bottom: 20px;">
+          <label for="inputTxid">Identificador da Transação (TXID - Opcional)</label>
+          <input type="text" id="inputTxid" placeholder="Ex: PIX... ou CARD..." style="font-family: monospace;">
+        </div>
+
+        <button type="submit" class="button button-primary" id="btnConsultar" style="width: 100%; min-height: 48px;">
+          <i class="fa-solid fa-magnifying-glass" style="margin-right: 8px;"></i> Consultar Status do Pagamento
+        </button>
+      </form>
+    </section>
+
+    <!-- CARD 2: PAINEL DE STATUS EM TEMPO REAL -->
+    <section class="conf-card" id="statusCard" style="display: none;">
+      
+      <!-- ESTADO: IDENTIFICANDO / BUSCANDO -->
+      <div class="conf-status-hero" id="stateIdentificando" style="display: none;">
+        <div class="conf-status-icon icon-processing">
+          <i class="fa-solid fa-circle-notch fa-spin"></i>
+        </div>
+        <div class="conf-header-badge badge-identificando">Identificando Transação</div>
+        <h2 class="conf-title">Consultando Servidor Central...</h2>
+        <p class="conf-subtitle">Estamos buscando suas informações de pagamento e conciliação bancária.</p>
+      </div>
+
+      <!-- ESTADO: PENDING (AGUARDANDO PAGAMENTO) -->
+      <div class="conf-status-hero" id="statePending" style="display: none;">
+        <div class="conf-status-icon icon-pending">
+          <i class="fa-regular fa-clock"></i>
+        </div>
+        <div class="conf-header-badge badge-pending">
+          <span class="pulse-dot-live"></span>
+          <span>Aguardando Liquidação Bancária</span>
+        </div>
+        <h2 class="conf-title">Pagamento Pendente</h2>
+        <p class="conf-subtitle">
+          Identificamos sua cobrança. Nosso sistema está monitorando o recebimento bancário em tempo real. Assim que o Pix for compensado, esta página atualizará instantaneamente.
+        </p>
+
+        <div class="conf-details-table">
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-user"></i> Participante</span>
+            <span class="conf-details-value" id="pendNome">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-fingerprint"></i> Identificador (TXID)</span>
+            <span class="conf-details-value" id="pendTxid" style="font-family: monospace;">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-layer-group"></i> Lote / Sub</span>
+            <span class="conf-details-value" id="pendLote">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-money-bill-wave"></i> Valor a Pagar</span>
+            <span class="conf-details-value conf-highlight-val" id="pendValor">-</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px;">
+          <button type="button" class="btn-resend-email" id="btnCheckNow" style="background: var(--bg-surface);">
+            <i class="fa-solid fa-rotate"></i> Verificar Pagamento Agora
+          </button>
+          <a href="./checkout.html" class="btn-resend-email" id="btnBackToPix" style="text-decoration: none;">
+            <i class="fa-solid fa-qrcode"></i> Ver QR Code / Pix Novamente
+          </a>
+        </div>
+        
+        <div class="banner-notification banner-warning" id="bannerPollingNotice">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="bannerPollingText">Tentativas automáticas atingiram o limite temporário. Clique em "Verificar Pagamento Agora" assim que concluir o pagamento no seu banco.</span>
+        </div>
+      </div>
+
+      <!-- ESTADO: APPROVED (PAGAMENTO CONFIRMADO) -->
+      <div class="conf-status-hero" id="stateApproved" style="display: none;">
+        <div class="conf-status-icon icon-approved">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="conf-header-badge badge-approved">
+          <span class="pulse-dot-live pulse-dot-green"></span>
+          <span>Pagamento Confirmado com Sucesso</span>
+        </div>
+        <h2 class="conf-title">Parabéns! Sua vaga está garantida!</h2>
+        <p class="conf-subtitle">
+          Seu pagamento foi compensado e validado pelos servidores do EJC. A sua inscrição está 100% regularizada.
+        </p>
+
+        <div class="conf-details-table">
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-user"></i> Participante</span>
+            <span class="conf-details-value" id="apprNome">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-envelope"></i> E-mail</span>
+            <span class="conf-details-value" id="apprEmail">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-users"></i> Sub Equipe</span>
+            <span class="conf-details-value" id="apprSub">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-credit-card"></i> Forma de Pagamento</span>
+            <span class="conf-details-value" id="apprMetodo">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-fingerprint"></i> Identificador (TXID)</span>
+            <span class="conf-details-value" id="apprTxid" style="font-family: monospace; font-size: .85rem;">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-regular fa-calendar-check"></i> Data da Confirmação</span>
+            <span class="conf-details-value" id="apprData">-</span>
+          </div>
+          <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-receipt"></i> Valor Confirmado</span>
+            <span class="conf-details-value conf-highlight-val" style="color: #34d399;" id="apprValor">-</span>
+          </div>
+        </div>
+
+        <!-- SEÇÃO DO E-MAIL DE COMPROVANTE -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin: 20px 0; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div style="font-weight: 700; color: var(--text-main); font-size: .95rem; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-envelope-circle-check" style="color: #38bdf8;"></i>
+                <span>Comprovante Oficial por E-mail</span>
+              </div>
+              <p style="margin: 4px 0 0; font-size: .85rem; color: var(--text-muted);" id="apprEmailStatusText">
+                Enviado para seu e-mail cadastrado.
+              </p>
+            </div>
+            <button type="button" class="btn-resend-email" id="btnResendReceipt">
+              <i class="fa-solid fa-paper-plane"></i> Reenviar Comprovante
+            </button>
+          </div>
+          <div class="banner-notification banner-success" id="bannerEmailSent">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="bannerEmailSentText">Comprovante reenviado com sucesso! Verifique sua caixa de entrada e spam.</span>
+          </div>
+        </div>
+
+        <!-- SEÇÃO DE ACESSO AO WHATSAPP -->
+        <div class="conf-actions">
+          <a href="#" class="btn-whatsapp-conf" id="btnWhatsAppGroup" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp" style="font-size: 1.4rem;"></i>
+            <span>Entrar no Grupo Oficial do WhatsApp</span>
+          </a>
+          <p style="font-size: .84rem; color: var(--text-muted); margin: 0;">
+            Importante: Entre no grupo do WhatsApp para receber comunicados e instruções dos líderes.
+          </p>
+          <a href="./" class="button button-secondary" style="width: 100%; margin-top: 10px;">
+            Voltar à Página Inicial
+          </a>
+        </div>
+      </div>
+
+      <!-- ESTADO: REJECTED (RECUSADO / CANCELADO) -->
+      <div class="conf-status-hero" id="stateRejected" style="display: none;">
+        <div class="conf-status-icon icon-rejected">
+          <i class="fa-solid fa-xmark"></i>
+        </div>
+        <div class="conf-header-badge badge-rejected">Pagamento Não Aprovado</div>
+        <h2 class="conf-title">Transação Cancelada ou Rejeitada</h2>
+        <p class="conf-subtitle">
+          O emissor do cartão ou a instituição financeira rejeitou a cobrança. Você pode tentar novamente no checkout escolhendo Pix ou outro cartão.
+        </p>
+        <a href="./checkout.html" class="button button-primary" style="display: inline-flex; width: auto; margin-top: 16px;">
+          Tentar Novamente no Checkout
+        </a>
+      </div>
+
+      <!-- ESTADO: EXPIRED (EXPIRADO) -->
+      <div class="conf-status-hero" id="stateExpired" style="display: none;">
+        <div class="conf-status-icon icon-expired">
+          <i class="fa-solid fa-hourglass-end"></i>
+        </div>
+        <div class="conf-header-badge badge-expired">Cobrança Expirada</div>
+        <h2 class="conf-title">Tempo Limite Excedido</h2>
+        <p class="conf-subtitle">
+          O código Pix gerado anteriormente atingiu o tempo máximo de validade (15 minutos) e foi cancelado pelo sistema.
+        </p>
+        <a href="./checkout.html" class="button button-primary" style="display: inline-flex; width: auto; margin-top: 16px;">
+          Gerar Novo Código Pix
+        </a>
+      </div>
+
+      <!-- ESTADO: ERROR (NÃO ENCONTRADO / FALHA) -->
+      <div class="conf-status-hero" id="stateError" style="display: none;">
+        <div class="conf-status-icon icon-error">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <div class="conf-header-badge badge-error">Registro Não Localizado</div>
+        <h2 class="conf-title">Nenhum pagamento correspondente</h2>
+        <p class="conf-subtitle" id="errorSubtitleText">
+          Não encontramos transações com os dados informados. Verifique se o e-mail ou nome digitados conferem com os da inscrição.
+        </p>
+        <button type="button" class="button button-secondary" id="btnTryAgainSearch" style="display: inline-flex; width: auto; margin-top: 16px;">
+          Tentar Outra Consulta
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/theme.js"></script>
+  <script>
+    // ==============================================================================
+    // CONTROLADOR DA PÁGINA DE CONFIRMAÇÃO DE PAGAMENTO
+    // ==============================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramTxid = urlParams.get("txid") || urlParams.get("id") || "";
+    const paramEmail = urlParams.get("email") || "";
+    const paramNome = urlParams.get("nome") || "";
+    const paramInscricao = urlParams.get("inscricao_id") || "";
+
+    const inputNome = document.getElementById("inputNome");
+    const inputEmail = document.getElementById("inputEmail");
+    const inputTxid = document.getElementById("inputTxid");
+    const formIdentification = document.getElementById("formIdentification");
+    const statusCard = document.getElementById("statusCard");
+
+    // Estados visuais
+    const stateIdentificando = document.getElementById("stateIdentificando");
+    const statePending = document.getElementById("statePending");
+    const stateApproved = document.getElementById("stateApproved");
+    const stateRejected = document.getElementById("stateRejected");
+    const stateExpired = document.getElementById("stateExpired");
+    const stateError = document.getElementById("stateError");
+
+    let activePollingTimer = null;
+    let pollingAttempts = 0;
+    const MAX_POLLING_ATTEMPTS = 60; // 60 tentativas * 3s = 3 minutos de polling ativo
+    let currentActiveTxid = null;
+    let currentPaymentData = null;
+
+    function resetStates() {
+      stateIdentificando.style.display = "none";
+      statePending.style.display = "none";
+      stateApproved.style.display = "none";
+      stateRejected.style.display = "none";
+      stateExpired.style.display = "none";
+      stateError.style.display = "none";
+    }
+
+    function showState(stateElement) {
+      resetStates();
+      statusCard.style.display = "block";
+      stateElement.style.display = "block";
+      stateElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    // ----------------------------------------------------------------------------
+    // BUSCA DE STATUS AUTORITATIVA NO BACKEND (SEM FAKE CONFIRMATION NO CLIENTE)
+    // ----------------------------------------------------------------------------
+    async function consultarStatus({ txid, email, nome, inscricao_id, isManualCheck = false }) {
+      if (!txid && !email && !inscricao_id) return;
+
+      if (!isManualCheck && pollingAttempts === 0) {
+        showState(stateIdentificando);
+      }
+
+      const queryParams = new URLSearchParams();
+      if (txid) queryParams.set("txid", txid);
+      if (email) queryParams.set("email", email);
+      if (nome) queryParams.set("nome", nome);
+      if (inscricao_id) queryParams.set("inscricao_id", inscricao_id);
+      queryParams.set("_t", Date.now());
+
+      try {
+        const response = await fetch(`/api/checkout-process?${queryParams.toString()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            // Tenta fallback com busca no armazenamento local do navegador
+            const localData = buscarPagamentoLocal({ txid, email, nome });
+            if (localData) {
+              processarResultadoPagamento(localData);
+              return;
+            }
+            clearInterval(activePollingTimer);
+            showState(stateError);
+            return;
+          }
+          throw new Error(`Erro do servidor HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        processarResultadoPagamento(data);
+      } catch (err) {
+        console.warn("[Consulta Confirmação] Erro de rede ou servidor:", err);
+        // Fallback local caso rede esteja offline
+        const localData = buscarPagamentoLocal({ txid, email, nome });
+        if (localData) {
+          processarResultadoPagamento(localData);
+        } else if (pollingAttempts === 0) {
+          showState(stateError);
+        }
+      }
+    }
+
+    function buscarPagamentoLocal({ txid, email, nome }) {
+      try {
+        const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
+        if (txid) {
+          const match = localPagamentos.find(p => p.txid === txid);
+          if (match) return match;
+        }
+        if (email) {
+          const cleanEmail = email.trim().toLowerCase();
+          const match = localPagamentos.find(p => (p.email || "").toLowerCase() === cleanEmail);
+          if (match) return match;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function processarResultadoPagamento(data) {
+      currentPaymentData = data;
+      currentActiveTxid = data.txid;
+      const status = String(data.status || "pending").toLowerCase();
+
+      if (status === "approved" || status === "confirmado" || status === "paid") {
+        clearInterval(activePollingTimer);
+        renderApproved(data);
+      } else if (status === "rejected" || status === "recusado" || status === "cancelled") {
+        clearInterval(activePollingTimer);
+        showState(stateRejected);
+      } else if (status === "expired" || status === "expirado") {
+        clearInterval(activePollingTimer);
+        showState(stateExpired);
+      } else {
+        // PENDING / PROCESSING
+        renderPending(data);
+        iniciarCicloPolling(data.txid, data.email, data.nome);
+      }
+    }
+
+    // ----------------------------------------------------------------------------
+    // RENDERIZADORES DE ESTADO
+    // ----------------------------------------------------------------------------
+    function renderApproved(data) {
+      showState(stateApproved);
+
+      document.getElementById("apprNome").textContent = data.nome || inputNome.value || "Participante";
+      document.getElementById("apprEmail").textContent = data.email || inputEmail.value || "-";
+      document.getElementById("apprSub").textContent = data.sub ? `Sub ${data.sub}` : "Geral";
+      document.getElementById("apprMetodo").textContent = data.metodo === "credit_card" ? "Cartão de Crédito" : "Pix Instantâneo";
+      document.getElementById("apprTxid").textContent = data.txid || "-";
+      document.getElementById("apprData").textContent = data.pago_em ? new Date(data.pago_em).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR");
+      document.getElementById("apprValor").textContent = Number(data.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+      if (data.whatsapp_link) {
+        document.getElementById("btnWhatsAppGroup").href = data.whatsapp_link;
+      } else {
+        document.getElementById("btnWhatsAppGroup").href = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+      }
+
+      if (data.comprovante_email_enviado) {
+        document.getElementById("apprEmailStatusText").textContent = `Comprovante oficial entregue para ${data.email || "seu e-mail"}.`;
+      }
+
+      // Atualiza também o localStorage para manter histórico consistente na máquina do cliente
+      try {
+        const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
+        const idx = localPagamentos.findIndex(p => p.txid === data.txid);
+        if (idx !== -1) {
+          localPagamentos[idx].status = "approved";
+          localPagamentos[idx].pago_em = data.pago_em || new Date().toISOString();
+          localStorage.setItem("ejc_pagamentos", JSON.stringify(localPagamentos));
+        }
+      } catch (e) {}
+    }
+
+    function renderPending(data) {
+      showState(statePending);
+
+      document.getElementById("pendNome").textContent = data.nome || inputNome.value || "Participante";
+      document.getElementById("pendTxid").textContent = data.txid || "-";
+      document.getElementById("pendLote").textContent = data.lote || `Sub ${data.sub || "Geral"}`;
+      document.getElementById("pendValor").textContent = Number(data.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    // ----------------------------------------------------------------------------
+    // POLLING RESILIENTE E CONTROLADO
+    // ----------------------------------------------------------------------------
+    function iniciarCicloPolling(txid, email, nome) {
+      if (activePollingTimer) return; // Polling já está em execução
+
+      pollingAttempts = 0;
+      activePollingTimer = setInterval(() => {
+        pollingAttempts++;
+
+        if (pollingAttempts > MAX_POLLING_ATTEMPTS) {
+          clearInterval(activePollingTimer);
+          activePollingTimer = null;
+          document.getElementById("bannerPollingNotice").style.display = "flex";
+          return;
+        }
+
+        // Não faz chamadas desnecessárias se aba do navegador estiver oculta
+        if (document.hidden) return;
+
+        consultarStatus({ txid, email, nome, isManualCheck: true });
+      }, 3000);
+    }
+
+    // Botão de verificação manual imediata
+    document.getElementById("btnCheckNow").addEventListener("click", () => {
+      const btn = document.getElementById("btnCheckNow");
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...`;
+      btn.disabled = true;
+
+      document.getElementById("bannerPollingNotice").style.display = "none";
+      pollingAttempts = 0;
+
+      consultarStatus({
+        txid: currentActiveTxid || inputTxid.value.trim(),
+        email: inputEmail.value.trim(),
+        nome: inputNome.value.trim(),
+        isManualCheck: true
+      }).finally(() => {
+        setTimeout(() => {
+          btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Verificar Pagamento Agora`;
+          btn.disabled = false;
+        }, 1200);
+      });
+    });
+
+    // ----------------------------------------------------------------------------
+    // REENVIO DE COMPROVANTE POR E-MAIL
+    // ----------------------------------------------------------------------------
+    document.getElementById("btnResendReceipt").addEventListener("click", async () => {
+      const btn = document.getElementById("btnResendReceipt");
+      const banner = document.getElementById("bannerEmailSent");
+      const bannerText = document.getElementById("bannerEmailSentText");
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Reenviando...`;
+      banner.style.display = "none";
+
+      try {
+        const response = await fetch("/api/checkout-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "resend_receipt",
+            txid: currentActiveTxid,
+            email: (currentPaymentData && currentPaymentData.email) || inputEmail.value.trim(),
+            nome: (currentPaymentData && currentPaymentData.nome) || inputNome.value.trim()
+          })
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          banner.className = "banner-notification banner-success";
+          bannerText.textContent = resData.message || "Comprovante reenviado com sucesso! Verifique sua caixa de entrada e spam.";
+          banner.style.display = "flex";
+        } else {
+          banner.className = "banner-notification banner-warning";
+          bannerText.textContent = resData.error || "Não foi possível reenviar o comprovante agora. Tente novamente em alguns instantes.";
+          banner.style.display = "flex";
+        }
+      } catch (err) {
+        banner.className = "banner-notification banner-warning";
+        bannerText.textContent = "Falha ao conectar com o serviço de envio de e-mail.";
+        banner.style.display = "flex";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Reenviar Comprovante`;
+      }
+    });
+
+    // Submissão do formulário de identificação
+    formIdentification.addEventListener("submit", (e) => {
+      e.preventDefault();
+      clearInterval(activePollingTimer);
+      activePollingTimer = null;
+      pollingAttempts = 0;
+
+      const nome = inputNome.value.trim();
+      const email = inputEmail.value.trim();
+      const txid = inputTxid.value.trim();
+
+      if (!email && !txid) {
+        alert("Por favor, preencha o seu E-mail ou o TXID para prosseguir.");
+        inputEmail.focus();
+        return;
+      }
+
+      consultarStatus({ txid, email, nome });
+    });
+
+    document.getElementById("btnTryAgainSearch").addEventListener("click", () => {
+      resetStates();
+      statusCard.style.display = "none";
+      document.getElementById("identificationCard").scrollIntoView({ behavior: "smooth" });
+      inputEmail.focus();
+    });
+
+    // Limpeza de timers ao fechar ou descarregar a página
+    window.addEventListener("beforeunload", () => {
+      if (activePollingTimer) clearInterval(activePollingTimer);
+    });
+
+    // Inicialização automática se parâmetros de URL forem detectados
+    (function autoInitFromUrl() {
+      if (paramNome) inputNome.value = paramNome;
+      if (paramEmail) inputEmail.value = paramEmail;
+      if (paramTxid) inputTxid.value = paramTxid;
+
+      if (paramTxid || paramEmail || paramInscricao) {
+        consultarStatus({
+          txid: paramTxid,
+          email: paramEmail,
+          nome: paramNome,
+          inscricao_id: paramInscricao
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

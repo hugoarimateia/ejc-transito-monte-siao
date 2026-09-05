@@ -157,6 +157,106 @@ function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
   return finalPayload;
 }
 
+async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload = {}, executado_por = "sistema" }) {
+  if (!txid) throw new Error("TXID é obrigatório para confirmação.");
+  const cleanTxid = String(txid).trim();
+  const agora = new Date().toISOString();
+
+  let confirmedOnDatabase = false;
+  let paymentRecord = null;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // 1. Atualiza Supabase via RPC unificada
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const dbResponse = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+        method: "POST",
+        headers: {
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          p_txid: cleanTxid,
+          p_gateway: gateway,
+          p_executado_por: executado_por,
+          p_payload: payload
+        }),
+        signal: AbortSignal.timeout(4000)
+      });
+      if (dbResponse.ok) {
+        confirmedOnDatabase = true;
+      }
+    } catch (dbErr) {
+      console.warn("[confirmarPagamentoResiliente] Erro RPC Supabase:", dbErr.message);
+    }
+
+    try {
+      const payRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(cleanTxid)}&limit=1`, {
+        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (payRes.ok) {
+        const rows = await payRes.json();
+        if (rows && rows.length > 0) paymentRecord = rows[0];
+      }
+    } catch (fetchErr) {}
+  }
+
+  // 2. Atualiza Local Store / Fallback
+  try {
+    const localStore = settingsStore.loadLocalStore();
+    if (!Array.isArray(localStore.pagamentos)) localStore.pagamentos = [];
+    const idx = localStore.pagamentos.findIndex(p => p.txid === cleanTxid);
+    if (idx !== -1) {
+      localStore.pagamentos[idx].status = "approved";
+      localStore.pagamentos[idx].pago_em = agora;
+      if (!paymentRecord) paymentRecord = localStore.pagamentos[idx];
+    } else {
+      const novoReg = {
+        txid: cleanTxid,
+        status: "approved",
+        pago_em: agora,
+        metodo: "pix",
+        criado_em: agora
+      };
+      localStore.pagamentos.unshift(novoReg);
+      if (!paymentRecord) paymentRecord = novoReg;
+    }
+    settingsStore.saveLocalStore(localStore);
+  } catch (localErr) {
+    console.warn("[confirmarPagamentoResiliente] Erro Store Local:", localErr.message);
+  }
+
+  // 3. Envio Idempotente de E-mail (Apenas se ainda não tiver sido enviado com sucesso)
+  let emailStatus = { success: false, idempotente: true };
+  if (paymentRecord && paymentRecord.email && !paymentRecord.comprovante_email_enviado) {
+    try {
+      emailStatus = await sendPaymentReceiptEmail({
+        txid: paymentRecord.txid || cleanTxid,
+        nome: paymentRecord.nome_pagador || "Participante",
+        email: paymentRecord.email,
+        valor: paymentRecord.valor || 50,
+        metodo: paymentRecord.metodo || "pix",
+        sub: paymentRecord.metadata?.sub || paymentRecord.sub,
+        executado_por: executado_por
+      });
+    } catch (eEmail) {
+      console.warn("[confirmarPagamentoResiliente] Erro ao enviar comprovante:", eEmail.message);
+    }
+  }
+
+  return {
+    success: true,
+    txid: cleanTxid,
+    status: "approved",
+    confirmedOnDatabase,
+    emailEnviado: Boolean(emailStatus.success || paymentRecord?.comprovante_email_enviado),
+    paymentRecord
+  };
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -171,29 +271,47 @@ module.exports = async (req, res) => {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // ==============================================================================
-  // FLUXO GET: POLLING DE STATUS DA TRANSAÇÃO EM TEMPO REAL
-  // Permite ao checkout.html verificar no servidor/Supabase se o Pix foi confirmado
+  // FLUXO GET: CONSULTA E POLLING DE STATUS (POR TXID, EMAIL OU INSCRIÇÃO)
+  // Permite à página de confirmação e ao checkout monitorar a transação
   // ==============================================================================
   if (req.method === "GET") {
-    const txid = req.query.txid || req.query.id;
-    if (!txid) {
-      return res.status(400).json({ error: "Parâmetro txid é obrigatório para consulta de status." });
+    const queryTxid = req.query.txid || req.query.id || req.query.payment_id || req.query.reference;
+    const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : null;
+    const queryNome = req.query.nome ? String(req.query.nome).trim().toLowerCase() : null;
+    const queryInscricao = req.query.inscricao_id || req.query.registration_id;
+
+    if (!queryTxid && !queryEmail && !queryInscricao) {
+      return res.status(400).json({ error: "Informe o TXID, E-mail ou Inscrição para consulta de status." });
     }
 
     try {
       let transactionFound = null;
 
-      // 1. Consulta em tempo real no Supabase
+      // 1. Consulta no Supabase
       if (supabaseUrl && supabaseKey) {
         try {
-          const dbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(txid)}&limit=1`, {
+          let urlQuery = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
+          if (queryTxid) {
+            urlQuery += `txid=eq.${encodeURIComponent(queryTxid)}&limit=1`;
+          } else if (queryInscricao) {
+            urlQuery += `inscricao_id=eq.${encodeURIComponent(queryInscricao)}&order=criado_em.desc&limit=1`;
+          } else if (queryEmail) {
+            urlQuery += `email=eq.${encodeURIComponent(queryEmail)}&order=criado_em.desc&limit=5`;
+          }
+
+          const dbRes = await fetch(urlQuery, {
             headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
             signal: AbortSignal.timeout(3000)
           });
           if (dbRes.ok) {
             const rows = await dbRes.json();
             if (rows && rows.length > 0) {
-              transactionFound = rows[0];
+              if (queryNome && rows.length > 1) {
+                const matched = rows.find(r => (r.nome_pagador || "").toLowerCase().includes(queryNome));
+                transactionFound = matched || rows[0];
+              } else {
+                transactionFound = rows[0];
+              }
             }
           }
         } catch (dbErr) {
@@ -205,14 +323,28 @@ module.exports = async (req, res) => {
       if (!transactionFound) {
         const localStore = settingsStore.loadLocalStore();
         if (Array.isArray(localStore.pagamentos)) {
-          transactionFound = localStore.pagamentos.find(p => p.txid === txid);
+          if (queryTxid) {
+            transactionFound = localStore.pagamentos.find(p => p.txid === queryTxid);
+          } else if (queryInscricao) {
+            transactionFound = localStore.pagamentos.find(p => p.inscricao_id === queryInscricao);
+          } else if (queryEmail) {
+            const candidates = localStore.pagamentos.filter(p => (p.email || "").toLowerCase() === queryEmail);
+            if (candidates.length > 0) {
+              if (queryNome && candidates.length > 1) {
+                const matched = candidates.find(p => (p.nome_pagador || "").toLowerCase().includes(queryNome));
+                transactionFound = matched || candidates[0];
+              } else {
+                transactionFound = candidates[0];
+              }
+            }
+          }
         }
       }
 
       if (!transactionFound) {
         return res.status(404).json({
           success: false,
-          error: `Transação ${txid} não encontrada.`,
+          error: "Nenhum pagamento correspondente foi localizado.",
           status: "not_found"
         });
       }
@@ -231,15 +363,20 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         success: true,
         txid: transactionFound.txid,
-        status: transactionFound.status, // "pending", "approved", "failed"
-        pago_em: transactionFound.pago_em,
-        metodo: transactionFound.metodo,
+        payment_id: transactionFound.payment_id || transactionFound.txid,
+        status: transactionFound.status || "pending",
+        pago_em: transactionFound.pago_em || null,
+        criado_em: transactionFound.criado_em || null,
+        metodo: transactionFound.metodo || "pix",
         valor: Number(transactionFound.valor),
         nome: transactionFound.nome_pagador,
         email: transactionFound.email,
         sub: sub,
+        lote: transactionFound.metadata?.lote || transactionFound.lote || "1º Lote",
         inscricao_id: transactionFound.inscricao_id || null,
         comprovante_email_enviado: Boolean(transactionFound.comprovante_email_enviado),
+        comprovante_email_em: transactionFound.comprovante_email_em || null,
+        comprovante_email_erro: transactionFound.comprovante_email_erro || null,
         whatsapp_link: whatsappLink
       });
     } catch (err) {
@@ -257,6 +394,7 @@ module.exports = async (req, res) => {
 
   try {
     const {
+      action, // 'create' (default), 'resend_receipt', 'confirm_payment'
       metodo, // 'pix' ou 'credit_card'
       valor,
       nome,
@@ -271,8 +409,105 @@ module.exports = async (req, res) => {
       cartao_ultimos_digitos,
       cartao_bandeira,
       cartao_titular,
-      parcelas
+      parcelas,
+      txid: bodyTxid,
+      gateway: bodyGateway,
+      executado_por: bodyExecutadoPor,
+      force_resend: bodyForceResend
     } = req.body || {};
+
+    // --------------------------------------------------------------------------
+    // AÇÃO 1: CONFIRMAÇÃO MANUAL / RECONCILIAÇÃO (ADMIN OU TESTES)
+    // --------------------------------------------------------------------------
+    if (action === "confirm_payment") {
+      const targetTxid = bodyTxid || req.body?.id;
+      if (!targetTxid) {
+        return res.status(400).json({ error: "TXID obrigatório para confirmar pagamento." });
+      }
+      const confirmResult = await confirmarPagamentoResiliente({
+        txid: targetTxid,
+        gateway: bodyGateway || "manual_admin",
+        payload: req.body?.payload || {},
+        executado_por: bodyExecutadoPor || "admin_confirm"
+      });
+      return res.status(200).json(confirmResult);
+    }
+
+    // --------------------------------------------------------------------------
+    // AÇÃO 2: REENVIO DE COMPROVANTE POR E-MAIL
+    // --------------------------------------------------------------------------
+    if (action === "resend_receipt") {
+      const targetTxid = bodyTxid || req.body?.id;
+      const targetEmail = email ? String(email).trim().toLowerCase() : null;
+
+      if (!targetTxid && !targetEmail) {
+        return res.status(400).json({ error: "Informe o TXID ou E-mail para reenviar o comprovante." });
+      }
+
+      // Localiza a transação correspondente
+      let transactionFound = null;
+      if (supabaseUrl && supabaseKey) {
+        try {
+          let urlQuery = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
+          if (targetTxid) {
+            urlQuery += `txid=eq.${encodeURIComponent(targetTxid)}&limit=1`;
+          } else if (targetEmail) {
+            urlQuery += `email=eq.${encodeURIComponent(targetEmail)}&order=criado_em.desc&limit=1`;
+          }
+          const checkRes = await fetch(urlQuery, {
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+          });
+          if (checkRes.ok) {
+            const rows = await checkRes.json();
+            if (rows && rows.length > 0) transactionFound = rows[0];
+          }
+        } catch (dbErr) {}
+      }
+
+      if (!transactionFound) {
+        const localStore = settingsStore.loadLocalStore();
+        if (Array.isArray(localStore.pagamentos)) {
+          if (targetTxid) {
+            transactionFound = localStore.pagamentos.find(p => p.txid === targetTxid);
+          } else if (targetEmail) {
+            transactionFound = localStore.pagamentos.find(p => (p.email || "").toLowerCase() === targetEmail);
+          }
+        }
+      }
+
+      if (!transactionFound) {
+        return res.status(404).json({ error: "Transação não encontrada para reenvio de comprovante." });
+      }
+
+      const emailDestino = transactionFound.email || targetEmail;
+      const emailResult = await sendPaymentReceiptEmail({
+        txid: transactionFound.txid,
+        nome: transactionFound.nome_pagador || nome || "Participante",
+        email: emailDestino,
+        valor: transactionFound.valor || 50,
+        metodo: transactionFound.metodo || "pix",
+        sub: transactionFound.metadata?.sub || transactionFound.sub || sub,
+        executado_por: bodyExecutadoPor || "resend_request",
+        force_resend: true
+      });
+
+      // Atualiza status do comprovante no store local se necessário
+      try {
+        const localStore = settingsStore.loadLocalStore();
+        const pIdx = localStore.pagamentos?.findIndex(p => p.txid === transactionFound.txid);
+        if (pIdx !== -1 && localStore.pagamentos[pIdx]) {
+          localStore.pagamentos[pIdx].comprovante_email_enviado = true;
+          localStore.pagamentos[pIdx].comprovante_email_em = new Date().toISOString();
+          settingsStore.saveLocalStore(localStore);
+        }
+      } catch (e) {}
+
+      return res.status(200).json({
+        success: true,
+        message: `Comprovante reenviado com sucesso para ${emailDestino}.`,
+        email_result: emailResult
+      });
+    }
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
@@ -549,3 +784,5 @@ module.exports.emvFormat = emvFormat;
 module.exports.sanitizePixAscii = sanitizePixAscii;
 module.exports.validarPayloadPix = validarPayloadPix;
 module.exports.gerarPayloadPixBACEN = gerarPayloadPixBACEN;
+module.exports.confirmarPagamentoResiliente = confirmarPagamentoResiliente;
+
