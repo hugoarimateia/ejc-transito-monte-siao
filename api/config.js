@@ -66,6 +66,7 @@ module.exports = async (req, res) => {
 
   return res.status(200).json({
     success: true,
+    versao: s.versao,
     supabaseUrl,
     supabaseAnonKey,
     preco_efetivo: precoEfetivo,

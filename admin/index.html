@@ -1282,12 +1282,45 @@
         if (res.ok) {
           const data = await res.json();
           if (data && data.settings && data.settings.valor_inscricao !== undefined) {
-            configFinanceiraAtiva = {
-              ...configFinanceiraAtiva,
-              ...data.settings,
-              valor_inscricao: Number(data.settings.valor_inscricao)
-            };
-            localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
+            const serverVersion = Number(data.settings.versao || 0);
+            const localCachedRaw = localStorage.getItem("ejc_config_financeira");
+            let localCached = null;
+            try { localCached = localCachedRaw ? JSON.parse(localCachedRaw) : null; } catch(e){}
+            const localVersion = Number(localCached?.versao || 0);
+
+            // ANTI-DOWNGRADE MULTI-CONTAINER:
+            // Se o storage local do admin possui versão estritamente mais recente que a réplica do servidor
+            // (ocorre quando a réplica serverless sobe com /tmp vazio e Supabase offline),
+            // NÃO sobrepomos com os defaults antigos e re-hidratamos a réplica do backend!
+            if (localCached && localVersion > serverVersion && localCached.valor_inscricao) {
+              console.warn(`[Admin Financeiro] Preservando versão local v${localVersion} mais recente que o servidor v${serverVersion}. Re-hidratando réplica...`);
+              configFinanceiraAtiva = { ...localCached };
+              fetch("/api/payment-settings", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${currentAdminPass}`,
+                  "x-admin-token": currentAdminPass
+                },
+                body: JSON.stringify({
+                  action: "update_prices",
+                  usuario: "anti_downgrade_sync",
+                  lote_atual: configFinanceiraAtiva.lote_atual,
+                  valor_inscricao: configFinanceiraAtiva.valor_inscricao,
+                  valor_promocional: configFinanceiraAtiva.valor_promocional,
+                  taxa_adicional: configFinanceiraAtiva.taxa_adicional,
+                  max_parcelas: configFinanceiraAtiva.max_parcelas,
+                  motivo: "Re-hidratação automática anti-downgrade"
+                })
+              }).catch(() => {});
+            } else {
+              configFinanceiraAtiva = {
+                ...configFinanceiraAtiva,
+                ...data.settings,
+                valor_inscricao: Number(data.settings.valor_inscricao)
+              };
+              localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
+            }
           }
           if (data && data.historico && Array.isArray(data.historico)) {
             historicoFinanceiroData = data.historico;

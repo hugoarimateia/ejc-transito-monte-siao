@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 17,
+    "versao": 21,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -11,7 +11,7 @@
     "pix_tipo_chave": "EMAIL",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_cidade": "CAMPINA GRANDE",
-    "atualizado_em": "2026-09-05T02:42:46.859Z",
+    "atualizado_em": "2026-09-05T03:58:18.326Z",
     "pix_documento": "",
     "motivo_alteracao": "Restauração pós-teste de integração",
     "atualizado_por": "sistema",
@@ -40,6 +40,87 @@
     }
   ],
   "historico": [
+    {
+      "id": "audit-1788580708502-1lfu",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "superadmin_teste",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: CARDMTNURV5EJ6DT",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:58:28.473Z",
+      "detalhes": {
+        "identificador": "CARDMTNURV5EJ6DT",
+        "txid": "CARDMTNURV5EJ6DT",
+        "email": "mariana.teste@ejctransito.com.br",
+        "email_enviado": true
+      }
+    },
+    {
+      "id": "audit-1788580698326-kio0",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "sistema",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "financeiro.ejc@igreja.org.br (EMAIL)",
+      "valor_novo": "leoeuler03@gmail.com (EMAIL)",
+      "motivo": "Restauração pós-teste de integração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:58:18.326Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 21
+      }
+    },
+    {
+      "id": "audit-1788580698314-gth5",
+      "acao": "PRICE_UPDATED",
+      "usuario": "sistema",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 60.00 (2º Lote Especial)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Restauração pós-teste de integração",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:58:18.314Z",
+      "detalhes": {
+        "versao": 20,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1788580698237-d98c",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
+      "valor_novo": "financeiro.ejc@igreja.org.br (EMAIL)",
+      "motivo": "Atualização de chave de teste",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:58:18.237Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO TESTE",
+        "cidade": "CAMPINA GRANDE",
+        "versao": 19
+      }
+    },
+    {
+      "id": "audit-1788580698174-ceck",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_test",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 60.00 (2º Lote Especial)",
+      "motivo": "Teste de sincronização cross-module",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:58:18.174Z",
+      "detalhes": {
+        "versao": 18,
+        "lote": "2º Lote Especial",
+        "valor_promocional": 45
+      }
+    },
     {
       "id": "audit-1788579229092-w843",
       "acao": "PAYMENT_MANUALLY_APPROVED",
@@ -341,6 +422,71 @@
     "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
   },
   "pagamentos": [
+    {
+      "txid": "CARDMTNURV5EJ6DT",
+      "nome_pagador": "Mariana Souza",
+      "email": "mariana.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83977776666",
+      "valor": 50,
+      "metodo": "credit_card",
+      "status": "approved",
+      "tipo": "inscricao",
+      "parcelas": 3,
+      "cartao_ultimos_digitos": "4242",
+      "cartao_bandeira": "Visa",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-05T03:58:28.473Z",
+      "criado_em": "2026-09-05T03:58:28.468Z"
+    },
+    {
+      "txid": "PIXMTNURV43HGXL",
+      "nome_pagador": "Gabriel Silva Teste",
+      "email": "participante.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83988887777",
+      "valor": 50,
+      "metodo": "pix",
+      "status": "approved",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0120leoeuler03@gmail.com0225TAXA EJC TRANSITO 1º LOTE520400005303986540550.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62190515PIXMTNURV43HGXL63042C1E",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T03:58:28.421Z",
+      "pago_em": "2026-09-05T03:58:28.436Z"
+    },
+    {
+      "txid": "CARDMTNURN9Z4JY6",
+      "nome_pagador": "Titular Cartao Teste",
+      "email": "inscrito.cartao@teste.com",
+      "whatsapp_pagador": null,
+      "valor": 45,
+      "metodo": "credit_card",
+      "status": "approved",
+      "tipo": "inscricao",
+      "parcelas": 6,
+      "cartao_ultimos_digitos": "4242",
+      "cartao_bandeira": "Visa",
+      "inscricao_id": null,
+      "sub": null,
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-05T03:58:18.303Z",
+      "criado_em": "2026-09-05T03:58:18.303Z"
+    },
+    {
+      "txid": "PIXMTNURN9W6GEA",
+      "nome_pagador": "Inscrito Checkout Teste",
+      "email": "inscrito@teste.com",
+      "whatsapp_pagador": "(83) 98888-7777",
+      "valor": 45,
+      "metodo": "pix",
+      "status": "pending",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126880014br.gov.bcb.pix0128financeiro.ejc@igreja.org.br0234TAXA EJC TRANSITO 2º LOTE ESPECIAL520400005303986540545.005802BR5918EJC TRANSITO TESTE6014CAMPINA GRANDE62190515PIXMTNURN9W6GEA63047D01",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T03:58:18.262Z"
+    },
     {
       "txid": "CARDMTNTW5N8IQF1",
       "nome_pagador": "Mariana Souza",
