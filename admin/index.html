@@ -1194,6 +1194,20 @@
         console.warn("[Admin] Falha ao acionar API payment-settings:", errApi);
       }
 
+      // Aciona reconciliação unificada no backend (/api/checkout-process)
+      try {
+        await fetch("/api/checkout-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "confirm_payment",
+            txid: txid,
+            gateway: "admin_manual",
+            executado_por: currentUserRole || "admin_coordenacao"
+          })
+        });
+      } catch (errCheck) {}
+
       // Tenta RPC direta no Supabase como garantia adicional (apenas se online)
       if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
         try {

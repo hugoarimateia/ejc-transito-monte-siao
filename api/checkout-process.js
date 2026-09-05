@@ -407,6 +407,39 @@ module.exports = async (req, res) => {
         });
       }
 
+      // 2.5. Reconciliação Server-Side no Polling (se transação estiver 'pending' e houver chave de gateway configurada)
+      if (transactionFound && (transactionFound.status === "pending" || !transactionFound.status) && queryTxid) {
+        const gatewayKey = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.GATEWAY_PIX_API_KEY;
+        if (gatewayKey) {
+          try {
+            const mpSearchRes = await fetch(`https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(queryTxid)}`, {
+              headers: { "Authorization": `Bearer ${gatewayKey}` },
+              signal: AbortSignal.timeout(3000)
+            });
+            if (mpSearchRes.ok) {
+              const mpSearch = await mpSearchRes.json();
+              const approvedItem = mpSearch.results?.find(r => r.status === "approved");
+              if (approvedItem) {
+                const reconcileResult = await confirmarPagamentoResiliente({
+                  txid: queryTxid,
+                  gateway: "mercadopago_polling_reconciler",
+                  payload: approvedItem,
+                  executado_por: "polling_server_reconciler"
+                });
+                if (reconcileResult.paymentRecord) {
+                  transactionFound = reconcileResult.paymentRecord;
+                } else {
+                  transactionFound.status = "approved";
+                  transactionFound.pago_em = new Date().toISOString();
+                }
+              }
+            }
+          } catch (eGw) {
+            console.warn("[Polling Reconciler] Aviso ao consultar API Gateway:", eGw.message);
+          }
+        }
+      }
+
       // 3. Obtém link do grupo do WhatsApp
       const sub = transactionFound.metadata?.sub || transactionFound.sub || "Geral";
       let whatsappLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";

@@ -51,25 +51,56 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Identifica o identificador da transação conforme os padrões de mercado
-    // (Mercado Pago, Efí Pay, Asaas, PagBank, Pagar.me, etc.)
-    const txid = payload.txid ||
+    // 1. Identificação robusta do identificador da transação (Mercado Pago, Efí Pay, Asaas, PagBank, etc.)
+    let txid = payload.txid ||
       payload.external_reference ||
+      payload.externalReference ||
       payload.data?.external_reference ||
-      payload.data?.id ||
+      payload.data?.externalReference ||
+      payload.payment?.externalReference ||
+      payload.payment?.external_reference ||
       payload.order_id ||
+      payload.orderId ||
       payload.data?.order_id ||
       payload.pix?.[0]?.txid ||
+      payload.data?.id ||
       payload.id ||
       payload.payment?.id;
+
+    // 2. Tratamento Especial Mercado Pago (Busca ativa de detalhes se Access Token estiver disponível)
+    const isMercadoPagoEvent = (payload.type === "payment" || (payload.action && String(payload.action).startsWith("payment"))) && (payload.data?.id || payload.id);
+    const mpPaymentId = isMercadoPagoEvent ? (payload.data?.id || payload.id) : null;
+    let mpPayloadFetched = null;
+
+    if (mpPaymentId) {
+      const gatewayKey = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.GATEWAY_PIX_API_KEY;
+      if (gatewayKey) {
+        try {
+          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}`, {
+            headers: { "Authorization": `Bearer ${gatewayKey}` },
+            signal: AbortSignal.timeout(4000)
+          });
+          if (mpRes.ok) {
+            mpPayloadFetched = await mpRes.json();
+            if (mpPayloadFetched.external_reference) {
+              txid = mpPayloadFetched.external_reference;
+            }
+          }
+        } catch (eMp) {
+          console.warn("[Webhook MP Fetch Warning]", eMp.message);
+        }
+      }
+    }
 
     if (!txid) {
       return res.status(400).json({ error: "Identificador da transação ausente no payload" });
     }
 
-    // Avaliação de status enviada pelo gateway
+    // 3. Avaliação de status enviada pelo gateway ou obtida na consulta ativa
     const rawStatus = String(
+      mpPayloadFetched?.status ||
       payload.status ||
+      payload.payment?.status ||
       payload.event ||
       payload.action ||
       payload.data?.status ||
@@ -82,6 +113,7 @@ module.exports = async (req, res) => {
       rawStatus.includes("approved") ||
       rawStatus.includes("liquidado") ||
       rawStatus.includes("paid") ||
+      rawStatus.includes("received") ||
       rawStatus.includes("concluid") ||
       !rawStatus; // Se gateway não enviou campo de status explícito, trata como notificação de crédito
 
@@ -90,11 +122,11 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, processedTxid: txid, status: rawStatus, confirmed: false });
     }
 
-    // Executa conciliação unificada resiliente (RPC Supabase + Store Local + Comprovante com Await)
+    // 4. Executa conciliação unificada resiliente (RPC Supabase + Store Local + Comprovante com Await)
     const result = await confirmarPagamentoResiliente({
       txid: String(txid),
-      gateway: "pix_webhook",
-      payload: payload,
+      gateway: mpPayloadFetched ? "mercadopago_webhook" : "pix_webhook",
+      payload: mpPayloadFetched || payload,
       executado_por: "gateway_webhook"
     });
 
