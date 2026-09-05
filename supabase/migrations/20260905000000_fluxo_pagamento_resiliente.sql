@@ -58,7 +58,7 @@ BEGIN
         p_txid, p_nome_pagador, COALESCE(p_email, ''), p_whatsapp_pagador, p_cpf_pagador, p_valor,
         p_metodo, p_parcelas, p_cartao_ultimos_digitos, p_cartao_bandeira,
         p_status, p_tipo, p_pix_copia_e_cola, p_qr_code_base64, p_expiracao,
-        v_inscricao_id, p_metadata, p_txid
+        v_inscricao_id, p_metadata, COALESCE(p_metadata->>'payment_id', p_metadata->>'gateway_id', p_txid)
     )
     ON CONFLICT (txid) DO UPDATE
     SET valor = EXCLUDED.valor,
@@ -66,6 +66,8 @@ BEGIN
         inscricao_id = COALESCE(EXCLUDED.inscricao_id, public.pagamentos.inscricao_id),
         email = CASE WHEN EXCLUDED.email <> '' THEN EXCLUDED.email ELSE public.pagamentos.email END,
         whatsapp_pagador = COALESCE(EXCLUDED.whatsapp_pagador, public.pagamentos.whatsapp_pagador),
+        metadata = COALESCE(EXCLUDED.metadata, public.pagamentos.metadata),
+        gateway_transaction_id = COALESCE(EXCLUDED.gateway_transaction_id, public.pagamentos.gateway_transaction_id),
         atualizado_em = now()
     RETURNING id INTO v_pagamento_id;
 
@@ -74,7 +76,7 @@ BEGIN
         transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
     ) VALUES (
         p_txid, 'criado', NULL, p_status, 'checkout',
-        json_build_object('metodo', p_metodo, 'valor', p_valor, 'email', p_email, 'inscricao_id', v_inscricao_id)
+        json_build_object('metodo', p_metodo, 'valor', p_valor, 'email', p_email, 'inscricao_id', v_inscricao_id, 'order_id', p_metadata->>'order_id', 'payment_id', p_metadata->>'payment_id')
     );
 
     RETURN json_build_object(
@@ -82,12 +84,14 @@ BEGIN
         'id', v_pagamento_id,
         'txid', p_txid,
         'status', p_status,
-        'inscricao_id', v_inscricao_id
+        'inscricao_id', v_inscricao_id,
+        'order_id', p_metadata->>'order_id',
+        'payment_id', p_metadata->>'payment_id'
     );
 END;
 $$;
 
--- 4. Função RPC: Confirmar pagamento unificado com reconciliação inteligente
+-- 4. Função RPC: Confirmar pagamento unificado com reconciliação inteligente multicamadas
 CREATE OR REPLACE FUNCTION public.confirmar_pagamento_unificado(
     p_txid TEXT,
     p_gateway TEXT DEFAULT 'checkout_transparente',
@@ -102,10 +106,23 @@ DECLARE
     v_pagamento RECORD;
     v_status_antigo TEXT;
     v_target_inscricao_id UUID;
+    v_clean_id TEXT := TRIM(p_txid);
 BEGIN
-    SELECT * INTO v_pagamento FROM public.pagamentos WHERE txid = p_txid FOR UPDATE;
+    -- Busca multicamadas: aceita txid, payment_id, order_id, external_reference, gateway_transaction_id ou id primário
+    SELECT * INTO v_pagamento 
+    FROM public.pagamentos 
+    WHERE txid = v_clean_id 
+       OR gateway_transaction_id = v_clean_id 
+       OR id::text = v_clean_id 
+       OR metadata->>'payment_id' = v_clean_id 
+       OR metadata->>'external_reference' = v_clean_id 
+       OR metadata->>'order_id' = v_clean_id
+    ORDER BY criado_em DESC
+    LIMIT 1
+    FOR UPDATE;
+
     IF NOT FOUND THEN
-        RETURN json_build_object('success', false, 'message', 'Transação não encontrada.');
+        RETURN json_build_object('success', false, 'message', 'Transação não encontrada para o identificador fornecido: ' || v_clean_id);
     END IF;
 
     -- Idempotência: se já aprovado, retorna sucesso sem duplicar efeitos
@@ -113,7 +130,7 @@ BEGIN
         RETURN json_build_object(
             'success', true,
             'status', 'approved',
-            'txid', p_txid,
+            'txid', v_pagamento.txid,
             'inscricao_id', v_pagamento.inscricao_id,
             'mensagem', 'Já confirmado previamente.',
             'already_confirmed', true
@@ -142,7 +159,7 @@ BEGIN
         atualizado_em = now()
     WHERE id = v_pagamento.id;
 
-    -- Se vinculado a uma inscrição, atualiza status da inscrição
+    -- Se vinculado a uma inscrição, atualiza status da inscrição para confirmado
     IF v_target_inscricao_id IS NOT NULL THEN
         UPDATE public.inscricoes
         SET pagamento_status = 'confirmado',
@@ -157,14 +174,23 @@ BEGIN
     INSERT INTO public.auditoria_transacoes (
         transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
     ) VALUES (
-        p_txid, 'aprovado', v_status_antigo, 'approved', p_executado_por,
-        json_build_object('gateway', p_gateway, 'metodo', v_pagamento.metodo, 'valor', v_pagamento.valor, 'inscricao_id', v_target_inscricao_id)
+        v_pagamento.txid, 'aprovado', v_status_antigo, 'approved', p_executado_por,
+        json_build_object(
+            'gateway', p_gateway,
+            'metodo', v_pagamento.metodo,
+            'valor', v_pagamento.valor,
+            'inscricao_id', v_target_inscricao_id,
+            'payment_id', v_pagamento.metadata->>'payment_id',
+            'order_id', v_pagamento.metadata->>'order_id'
+        )
     );
 
     RETURN json_build_object(
         'success', true,
         'status', 'approved',
-        'txid', p_txid,
+        'txid', v_pagamento.txid,
+        'payment_id', v_pagamento.metadata->>'payment_id',
+        'order_id', v_pagamento.metadata->>'order_id',
         'inscricao_id', v_target_inscricao_id
     );
 END;

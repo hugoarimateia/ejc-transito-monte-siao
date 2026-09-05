@@ -312,8 +312,8 @@
         </div>
 
         <div class="conf-field" style="margin-bottom: 20px;">
-          <label for="inputTxid">Identificador da Transação (TXID - Opcional)</label>
-          <input type="text" id="inputTxid" placeholder="Ex: PIX... ou CARD..." style="font-family: monospace;">
+          <label for="inputTxid">Identificador da Transação (TXID / Payment ID / Order ID - Opcional)</label>
+          <input type="text" id="inputTxid" placeholder="Ex: PIX... ou PAY... ou ORD..." style="font-family: monospace;">
         </div>
 
         <button type="submit" class="button button-primary" id="btnConsultar" style="width: 100%; min-height: 48px;">
@@ -390,7 +390,7 @@
         </div>
         <div class="conf-header-badge badge-approved">
           <span class="pulse-dot-live pulse-dot-green"></span>
-          <span>Pagamento Confirmado com Sucesso</span>
+          <span>✓ CHECK-IN CONFIRMADO | Pagamento Aprovado</span>
         </div>
         <h2 class="conf-title">Parabéns! Sua vaga está garantida!</h2>
         <p class="conf-subtitle">
@@ -415,6 +415,10 @@
             <span class="conf-details-value" id="apprMetodo">-</span>
           </div>
           <div class="conf-details-row">
+            <span class="conf-details-label"><i class="fa-solid fa-receipt"></i> Payment ID</span>
+            <span class="conf-details-value" id="apprPaymentId" style="font-family: monospace; font-size: .85rem;">-</span>
+          </div>
+          <div class="conf-details-row">
             <span class="conf-details-label"><i class="fa-solid fa-fingerprint"></i> Identificador (TXID)</span>
             <span class="conf-details-value" id="apprTxid" style="font-family: monospace; font-size: .85rem;">-</span>
           </div>
@@ -423,7 +427,7 @@
             <span class="conf-details-value" id="apprData">-</span>
           </div>
           <div class="conf-details-row">
-            <span class="conf-details-label"><i class="fa-solid fa-receipt"></i> Valor Confirmado</span>
+            <span class="conf-details-label"><i class="fa-solid fa-money-bill-wave"></i> Valor Confirmado</span>
             <span class="conf-details-value conf-highlight-val" style="color: #34d399;" id="apprValor">-</span>
           </div>
         </div>
@@ -520,7 +524,7 @@
     // CONTROLADOR DA PÁGINA DE CONFIRMAÇÃO DE PAGAMENTO
     // ==============================================================================
     const urlParams = new URLSearchParams(window.location.search);
-    const paramTxid = urlParams.get("txid") || urlParams.get("id") || "";
+    const paramTxid = urlParams.get("txid") || urlParams.get("id") || urlParams.get("payment_id") || urlParams.get("order_id") || "";
     const paramEmail = urlParams.get("email") || "";
     const paramNome = urlParams.get("nome") || "";
     const paramInscricao = urlParams.get("inscricao_id") || "";
@@ -617,7 +621,12 @@
       try {
         const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
         if (txid) {
-          const match = localPagamentos.find(p => p.txid === txid);
+          const match = localPagamentos.find(p => 
+            p.txid === txid || 
+            p.payment_id === txid || 
+            p.order_id === txid || 
+            (p.metadata && (p.metadata.payment_id === txid || p.metadata.order_id === txid))
+          );
           if (match) return match;
         }
         if (email) {
@@ -660,6 +669,7 @@
       document.getElementById("apprEmail").textContent = data.email || inputEmail.value || "-";
       document.getElementById("apprSub").textContent = data.sub ? `Sub ${data.sub}` : "Geral";
       document.getElementById("apprMetodo").textContent = data.metodo === "credit_card" ? "Cartão de Crédito" : "Pix Instantâneo";
+      document.getElementById("apprPaymentId").textContent = data.payment_id || data.metadata?.payment_id || data.txid || "-";
       document.getElementById("apprTxid").textContent = data.txid || "-";
       document.getElementById("apprData").textContent = data.pago_em ? new Date(data.pago_em).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR");
       document.getElementById("apprValor").textContent = Number(data.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

@@ -15,10 +15,14 @@ const APPROVED_STATUS_TOKENS = new Set([
   "confirmed",
   "completed",
   "payment_received",
+  "pix_received",
+  "pix.received",
   "concluida",
+  "concluido",
   "liquidado",
   "settled",
-  "pago"
+  "pago",
+  "received"
 ]);
 
 module.exports = async (req, res) => {
@@ -53,6 +57,8 @@ module.exports = async (req, res) => {
       payload.external_reference ||
       payload.data?.external_reference ||
       payload.data?.id ||
+      payload.order_id ||
+      payload.data?.order_id ||
       payload.pix?.[0]?.txid ||
       payload.id ||
       payload.payment?.id;
@@ -97,6 +103,8 @@ module.exports = async (req, res) => {
       success: true,
       processedTxid: txid,
       confirmed: true,
+      payment_id: result.payment_id || null,
+      order_id: result.order_id || null,
       database_updated: result.confirmedOnDatabase,
       email_dispatched: result.emailEnviado
     });

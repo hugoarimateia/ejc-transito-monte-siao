@@ -20,6 +20,176 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <link href="css/all.min.css" rel="stylesheet">
+  <style>
+    .step-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      background: rgba(8, 125, 249, 0.12);
+      color: var(--blue);
+      border: 1px solid rgba(8, 125, 249, 0.25);
+      margin-bottom: 12px;
+    }
+    .checkout-step-header {
+      margin-bottom: 22px;
+    }
+    .step2-participant-strip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 22px;
+      display: grid;
+      grid-template-columns: 1.2fr 1.5fr 1fr;
+      gap: 12px;
+      font-size: .88rem;
+      align-items: center;
+    }
+    @media (max-width: 650px) {
+      .step2-participant-strip { grid-template-columns: 1fr; gap: 8px; }
+    }
+    .btn-step-back {
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 0 16px;
+      margin: 0;
+      transition: color .2s ease;
+    }
+    .btn-step-back:hover {
+      text-decoration: underline;
+    }
+    .btn-check-now {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: .9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .2s ease;
+    }
+    .btn-check-now:hover:not(:disabled) {
+      background: var(--bg-card);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .btn-check-now:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+    .checkin-success-card {
+      text-align: center;
+      padding: 10px 0;
+      animation: fadeIn .4s ease;
+    }
+    .checkin-badge-hero {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .checkin-icon-circle {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      background: #10b981;
+      color: #fff;
+      font-size: 2.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 28px rgba(16, 185, 129, 0.35);
+    }
+    .checkin-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 18px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-size: .88rem;
+      font-weight: 800;
+      letter-spacing: .5px;
+      margin-bottom: 12px;
+    }
+    [data-theme="dark"] .checkin-status-pill {
+      color: #34d399;
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+    .checkin-title {
+      font-family: "Archivo Black", sans-serif;
+      font-size: 1.65rem;
+      margin: 0 0 8px;
+      color: var(--text-main);
+    }
+    .checkin-subtitle {
+      color: var(--text-muted);
+      font-size: .95rem;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    .checkin-receipt-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin: 22px 0;
+      text-align: left;
+      display: grid;
+      gap: 12px;
+      font-size: .92rem;
+    }
+    .checkin-receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .checkin-receipt-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .checkin-receipt-row span { color: var(--text-muted); }
+    .checkin-receipt-row strong { color: var(--text-main); }
+    .checkin-alert-box {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #10b981;
+      padding: 14px 18px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: .9rem;
+      font-weight: 600;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    [data-theme="dark"] .checkin-alert-box { color: #34d399; }
+  </style>
 </head>
 <body>
 
@@ -100,20 +270,82 @@
           </div>
         </aside>
 
-        <!-- LADO DIREITO: ÁREA ÚNICA DE PAGAMENTO -->
+        <!-- LADO DIREITO: ÁREA DE PAGAMENTO EM DUAS ETAPAS -->
         <section class="payment-container-card">
           
-          <!-- ESTADO FORMULÁRIO DE PAGAMENTO -->
-          <div id="paymentFormState">
-            <h2>Escolha como deseja pagar</h2>
-            <p>Selecione a forma de pagamento de sua preferência abaixo:</p>
+          <!-- ==================================================================== -->
+          <!-- ETAPA 1: IDENTIFICAÇÃO DO PARTICIPANTE E RESUMO (SEM QR CODE / SEM TIMER) -->
+          <!-- ==================================================================== -->
+          <div id="checkoutStep1">
+            <div class="checkout-step-header">
+              <span class="step-pill"><i class="fa-solid fa-user-check"></i> Etapa 1 de 2: Identificação</span>
+              <h2 style="margin: 8px 0 6px;">Dados do Participante</h2>
+              <p style="color: var(--text-muted); font-size: .92rem; margin: 0 0 20px;">
+                Preencha seu nome e e-mail para vincularmos sua inscrição e enviarmos seu comprovante oficial.
+              </p>
+            </div>
 
-            <!-- CAMPO DE E-MAIL OBRIGATÓRIO (COMUM A TODOS OS MÉTODOS) -->
-            <div class="email-field-box">
-              <label for="checkoutEmail"><i class="fa-solid fa-envelope"></i> E-mail para Comprovante (Obrigatório)</label>
-              <input type="email" id="checkoutEmail" placeholder="seuemail@exemplo.com" required autocomplete="email">
-              <small>Enviaremos o comprovante de pagamento e a confirmação oficial para este endereço.</small>
-              <span id="emailErrorMsg" style="color: #f87171; font-size: .8rem; font-weight: 700; display: none; margin-top: 4px;">Por favor, informe um endereço de e-mail válido.</span>
+            <form id="step1Form" novalidate onsubmit="return false;">
+              <div class="card-field" style="margin-bottom: 16px;">
+                <label for="checkoutName"><i class="fa-solid fa-user"></i> Nome Completo do Participante (Obrigatório)</label>
+                <div class="card-input-wrap">
+                  <input type="text" id="checkoutName" placeholder="Ex: Lucas Gabriel da Silva" required autocomplete="name">
+                </div>
+              </div>
+
+              <div class="card-field" style="margin-bottom: 16px;">
+                <label for="checkoutEmail"><i class="fa-solid fa-envelope"></i> E-mail para Comprovante (Obrigatório)</label>
+                <div class="card-input-wrap">
+                  <input type="email" id="checkoutEmail" placeholder="seuemail@exemplo.com" required autocomplete="email">
+                </div>
+                <small style="color: var(--text-muted); font-size: .8rem; margin-top: 4px; display: block;">
+                  O comprovante autenticado e instruções serão enviados imediatamente para este e-mail.
+                </small>
+              </div>
+
+              <div class="card-field" style="margin-bottom: 24px;">
+                <label for="checkoutWhatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp / Telefone (Opcional)</label>
+                <div class="card-input-wrap">
+                  <input type="tel" id="checkoutWhatsapp" placeholder="(83) 99999-9999" autocomplete="tel">
+                </div>
+              </div>
+
+              <div id="step1ErrorMsg" style="display: none; color: #ef4444; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); padding: 12px 16px; border-radius: 12px; font-size: .88rem; font-weight: 700; margin-bottom: 18px;"></div>
+
+              <button type="button" class="button button-primary" id="btnContinueToPayment" style="width: 100%; min-height: 52px; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span>Continuar para Pagamento</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- ==================================================================== -->
+          <!-- ETAPA 2: PAGAMENTO E CONFIRMAÇÃO (COM TIMER, QR CODE E COPIA E COLA) -->
+          <!-- ==================================================================== -->
+          <div id="checkoutStep2" style="display: none;">
+            <button type="button" class="btn-step-back" id="btnBackToStep1">
+              <i class="fa-solid fa-arrow-left"></i> Alterar dados do participante
+            </button>
+
+            <div class="checkout-step-header">
+              <span class="step-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);"><i class="fa-solid fa-qrcode"></i> Etapa 2 de 2: Pagamento</span>
+              <h2 style="margin: 8px 0 6px;">Escolha a forma de pagamento</h2>
+            </div>
+
+            <!-- Tira de resumo dos dados identificados -->
+            <div class="step2-participant-strip">
+              <div>
+                <span style="font-size: .75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Participante</span><br>
+                <strong id="step2IdentifiedName" style="color: var(--text-main); font-size: .95rem;">-</strong>
+              </div>
+              <div>
+                <span style="font-size: .75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">E-mail</span><br>
+                <strong id="step2IdentifiedEmail" style="color: var(--text-main); font-size: .9rem; word-break: break-all;">-</strong>
+              </div>
+              <div>
+                <span style="font-size: .75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Total</span><br>
+                <strong id="step2IdentifiedTotal" style="color: var(--blue); font-size: 1.1rem;">-</strong>
+              </div>
             </div>
 
             <!-- SELETOR DE ABAS UNIFICADAS: PIX / CARTÃO -->
@@ -137,14 +369,14 @@
                 </div>
 
                 <div class="pix-qr-container" id="pixQrCodeBox">
-                  <span style="color: #64748b; font-size: .88rem; font-weight: 600;">Gerando QR Code...</span>
+                  <span style="color: #64748b; font-size: .88rem; font-weight: 600;">Carregando QR Code...</span>
                 </div>
 
-                <p style="font-size: .86rem; color: var(--text-muted); max-width: 360px; margin: 0 auto 14px;">
+                <p style="font-size: .86rem; color: var(--text-muted); max-width: 380px; margin: 0 auto 14px;">
                   Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code, ou utilize o código Copia e Cola:
                 </p>
 
-                <textarea class="pix-copy-textarea" id="pixCodeTextarea" readonly></textarea>
+                <textarea class="pix-copy-textarea" id="pixCodeTextarea" readonly placeholder="Código Copia e Cola..."></textarea>
                 <button type="button" class="button button-primary" id="btnCopyPixCheckout" style="width: 100%; min-height: 48px;">
                   <i class="fa-regular fa-copy" style="margin-right: 8px;"></i> Copiar Código Pix
                 </button>
@@ -153,6 +385,10 @@
                   <div class="pulse-indicator-dot"></div>
                   <span>Aguardando confirmação do pagamento...</span>
                 </div>
+
+                <button type="button" class="btn-check-now" id="btnCheckPaymentNow">
+                  <i class="fa-solid fa-rotate"></i> Verificar Pagamento Agora
+                </button>
 
                 <a href="./confirmacao-pagamento.html" id="linkGoToConfirmation" class="btn-track-confirmation" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; font-size: .88rem; color: var(--blue); text-decoration: none; padding: 10px 14px; border: 1px dashed var(--border-color); border-radius: 10px; transition: all .2s ease; background: var(--bg-surface);">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -216,28 +452,63 @@
 
           </div>
 
-          <!-- TELA DE SUCESSO UNIFICADA (TRANSICIONADA AUTOMATICAMENTE) -->
-          <div class="success-screen-card" id="successScreen">
-            <div class="success-icon-badge">✓</div>
-            <h2>Pagamento Confirmado!</h2>
-            <p style="color: var(--text-muted); font-size: .95rem; margin-bottom: 20px;">
-              Sua inscrição na Equipe do Trânsito foi confirmada com sucesso.
-            </p>
-
-            <div class="receipt-info-box">
-              <div><span>Identificador da Transação:</span> <strong id="resTxid">-</strong></div>
-              <div><span>Forma de Pagamento:</span> <strong id="resMethod">-</strong></div>
-              <div><span>Valor Confirmado:</span> <strong id="resAmount">-</strong></div>
-              <div><span>Data de Aprovação:</span> <strong id="resDate">-</strong></div>
-              <div><span>Comprovante enviado para:</span> <strong id="resEmail" style="color: var(--blue);">-</strong></div>
+          <!-- ==================================================================== -->
+          <!-- CARD DE CHECK-IN CONFIRMADO (RENDERIZADO EXCLUSIVAMENTE COM SUCESSO) -->
+          <!-- ==================================================================== -->
+          <div class="checkin-success-card" id="checkinSuccessState" style="display: none;">
+            <div class="checkin-badge-hero">
+              <div class="checkin-icon-circle">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <span class="checkin-status-pill">✓ CHECK-IN CONFIRMADO</span>
+              <h2 class="checkin-title">Pagamento Confirmado!</h2>
+              <p class="checkin-subtitle">
+                Sua inscrição na Equipe do Trânsito foi confirmada e validada pelo sistema com sucesso.
+              </p>
             </div>
 
-            <p style="color: #10b981; font-weight: 700; font-size: .9rem;">
-              <i class="fa-solid fa-circle-check"></i> Enviamos o comprovante oficial completo para o seu e-mail.
-            </p>
+            <div class="checkin-receipt-box">
+              <div class="checkin-receipt-row">
+                <span>Participante:</span>
+                <strong id="resName">-</strong>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>E-mail:</span>
+                <strong id="resEmail" style="color: var(--blue);">-</strong>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Sub Equipe:</span>
+                <strong id="resSub">-</strong>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Forma de Pagamento:</span>
+                <strong id="resMethod">-</strong>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Valor Confirmado:</span>
+                <strong id="resAmount" style="color: #10b981; font-size: 1.15rem;">-</strong>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Payment ID:</span>
+                <code id="resPaymentId" style="font-family: monospace; font-size: .86rem; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px;">-</code>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Identificador TXID:</span>
+                <code id="resTxid" style="font-family: monospace; font-size: .86rem; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px;">-</code>
+              </div>
+              <div class="checkin-receipt-row">
+                <span>Data de Aprovação:</span>
+                <strong id="resDate">-</strong>
+              </div>
+            </div>
+
+            <div class="checkin-alert-box">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Comprovante oficial entregue para <strong id="resEmailBanner">-</strong>. Verifique sua caixa de entrada e spam.</span>
+            </div>
 
             <a href="#" class="button btn-whatsapp-group" id="btnSuccessWhatsApp" target="_blank" rel="noopener">
-              <i class="fa-brands fa-whatsapp"></i> Entrar no Grupo Oficial do WhatsApp
+              <i class="fa-brands fa-whatsapp" style="font-size: 1.25rem;"></i> Entrar no Grupo Oficial do WhatsApp
             </a>
 
             <a href="./" class="button button-secondary" style="width: 100%; margin-top: 12px;">
@@ -340,10 +611,29 @@
     document.getElementById("summarySubTag").className = `event-tag sub-${subSelecionado.toLowerCase()}`;
     atualizarValoresUI();
 
-    const emailInput = document.getElementById("checkoutEmail");
-    if (emailParam) emailInput.value = emailParam;
+    // Contêineres das etapas
+    const checkoutStep1 = document.getElementById("checkoutStep1");
+    const checkoutStep2 = document.getElementById("checkoutStep2");
+    const checkinSuccessState = document.getElementById("checkinSuccessState");
 
-    // Alternância de Abas: PIX vs CARTÃO
+    // Inputs e botões da Etapa 1
+    const nameInput = document.getElementById("checkoutName");
+    const emailInput = document.getElementById("checkoutEmail");
+    const wppInput = document.getElementById("checkoutWhatsapp");
+    const step1ErrorMsg = document.getElementById("step1ErrorMsg");
+    const btnContinueToPayment = document.getElementById("btnContinueToPayment");
+
+    if (nomeParticipante && nomeParticipante !== "Participante EJC") {
+      nameInput.value = nomeParticipante;
+    }
+    if (emailParam) {
+      emailInput.value = emailParam;
+    }
+    if (wppParam) {
+      wppInput.value = wppParam;
+    }
+
+    // Alternância de Abas: PIX vs CARTÃO na Etapa 2
     const tabBtnPix = document.getElementById("tabBtnPix");
     const tabBtnCard = document.getElementById("tabBtnCard");
     const panelPix = document.getElementById("panelPix");
@@ -366,20 +656,21 @@
       currentMethod = "credit_card";
     });
 
-    // ==============================================================================
-    // VALIDAÇÃO DE E-MAIL
-    // ==============================================================================
+    // Validação de E-mail
     function validarEmail(email) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
     }
 
-    // ==============================================================================
-    // GERAÇÃO E POLLING DO PIX COM CONFIGURAÇÃO ATIVA DO SERVIDOR
-    // ==============================================================================
-    let activeTxid = "EJC" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    // Identificadores da transação ativa
+    let activeTxid = null;
+    let activePaymentId = null;
+    let activeOrderId = null;
+    let activePixPayload = null;
     let pixTimerInterval = null;
     let pixPollingInterval = null;
+    let isTransitioningToStep2 = false;
 
+    // Helpers BACEN EMV e CRC16
     const textEncoder = new TextEncoder();
     function getUtf8ByteLength(str) {
       return textEncoder.encode(String(str || "")).length;
@@ -411,10 +702,10 @@
       if (!str) return "";
       return String(str)
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // remove acentos
-        .replace(/[º°]/g, "")            // remove ordinais
-        .replace(/ª/g, "a")              // normaliza ordinais femininos
-        .replace(/[^a-zA-Z0-9\s.\-_@]/g, "") // apenas caracteres ASCII seguros
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[º°]/g, "")
+        .replace(/ª/g, "a")
+        .replace(/[^a-zA-Z0-9\s.\-_@]/g, "")
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, maxLen);
@@ -490,72 +781,48 @@
       }
     }
 
-    let lastInitializedPrice = null;
-    let lastInitializedKey = null;
+    // ----------------------------------------------------------------------------
+    // TRANSIÇÃO ETAPA 1 -> ETAPA 2 (DISPARADA PELO BOTÃO "CONTINUAR PARA PAGAMENTO")
+    // ----------------------------------------------------------------------------
+    btnContinueToPayment.addEventListener("click", async () => {
+      const nomeVal = nameInput.value.trim();
+      const emailVal = emailInput.value.trim();
+      const wppVal = wppInput.value.trim();
 
-    async function inicializarPix(force = false) {
-      const priceChanged = lastInitializedPrice !== valorTotal;
-      const keyChanged = lastInitializedKey !== activePixConfig.chave;
-
-      // Se já está inicializado para este valor e chave, não recria a transação
-      if (!force && activeTxid && !priceChanged && !keyChanged) {
+      if (!nomeVal || nomeVal.length < 3) {
+        step1ErrorMsg.textContent = "Por favor, informe seu nome completo.";
+        step1ErrorMsg.style.display = "block";
+        nameInput.focus();
         return;
       }
 
-      lastInitializedPrice = valorTotal;
-      lastInitializedKey = activePixConfig.chave;
-
-      if (!activeTxid || priceChanged || keyChanged) {
-        activeTxid = "PIX" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      if (!validarEmail(emailVal)) {
+        step1ErrorMsg.textContent = "Por favor, informe um endereço de e-mail válido para o comprovante.";
+        step1ErrorMsg.style.display = "block";
+        emailInput.focus();
+        return;
       }
 
-      // 1. Gera imediatamente o código BACEN com dados ativos para renderização instantânea
-      const descInfo = tipoCheckout === "inscricao" ? `TAXA EJC TRANSITO ${activePixConfig.loteAtual || ""}` : "CONTRIBUICAO EJC TRANSITO";
-      const payloadPix = gerarPayloadBACEN(
-        activePixConfig.chave,
-        activePixConfig.beneficiario,
-        activePixConfig.cidade,
-        valorTotal,
-        activeTxid,
-        descInfo
-      );
+      step1ErrorMsg.style.display = "none";
+      await avancarParaEtapa2(nomeVal, emailVal, wppVal);
+    });
 
-      if (validarPayloadPix(payloadPix)) {
-        document.getElementById("pixCodeTextarea").value = payloadPix;
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(payloadPix)}`;
-        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
-      }
+    async function avancarParaEtapa2(nome, email, whatsapp) {
+      if (isTransitioningToStep2) return;
+      isTransitioningToStep2 = true;
 
-      // 2. Inicia contagem regressiva 15 minutos
-      let segundos = 15 * 60;
-      clearInterval(pixTimerInterval);
-      pixTimerInterval = setInterval(() => {
-        segundos--;
-        const m = String(Math.floor(segundos / 60)).padStart(2, "0");
-        const s = String(segundos % 60).padStart(2, "0");
-        document.getElementById("pixCountdownText").textContent = `${m}:${s}`;
-        if (segundos <= 0) {
-          clearInterval(pixTimerInterval);
-          alert("O código Pix expirou. Atualize a página para gerar um novo.");
-        }
-      }, 1000);
+      btnContinueToPayment.disabled = true;
+      btnContinueToPayment.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gerando cobrança oficial...`;
 
-      // 3. Registra no armazenamento local inicial
-      registrarTransacaoLocal({
-        txid: activeTxid,
-        metodo: "pix",
-        valor: valorTotal,
-        status: "pending",
-        nome: nomeParticipante,
-        sub: subSelecionado
-      });
+      // Atualiza nome na lateral
+      document.getElementById("summaryParticipantName").textContent = nome;
 
-      // 4. Registra transação pendente no servidor e Supabase
-      const emailFinal = emailInput.value.trim() || emailParam;
+      // 1. Chama backend para registrar pagamento e gerar o Pix oficial sincronizado
+      let pixCode = "";
       try {
         const res = await fetch("/api/checkout-process", {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "x-client-version": String(activePixConfig.versao || 0)
           },
@@ -565,9 +832,9 @@
             valor: valorTotal,
             versao: activePixConfig.versao || 0,
             chave_pix: activePixConfig.chave,
-            nome: nomeParticipante,
-            email: emailFinal || "participante@ejctransito.com.br",
-            whatsapp: wppParam || null,
+            nome: nome,
+            email: email,
+            whatsapp: whatsapp || null,
             sub: subSelecionado,
             inscricao_id: inscricaoIdParam || null
           })
@@ -577,34 +844,147 @@
           const data = await res.json();
           if (data && data.txid) {
             activeTxid = data.txid;
-            if (data.pixCopiaECola && validarPayloadPix(data.pixCopiaECola)) {
-              document.getElementById("pixCodeTextarea").value = data.pixCopiaECola;
-              const newQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(data.pixCopiaECola)}`;
-              document.getElementById("pixQrCodeBox").innerHTML = `<img src="${newQrUrl}" alt="QR Code Pix">`;
-            }
-            registrarTransacaoLocal({
-              txid: activeTxid,
-              metodo: "pix",
-              valor: data.valor || valorTotal,
-              status: "pending",
-              nome: nomeParticipante,
-              sub: subSelecionado
-            });
+            activePaymentId = data.payment_id || data.txid;
+            activeOrderId = data.order_id || null;
+            pixCode = data.pixCopiaECola || data.payload || "";
           }
         }
-      } catch (errApi) {
-        console.warn("[Checkout] Registro no backend completado via store local:", errApi);
+      } catch (eErr) {
+        console.warn("[Checkout] Falha de rede no checkout-process, utilizando gerador resiliente:", eErr);
       }
 
-      // 5. Polling de monitoramento ativo no backend
-      iniciarPolling(activeTxid);
+      // Fallback local caso servidor temporariamente inalcançável
+      if (!activeTxid) {
+        const ts36 = Date.now().toString(36).toUpperCase();
+        const rnd4 = Math.random().toString(36).substring(2, 6).toUpperCase();
+        activeTxid = "PIX" + ts36 + rnd4;
+        activePaymentId = "PAY" + ts36 + rnd4;
+        activeOrderId = "ORD" + ts36 + rnd4;
+      }
 
-      // 6. Atualiza link para a página exclusiva de confirmação
+      if (!pixCode || !validarPayloadPix(pixCode)) {
+        const descInfo = tipoCheckout === "inscricao" ? `TAXA EJC TRANSITO ${activePixConfig.loteAtual || ""}` : "CONTRIBUICAO EJC TRANSITO";
+        pixCode = gerarPayloadBACEN(
+          activePixConfig.chave,
+          activePixConfig.beneficiario,
+          activePixConfig.cidade,
+          valorTotal,
+          activeTxid,
+          descInfo
+        );
+      }
+
+      activePixPayload = pixCode;
+
+      // 2. Renderiza Etapa 2
+      document.getElementById("step2IdentifiedName").textContent = nome;
+      document.getElementById("step2IdentifiedEmail").textContent = email;
+      document.getElementById("step2IdentifiedTotal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+      document.getElementById("pixCodeTextarea").value = activePixPayload;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
+      document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+
+      // Atualiza link para página exclusiva de confirmação
       const linkConf = document.getElementById("linkGoToConfirmation");
       if (linkConf) {
-        const curEmail = emailInput ? emailInput.value.trim() : emailParam;
-        linkConf.href = `./confirmacao-pagamento.html?txid=${encodeURIComponent(activeTxid)}&email=${encodeURIComponent(curEmail)}&nome=${encodeURIComponent(nomeParticipante)}&sub=${encodeURIComponent(subSelecionado)}`;
+        linkConf.href = `./confirmacao-pagamento.html?txid=${encodeURIComponent(activeTxid)}&order_id=${encodeURIComponent(activeOrderId || '')}&payment_id=${encodeURIComponent(activePaymentId || '')}&email=${encodeURIComponent(email)}&nome=${encodeURIComponent(nome)}&sub=${encodeURIComponent(subSelecionado)}`;
       }
+
+      // 3. Salva sessão
+      try {
+        sessionStorage.setItem("ejc_active_checkout", JSON.stringify({
+          txid: activeTxid,
+          payment_id: activePaymentId,
+          order_id: activeOrderId,
+          nome,
+          email,
+          whatsapp,
+          sub: subSelecionado,
+          valor: valorTotal,
+          pixPayload: activePixPayload,
+          expiresAt: Date.now() + 15 * 60 * 1000
+        }));
+      } catch (eStore) {}
+
+      // Registra no store local para redundância de leitura
+      registrarTransacaoLocal({
+        txid: activeTxid,
+        payment_id: activePaymentId,
+        order_id: activeOrderId,
+        metodo: "pix",
+        valor: valorTotal,
+        status: "pending",
+        nome: nome,
+        email: email,
+        sub: subSelecionado
+      });
+
+      // 4. Inicia contagem regressiva 15 minutos
+      iniciarTimerPix(15 * 60);
+
+      // 5. Inicia Polling de confirmação
+      iniciarPolling(activeTxid);
+
+      // 6. Transição visual para Etapa 2
+      checkoutStep1.style.display = "none";
+      checkoutStep2.style.display = "block";
+      checkoutStep2.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Atualiza URL com parâmetros sem recarregar a página
+      try {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set("step", "2");
+        newUrl.searchParams.set("txid", activeTxid);
+        newUrl.searchParams.set("email", email);
+        newUrl.searchParams.set("nome", nome);
+        window.history.replaceState(null, "", newUrl.toString());
+      } catch (eH) {}
+
+      btnContinueToPayment.disabled = false;
+      btnContinueToPayment.innerHTML = `<span>Continuar para Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
+      isTransitioningToStep2 = false;
+    }
+
+    // Botão Voltar para Etapa 1
+    document.getElementById("btnBackToStep1").addEventListener("click", () => {
+      clearInterval(pixTimerInterval);
+      clearInterval(pixPollingInterval);
+
+      checkoutStep2.style.display = "none";
+      checkoutStep1.style.display = "block";
+      checkoutStep1.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      try {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("step");
+        window.history.replaceState(null, "", newUrl.toString());
+      } catch (eH) {}
+    });
+
+    function iniciarTimerPix(duracaoSegundos) {
+      let segundos = duracaoSegundos;
+      clearInterval(pixTimerInterval);
+      const timerEl = document.getElementById("pixCountdownText");
+      if (!timerEl) return;
+
+      const updateDisplay = () => {
+        const m = String(Math.floor(segundos / 60)).padStart(2, "0");
+        const s = String(segundos % 60).padStart(2, "0");
+        timerEl.textContent = `${m}:${s}`;
+      };
+
+      updateDisplay();
+      pixTimerInterval = setInterval(() => {
+        segundos--;
+        if (segundos <= 0) {
+          clearInterval(pixTimerInterval);
+          timerEl.textContent = "00:00";
+          alert("O código Pix atingiu o tempo limite. Gere uma nova cobrança retornando à etapa 1.");
+          return;
+        }
+        updateDisplay();
+      }, 1000);
     }
 
     function aplicarConfiguracao(cfg) {
@@ -619,10 +999,6 @@
         return;
       }
       if (incomingVersao > 0) activePixConfig.versao = incomingVersao;
-
-      const oldPrice = activePixConfig.valorTaxaInscricao;
-      const oldPromo = activePixConfig.valorPromocional;
-      const oldKey = activePixConfig.chave;
 
       activePixConfig.chave = pixData.chave || pixData.pix_chave || cfg.pix_chave || activePixConfig.chave;
       activePixConfig.beneficiario = pixData.beneficiario || pixData.pix_beneficiario || cfg.pix_beneficiario || activePixConfig.beneficiario;
@@ -649,20 +1025,10 @@
       } catch (eStorage) {}
 
       atualizarValoresUI();
-
-      // Só recria o Pix se o preço efetivo ou a chave tiverem efetivamente mudado
-      const newEffPrice = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
-      const oldEffPrice = computeEffectivePrice(oldPrice, oldPromo);
-      if (newEffPrice !== oldEffPrice || activePixConfig.chave !== oldKey) {
-        inicializarPix(true);
-      }
     }
 
     async function carregarConfiguracaoAtiva() {
-      // 1. Inicializa o Pix imediatamente com a configuração disponível (0 latência visual)
-      inicializarPix();
-
-      // 2. Busca configuração ativa do servidor com versão do cliente
+      // Busca configuração ativa do servidor com versão do cliente
       const headers = { "Cache-Control": "no-cache", "Pragma": "no-cache" };
       if (activePixConfig.versao) {
         headers["x-client-version"] = String(activePixConfig.versao);
@@ -695,7 +1061,7 @@
     });
 
     function registrarTransacaoLocal(data) {
-      const email = emailInput.value.trim();
+      const email = (data.email || emailInput.value || "").trim();
       const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
       const existingIdx = pagamentos.findIndex(p => p.txid === data.txid);
       if (existingIdx >= 0) {
@@ -707,6 +1073,8 @@
       const transacao = {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         txid: data.txid,
+        payment_id: data.payment_id || data.txid,
+        order_id: data.order_id || null,
         metodo: data.metodo,
         valor: data.valor,
         status: data.status,
@@ -739,9 +1107,17 @@
       clearInterval(pixPollingInterval);
       if (!txid) return;
 
-      let pollingActive = true;
+      let pollingAttempts = 0;
+      const MAX_POLLING = 60; // 60 tentativas * 3s = 3 minutos de polling ativo
+
       pixPollingInterval = setInterval(async () => {
-        if (!pollingActive) return;
+        if (document.hidden) return; // Pausa se aba estiver em segundo plano
+        pollingAttempts++;
+
+        if (pollingAttempts > MAX_POLLING) {
+          clearInterval(pixPollingInterval);
+          return;
+        }
 
         // 1. Consulta em tempo real na API do Servidor (backend com resiliência Supabase)
         try {
@@ -752,7 +1128,6 @@
           if (res.ok) {
             const serverData = await res.json();
             if (serverData && (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid")) {
-              pollingActive = false;
               clearInterval(pixPollingInterval);
               concluirPagamentoComSucesso(serverData);
               return;
@@ -765,7 +1140,6 @@
           const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
           const item = pagamentos.find(p => p.txid === txid);
           if (item && (item.status === "approved" || item.status === "confirmado")) {
-            pollingActive = false;
             clearInterval(pixPollingInterval);
             concluirPagamentoComSucesso(item);
             return;
@@ -774,6 +1148,36 @@
       }, 3000);
     }
 
+    // Botão "Verificar Pagamento Agora"
+    const btnCheckPaymentNow = document.getElementById("btnCheckPaymentNow");
+    if (btnCheckPaymentNow) {
+      btnCheckPaymentNow.addEventListener("click", async () => {
+        if (!activeTxid) return;
+        btnCheckPaymentNow.disabled = true;
+        btnCheckPaymentNow.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando pagamento...`;
+
+        try {
+          const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(activeTxid)}&_t=${Date.now()}`, {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+          if (res.ok) {
+            const serverData = await res.json();
+            if (serverData && (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid")) {
+              concluirPagamentoComSucesso(serverData);
+              return;
+            }
+          }
+        } catch (e) {}
+
+        setTimeout(() => {
+          btnCheckPaymentNow.disabled = false;
+          btnCheckPaymentNow.innerHTML = `<i class="fa-solid fa-rotate"></i> Verificar Pagamento Agora`;
+        }, 1200);
+      });
+    }
+
+    // Copiar Pix
     document.getElementById("btnCopyPixCheckout").addEventListener("click", () => {
       const textarea = document.getElementById("pixCodeTextarea");
       const cleanVal = (textarea.value || "").trim();
@@ -790,12 +1194,11 @@
     });
 
     // ==============================================================================
-    // PAGAMENTO VIA CARTÃO DE CRÉDITO
+    // PAGAMENTO VIA CARTÃO DE CRÉDITO NA ETAPA 2
     // ==============================================================================
     const cardInput = document.getElementById("cardNumber");
     const brandIcon = document.getElementById("cardBrandIcon");
 
-    // Formatação e Detecção de Bandeira do Cartão
     cardInput.addEventListener("input", function() {
       let v = this.value.replace(/\D/g, "").substring(0, 16);
       v = v.replace(/(\d{4})(?=\d)/g, "$1 ");
@@ -807,7 +1210,7 @@
       } else if (/^5[1-5]/.test(num)) {
         brandIcon.className = "fa-brands fa-cc-mastercard card-brand-icon";
       } else if (/^(4011|5067|5090|6277|6363)/.test(num)) {
-        brandIcon.className = "fa-solid fa-credit-card card-brand-icon"; // Elo
+        brandIcon.className = "fa-solid fa-credit-card card-brand-icon";
       } else if (/^3[47]/.test(num)) {
         brandIcon.className = "fa-brands fa-cc-amex card-brand-icon";
       } else {
@@ -822,18 +1225,16 @@
       this.value = v;
     });
 
-    // Submissão do Cartão
     const cardForm = document.getElementById("cardPaymentForm");
     cardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = emailInput.value.trim();
+      const nomeFinal = nameInput.value.trim() || nomeParticipante;
+      const emailFinal = emailInput.value.trim() || emailParam;
 
-      if (!validarEmail(email)) {
-        document.getElementById("emailErrorMsg").style.display = "block";
-        emailInput.focus();
+      if (!validarEmail(emailFinal)) {
+        alert("E-mail inválido. Por favor, volte à Etapa 1 e confirme o endereço.");
         return;
       }
-      document.getElementById("emailErrorMsg").style.display = "none";
 
       const cardRaw = cardInput.value.replace(/\s/g, "");
       const holder = document.getElementById("cardHolderName").value.trim();
@@ -846,7 +1247,6 @@
         return;
       }
 
-      // Processamento seguro com tokenização
       const btnSubmitCard = document.getElementById("btnSubmitCard");
       const feedback = document.getElementById("cardProcessingFeedback");
       btnSubmitCard.disabled = true;
@@ -866,9 +1266,9 @@
             metodo: "credit_card",
             tipo: tipoCheckout,
             valor: valorTotal,
-            nome: nomeParticipante || holder,
-            email: email,
-            whatsapp: wppParam || null,
+            nome: nomeFinal || holder,
+            email: emailFinal,
+            whatsapp: wppInput.value.trim() || wppParam || null,
             sub: subSelecionado,
             inscricao_id: inscricaoIdParam || null,
             parcelas: installments,
@@ -886,11 +1286,13 @@
         const txidFinal = (data && data.txid) ? data.txid : txidCard;
         const pagamentoCard = {
           txid: txidFinal,
+          payment_id: (data && data.payment_id) ? data.payment_id : txidFinal,
+          order_id: (data && data.order_id) ? data.order_id : null,
           metodo: "credit_card",
           valor: (data && data.valor) ? data.valor : valorTotal,
           status: "approved",
-          nome: nomeParticipante || holder,
-          email: email,
+          nome: nomeFinal || holder,
+          email: emailFinal,
           sub: subSelecionado,
           parcelas: installments,
           cartao_ultimos_digitos: ultimosDigitos,
@@ -904,11 +1306,12 @@
         console.warn("[Checkout] Falha na chamada da API, utilizando fallback local:", err);
         const pagamentoCard = {
           txid: txidCard,
+          payment_id: txidCard,
           metodo: "credit_card",
           valor: valorTotal,
           status: "approved",
-          nome: nomeParticipante || holder,
-          email: email,
+          nome: nomeFinal || holder,
+          email: emailFinal,
           sub: subSelecionado,
           parcelas: installments,
           cartao_ultimos_digitos: ultimosDigitos,
@@ -925,11 +1328,15 @@
     });
 
     // ==============================================================================
-    // CONCLUSÃO E TELA DE SUCESSO UNIFICADA
+    // CONCLUSÃO E TELA DE CHECK-IN CONFIRMADO (CARD VERDE)
     // ==============================================================================
     function concluirPagamentoComSucesso(pagamento) {
       clearInterval(pixTimerInterval);
       clearInterval(pixPollingInterval);
+
+      try {
+        sessionStorage.removeItem("ejc_active_checkout");
+      } catch (e) {}
 
       // 1. Atualiza status no armazenamento local de pagamentos
       try {
@@ -942,12 +1349,14 @@
         } else {
           localPagamentos.unshift({
             txid: pagamento.txid,
+            payment_id: pagamento.payment_id || pagamento.txid,
+            order_id: pagamento.order_id || null,
             metodo: pagamento.metodo || "pix",
             valor: pagamento.valor || valorTotal,
             status: "approved",
             pago_em: agora,
             email: pagamento.email || emailInput.value.trim(),
-            nome_pagador: pagamento.nome || nomeParticipante,
+            nome_pagador: pagamento.nome || nameInput.value.trim() || nomeParticipante,
             sub: pagamento.sub || subSelecionado
           });
         }
@@ -972,29 +1381,40 @@
         }
       } catch (e) {}
 
-      // 3. Renderiza a tela de sucesso
-      document.getElementById("paymentFormState").style.display = "none";
-      document.getElementById("successScreen").style.display = "block";
+      // 3. Renderiza o Card Verde de Check-in Confirmado
+      checkoutStep1.style.display = "none";
+      checkoutStep2.style.display = "none";
+      checkinSuccessState.style.display = "block";
+      checkinSuccessState.scrollIntoView({ behavior: "smooth", block: "start" });
 
-      document.getElementById("resTxid").textContent = pagamento.txid;
+      const finalNome = pagamento.nome || nameInput.value.trim() || nomeParticipante;
+      const finalEmail = pagamento.email || emailInput.value.trim() || emailParam || "seu e-mail informado";
+      const finalTxid = pagamento.txid;
+      const finalPaymentId = pagamento.payment_id || pagamento.metadata?.payment_id || finalTxid;
+
+      document.getElementById("resName").textContent = finalNome;
+      document.getElementById("resEmail").textContent = finalEmail;
+      document.getElementById("resSub").textContent = `Sub ${pagamento.sub || subSelecionado}`;
       document.getElementById("resMethod").textContent = pagamento.metodo === "credit_card"
         ? `Cartão de Crédito (${pagamento.cartao_bandeira || "Cartão"} final ${pagamento.cartao_ultimos_digitos || "0000"})`
         : "Pix Instantâneo";
       document.getElementById("resAmount").textContent = Number(pagamento.valor || valorTotal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      document.getElementById("resDate").textContent = new Date().toLocaleString("pt-BR");
-      
-      const emailFinal = emailInput.value.trim() || pagamento.email || emailParam || "seu e-mail informado";
-      document.getElementById("resEmail").textContent = emailFinal;
+      document.getElementById("resPaymentId").textContent = finalPaymentId;
+      document.getElementById("resTxid").textContent = finalTxid;
+      document.getElementById("resDate").textContent = pagamento.pago_em ? new Date(pagamento.pago_em).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR");
+      document.getElementById("resEmailBanner").textContent = finalEmail;
 
       // 4. Dispara envio/garantia de comprovante por e-mail via API (idempotente)
-      if (emailFinal && validarEmail(emailFinal)) {
+      if (finalEmail && validarEmail(finalEmail)) {
         fetch("/api/email-comprovante", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            txid: pagamento.txid,
-            nome: nomeParticipante,
-            email: emailFinal,
+            txid: finalTxid,
+            payment_id: finalPaymentId,
+            order_id: pagamento.order_id || null,
+            nome: finalNome,
+            email: finalEmail,
             valor: pagamento.valor || valorTotal,
             metodo: pagamento.metodo || "pix",
             sub: subSelecionado
@@ -1012,7 +1432,6 @@
     }
 
     async function obterLinkWhatsAppSub(sub) {
-      // 1. Tenta ler do Supabase configuracoes_whatsapp (apenas se online e configurado)
       if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
@@ -1021,17 +1440,69 @@
         } catch(e) {}
       }
 
-      // 2. Fallback no localStorage administrável
       const adminLinks = JSON.parse(localStorage.getItem("ejc_whatsapp_links") || "{}");
       if (adminLinks[sub]) return adminLinks[sub];
 
-      // 3. Fallback no objeto global
       const fallbackSubs = window.EJC_WHATSAPP_SUBS || {};
       return fallbackSubs[sub] || fallbackSubs["Geral"] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
     }
 
-    // Inicializa com configuração ativa do servidor
+    // Inicialização da configuração ativa
     carregarConfiguracaoAtiva();
+
+    // Verificação de restauração de Etapa 2 após reload ou parâmetro de URL
+    (async function verificarSessaoAtiva() {
+      const urlStep = urlParams.get("step");
+      const urlTxid = urlParams.get("txid");
+      let sessionData = null;
+      try {
+        const rawSession = sessionStorage.getItem("ejc_active_checkout");
+        if (rawSession) sessionData = JSON.parse(rawSession);
+      } catch (e) {}
+
+      const checkTxid = urlTxid || sessionData?.txid;
+
+      if (checkTxid) {
+        try {
+          const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(checkTxid)}&_t=${Date.now()}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.status === "approved" || data.status === "confirmado" || data.status === "paid")) {
+              concluirPagamentoComSucesso(data);
+              return;
+            }
+          }
+        } catch (e) {}
+
+        if ((urlStep === "2" || sessionData) && sessionData && sessionData.expiresAt > Date.now()) {
+          // Restaura Step 2 com os dados existentes
+          activeTxid = sessionData.txid;
+          activePaymentId = sessionData.payment_id;
+          activeOrderId = sessionData.order_id;
+          activePixPayload = sessionData.pixPayload;
+
+          document.getElementById("step2IdentifiedName").textContent = sessionData.nome;
+          document.getElementById("step2IdentifiedEmail").textContent = sessionData.email;
+          document.getElementById("step2IdentifiedTotal").textContent = sessionData.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+          document.getElementById("pixCodeTextarea").value = activePixPayload;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
+          document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+
+          const linkConf = document.getElementById("linkGoToConfirmation");
+          if (linkConf) {
+            linkConf.href = `./confirmacao-pagamento.html?txid=${encodeURIComponent(activeTxid)}&order_id=${encodeURIComponent(activeOrderId || '')}&payment_id=${encodeURIComponent(activePaymentId || '')}&email=${encodeURIComponent(sessionData.email)}&nome=${encodeURIComponent(sessionData.nome)}&sub=${encodeURIComponent(sessionData.sub)}`;
+          }
+
+          const restantes = Math.max(10, Math.floor((sessionData.expiresAt - Date.now()) / 1000));
+          iniciarTimerPix(restantes);
+          iniciarPolling(activeTxid);
+
+          checkoutStep1.style.display = "none";
+          checkoutStep2.style.display = "block";
+        }
+      }
+    })();
   </script>
 </body>
 </html>

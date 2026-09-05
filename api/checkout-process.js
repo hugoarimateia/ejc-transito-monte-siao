@@ -167,7 +167,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // 1. Atualiza Supabase via RPC unificada
+  // 1. Atualiza Supabase via RPC unificada multi-identificador
   if (supabaseUrl && supabaseKey) {
     try {
       const dbResponse = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
@@ -186,29 +186,48 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
         signal: AbortSignal.timeout(4000)
       });
       if (dbResponse.ok) {
-        confirmedOnDatabase = true;
+        const rpcResult = await dbResponse.json();
+        if (rpcResult && rpcResult.success) {
+          confirmedOnDatabase = true;
+          if (rpcResult.pagamento) {
+            paymentRecord = rpcResult.pagamento;
+          }
+        }
       }
     } catch (dbErr) {
       console.warn("[confirmarPagamentoResiliente] Erro RPC Supabase:", dbErr.message);
     }
 
-    try {
-      const payRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(cleanTxid)}&limit=1`, {
-        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
-        signal: AbortSignal.timeout(3000)
-      });
-      if (payRes.ok) {
-        const rows = await payRes.json();
-        if (rows && rows.length > 0) paymentRecord = rows[0];
-      }
-    } catch (fetchErr) {}
+    // Busca detalhada multi-identificador se o registro ainda não foi obtido
+    if (!paymentRecord) {
+      try {
+        const multiQuery = `or=(txid.eq.${encodeURIComponent(cleanTxid)},gateway_transaction_id.eq.${encodeURIComponent(cleanTxid)},id.eq.${encodeURIComponent(cleanTxid)})&limit=1`;
+        const payRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?${multiQuery}`, {
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+          signal: AbortSignal.timeout(3000)
+        });
+        if (payRes.ok) {
+          const rows = await payRes.json();
+          if (rows && rows.length > 0) paymentRecord = rows[0];
+        }
+      } catch (fetchErr) {}
+    }
   }
 
-  // 2. Atualiza Local Store / Fallback
+  // 2. Atualiza Local Store / Fallback multi-identificador
   try {
     const localStore = settingsStore.loadLocalStore();
     if (!Array.isArray(localStore.pagamentos)) localStore.pagamentos = [];
-    const idx = localStore.pagamentos.findIndex(p => p.txid === cleanTxid);
+    const idx = localStore.pagamentos.findIndex(p => 
+      p.txid === cleanTxid ||
+      p.payment_id === cleanTxid ||
+      p.order_id === cleanTxid ||
+      p.external_reference === cleanTxid ||
+      p.gateway_transaction_id === cleanTxid ||
+      p.id === cleanTxid ||
+      (p.metadata && (p.metadata.order_id === cleanTxid || p.metadata.payment_id === cleanTxid || p.metadata.external_reference === cleanTxid))
+    );
+
     if (idx !== -1) {
       localStore.pagamentos[idx].status = "approved";
       localStore.pagamentos[idx].pago_em = agora;
@@ -216,6 +235,8 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
     } else {
       const novoReg = {
         txid: cleanTxid,
+        payment_id: cleanTxid,
+        order_id: cleanTxid,
         status: "approved",
         pago_em: agora,
         metodo: "pix",
@@ -235,6 +256,8 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
     try {
       emailStatus = await sendPaymentReceiptEmail({
         txid: paymentRecord.txid || cleanTxid,
+        payment_id: paymentRecord.payment_id || paymentRecord.metadata?.payment_id || cleanTxid,
+        order_id: paymentRecord.order_id || paymentRecord.metadata?.order_id,
         nome: paymentRecord.nome_pagador || "Participante",
         email: paymentRecord.email,
         valor: paymentRecord.valor || 50,
@@ -250,6 +273,8 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
   return {
     success: true,
     txid: cleanTxid,
+    payment_id: paymentRecord?.payment_id || paymentRecord?.metadata?.payment_id || cleanTxid,
+    order_id: paymentRecord?.order_id || paymentRecord?.metadata?.order_id || null,
     status: "approved",
     confirmedOnDatabase,
     emailEnviado: Boolean(emailStatus.success || paymentRecord?.comprovante_email_enviado),
@@ -275,24 +300,24 @@ module.exports = async (req, res) => {
   // Permite à página de confirmação e ao checkout monitorar a transação
   // ==============================================================================
   if (req.method === "GET") {
-    const queryTxid = req.query.txid || req.query.id || req.query.payment_id || req.query.reference;
+    const queryTxid = req.query.txid || req.query.id || req.query.payment_id || req.query.order_id || req.query.reference || req.query.external_reference;
     const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : null;
     const queryNome = req.query.nome ? String(req.query.nome).trim().toLowerCase() : null;
     const queryInscricao = req.query.inscricao_id || req.query.registration_id;
 
     if (!queryTxid && !queryEmail && !queryInscricao) {
-      return res.status(400).json({ error: "Informe o TXID, E-mail ou Inscrição para consulta de status." });
+      return res.status(400).json({ error: "Informe o TXID, Payment ID, Order ID, E-mail ou Inscrição para consulta de status." });
     }
 
     try {
       let transactionFound = null;
 
-      // 1. Consulta no Supabase
+      // 1. Consulta no Supabase multi-identificador
       if (supabaseUrl && supabaseKey) {
         try {
           let urlQuery = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
           if (queryTxid) {
-            urlQuery += `txid=eq.${encodeURIComponent(queryTxid)}&limit=1`;
+            urlQuery += `or=(txid.eq.${encodeURIComponent(queryTxid)},gateway_transaction_id.eq.${encodeURIComponent(queryTxid)},id.eq.${encodeURIComponent(queryTxid)})&limit=1`;
           } else if (queryInscricao) {
             urlQuery += `inscricao_id=eq.${encodeURIComponent(queryInscricao)}&order=criado_em.desc&limit=1`;
           } else if (queryEmail) {
@@ -314,17 +339,50 @@ module.exports = async (req, res) => {
               }
             }
           }
+
+          // Se não encontrou por coluna e temos queryTxid, tenta buscar no metadata JSONB
+          if (!transactionFound && queryTxid) {
+            try {
+              const metaRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?metadata->>payment_id=eq.${encodeURIComponent(queryTxid)}&limit=1`, {
+                headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+              });
+              if (metaRes.ok) {
+                const metaRows = await metaRes.json();
+                if (metaRows && metaRows.length > 0) transactionFound = metaRows[0];
+              }
+            } catch (eMeta) {}
+
+            if (!transactionFound) {
+              try {
+                const orderRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?metadata->>order_id=eq.${encodeURIComponent(queryTxid)}&limit=1`, {
+                  headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+                });
+                if (orderRes.ok) {
+                  const orderRows = await orderRes.json();
+                  if (orderRows && orderRows.length > 0) transactionFound = orderRows[0];
+                }
+              } catch (eOrd) {}
+            }
+          }
         } catch (dbErr) {
           console.warn("[Checkout Process GET] Erro ao consultar Supabase:", dbErr.message);
         }
       }
 
-      // 2. Fallback no Store Local / Memória
+      // 2. Fallback no Store Local / Memória multi-identificador
       if (!transactionFound) {
         const localStore = settingsStore.loadLocalStore();
         if (Array.isArray(localStore.pagamentos)) {
           if (queryTxid) {
-            transactionFound = localStore.pagamentos.find(p => p.txid === queryTxid);
+            transactionFound = localStore.pagamentos.find(p => 
+              p.txid === queryTxid || 
+              p.payment_id === queryTxid || 
+              p.order_id === queryTxid || 
+              p.external_reference === queryTxid || 
+              p.gateway_transaction_id === queryTxid || 
+              p.id === queryTxid ||
+              (p.metadata && (p.metadata.order_id === queryTxid || p.metadata.payment_id === queryTxid || p.metadata.external_reference === queryTxid))
+            );
           } else if (queryInscricao) {
             transactionFound = localStore.pagamentos.find(p => p.inscricao_id === queryInscricao);
           } else if (queryEmail) {
@@ -360,11 +418,14 @@ module.exports = async (req, res) => {
         }
       } catch (eWpp) {}
 
-      return res.status(200).json({
+      const responsePayload = {
         success: true,
         txid: transactionFound.txid,
-        payment_id: transactionFound.payment_id || transactionFound.txid,
+        payment_id: transactionFound.payment_id || transactionFound.metadata?.payment_id || transactionFound.txid,
+        order_id: transactionFound.order_id || transactionFound.metadata?.order_id || null,
+        external_reference: transactionFound.external_reference || transactionFound.metadata?.external_reference || transactionFound.txid,
         status: transactionFound.status || "pending",
+        pago: transactionFound.status === "approved" || transactionFound.status === "confirmado" || transactionFound.status === "paid",
         pago_em: transactionFound.pago_em || null,
         criado_em: transactionFound.criado_em || null,
         metodo: transactionFound.metodo || "pix",
@@ -378,7 +439,9 @@ module.exports = async (req, res) => {
         comprovante_email_em: transactionFound.comprovante_email_em || null,
         comprovante_email_erro: transactionFound.comprovante_email_erro || null,
         whatsapp_link: whatsappLink
-      });
+      };
+      responsePayload.payment = { ...responsePayload };
+      return res.status(200).json(responsePayload);
     } catch (err) {
       console.error("[Checkout Process GET Exception]", err);
       return res.status(500).json({ error: "Falha interna ao consultar status da transação." });
@@ -398,6 +461,7 @@ module.exports = async (req, res) => {
       metodo, // 'pix' ou 'credit_card'
       valor,
       nome,
+      nome_completo,
       email,
       whatsapp,
       cpf,
@@ -419,10 +483,10 @@ module.exports = async (req, res) => {
     // --------------------------------------------------------------------------
     // AÇÃO 1: CONFIRMAÇÃO MANUAL / RECONCILIAÇÃO (ADMIN OU TESTES)
     // --------------------------------------------------------------------------
-    if (action === "confirm_payment") {
-      const targetTxid = bodyTxid || req.body?.id;
+    if (action === "confirm_payment" || action === "verificar_pagamento" || action === "reconciliar") {
+      const targetTxid = bodyTxid || req.body?.id || req.body?.payment_id || req.body?.order_id || req.body?.external_reference;
       if (!targetTxid) {
-        return res.status(400).json({ error: "TXID obrigatório para confirmar pagamento." });
+        return res.status(400).json({ error: "Identificador (TXID, Payment ID ou Order ID) obrigatório para confirmar pagamento." });
       }
       const confirmResult = await confirmarPagamentoResiliente({
         txid: targetTxid,
@@ -437,11 +501,11 @@ module.exports = async (req, res) => {
     // AÇÃO 2: REENVIO DE COMPROVANTE POR E-MAIL
     // --------------------------------------------------------------------------
     if (action === "resend_receipt") {
-      const targetTxid = bodyTxid || req.body?.id;
+      const targetTxid = bodyTxid || req.body?.id || req.body?.payment_id || req.body?.order_id || req.body?.external_reference;
       const targetEmail = email ? String(email).trim().toLowerCase() : null;
 
       if (!targetTxid && !targetEmail) {
-        return res.status(400).json({ error: "Informe o TXID ou E-mail para reenviar o comprovante." });
+        return res.status(400).json({ error: "Informe o TXID, Payment ID ou E-mail para reenviar o comprovante." });
       }
 
       // Localiza a transação correspondente
@@ -513,9 +577,15 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
 
-    const txid = (metodo === "credit_card" ? "CARD" : "PIX") +
-      Date.now().toString(36).toUpperCase() +
-      Math.random().toString(36).substring(2, 6).toUpperCase();
+    const nomeFinal = (nome || nome_completo || "Participante").trim();
+    const metodoFinal = (metodo || "pix").toLowerCase();
+
+    const ts36 = Date.now().toString(36).toUpperCase();
+    const rnd4 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const orderId = `ORD${ts36}${rnd4}`;
+    const paymentId = `PAY${ts36}${rnd4}`;
+    const txid = (metodoFinal === "credit_card" ? "CARD" : "PIX") + ts36 + rnd4;
+    const externalReference = txid;
 
     // Busca configuração financeira ativa oficial garantida pelo settingsStore
     let officialPrice = Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00);
@@ -565,7 +635,7 @@ module.exports = async (req, res) => {
     // --------------------------------------------------------------------------
     // PROCESSAMENTO PIX
     // --------------------------------------------------------------------------
-    if (metodo === "pix") {
+    if (metodoFinal === "pix") {
       const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);
       const expiracao = new Date(Date.now() + tempoExpiracao * 60000).toISOString();
 
@@ -590,7 +660,7 @@ module.exports = async (req, res) => {
             },
             body: JSON.stringify({
               p_txid: txid,
-              p_nome_pagador: nome || "Anônimo",
+              p_nome_pagador: nomeFinal,
               p_email: email.trim().toLowerCase(),
               p_whatsapp_pagador: whatsapp || null,
               p_cpf_pagador: cpf || null,
@@ -605,7 +675,15 @@ module.exports = async (req, res) => {
               p_qr_code_base64: null,
               p_expiracao: expiracao,
               p_inscricao_id: inscricao_id || null,
-              p_metadata: { sub: sub || null, gerado_via: "api_checkout_process", lote: loteAtual }
+              p_metadata: {
+                order_id: orderId,
+                payment_id: paymentId,
+                external_reference: externalReference,
+                sub: sub || null,
+                gerado_via: "api_checkout_process",
+                lote: loteAtual,
+                inscricao_id: inscricao_id || null
+              }
             })
           });
         } catch (dbErr) {
@@ -619,7 +697,11 @@ module.exports = async (req, res) => {
         if (!Array.isArray(localData.pagamentos)) localData.pagamentos = [];
         localData.pagamentos.unshift({
           txid: txid,
-          nome_pagador: nome || "Anônimo",
+          payment_id: paymentId,
+          order_id: orderId,
+          external_reference: externalReference,
+          gateway_transaction_id: paymentId,
+          nome_pagador: nomeFinal,
           email: email.trim().toLowerCase(),
           whatsapp_pagador: whatsapp || null,
           valor: valorNumerico,
@@ -629,6 +711,13 @@ module.exports = async (req, res) => {
           pix_copia_e_cola: payloadPix,
           inscricao_id: inscricao_id || null,
           sub: sub || null,
+          metadata: {
+            order_id: orderId,
+            payment_id: paymentId,
+            external_reference: externalReference,
+            sub: sub || null,
+            lote: loteAtual
+          },
           criado_em: new Date().toISOString()
         });
         if (localData.pagamentos.length > 200) localData.pagamentos.pop();
@@ -641,9 +730,13 @@ module.exports = async (req, res) => {
         success: true,
         metodo: "pix",
         txid: txid,
+        payment_id: paymentId,
+        order_id: orderId,
+        external_reference: externalReference,
         valor: valorNumerico,
         chave: chavePix,
         pixCopiaECola: payloadPix,
+        pix_copia_cola: payloadPix,
         payload: payloadPix,
         expiracao: expiracao,
         status: "pending"
@@ -653,7 +746,7 @@ module.exports = async (req, res) => {
     // --------------------------------------------------------------------------
     // PROCESSAMENTO CARTÃO DE CRÉDITO
     // --------------------------------------------------------------------------
-    if (metodo === "credit_card") {
+    if (metodoFinal === "credit_card") {
       const ultimosDigitos = cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : "0000";
       const bandeira = cartao_bandeira || "Cartão";
       const totalParcelas = Math.min(maxParcelasAllowed, Math.max(1, Number(parcelas || 1)));
@@ -687,10 +780,14 @@ module.exports = async (req, res) => {
               p_expiracao: new Date(Date.now() + 86400000).toISOString(),
               p_inscricao_id: inscricao_id || null,
               p_metadata: {
+                order_id: orderId,
+                payment_id: paymentId,
+                external_reference: externalReference,
                 sub: sub || null,
                 titular: cartao_titular || null,
                 token: cartao_token ? "tokenizado" : "direto",
-                lote: loteAtual
+                lote: loteAtual,
+                inscricao_id: inscricao_id || null
               }
             })
           });
@@ -720,6 +817,8 @@ module.exports = async (req, res) => {
       try {
         emailResult = await sendPaymentReceiptEmail({
           txid: txid,
+          payment_id: paymentId,
+          order_id: orderId,
           nome: nome || cartao_titular || "Participante",
           email: email.trim().toLowerCase(),
           valor: valorNumerico,
@@ -737,6 +836,10 @@ module.exports = async (req, res) => {
         if (!Array.isArray(localData.pagamentos)) localData.pagamentos = [];
         localData.pagamentos.unshift({
           txid: txid,
+          payment_id: paymentId,
+          order_id: orderId,
+          external_reference: externalReference,
+          gateway_transaction_id: paymentId,
           nome_pagador: nome || cartao_titular || "Titular do Cartão",
           email: email.trim().toLowerCase(),
           whatsapp_pagador: whatsapp || null,
@@ -749,6 +852,13 @@ module.exports = async (req, res) => {
           cartao_bandeira: bandeira,
           inscricao_id: inscricao_id || null,
           sub: sub || null,
+          metadata: {
+            order_id: orderId,
+            payment_id: paymentId,
+            external_reference: externalReference,
+            sub: sub || null,
+            lote: loteAtual
+          },
           comprovante_email_enviado: emailResult.success,
           pago_em: new Date().toISOString(),
           criado_em: new Date().toISOString()
@@ -763,6 +873,9 @@ module.exports = async (req, res) => {
         success: true,
         metodo: "credit_card",
         txid: txid,
+        payment_id: paymentId,
+        order_id: orderId,
+        external_reference: externalReference,
         valor: valorNumerico,
         status: statusFinal,
         parcelas: totalParcelas,

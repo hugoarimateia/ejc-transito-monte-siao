@@ -193,7 +193,7 @@
                 <th>Meio de Pagamento</th>
                 <th>Tipo</th>
                 <th>Valor</th>
-                <th>Código (TXID)</th>
+                <th>Payment ID / TXID</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -855,7 +855,9 @@
       const filtered = pagamentosData.filter(p => {
         const matchSearch = (p.nome_pagador || "").toLowerCase().includes(search) ||
           (p.email || "").toLowerCase().includes(search) ||
-          (p.txid || "").toLowerCase().includes(search);
+          (p.txid || "").toLowerCase().includes(search) ||
+          (p.payment_id || "").toLowerCase().includes(search) ||
+          (p.order_id || "").toLowerCase().includes(search);
         const matchMethod = !methodFilter || p.metodo === methodFilter;
         const matchStatus = !statusFilter || (statusFilter === "approved" ? isApproved(p.status) : p.status === statusFilter);
         return matchSearch && matchMethod && matchStatus;
@@ -876,6 +878,7 @@
 
         const statusClass = isApproved(p.status) ? "status-approved" : `status-${p.status || 'pending'}`;
         const statusLabel = isApproved(p.status) ? "Aprovado" : (p.status === "rejected" ? "Recusado" : (p.status === "expired" ? "Expirado" : "Pendente"));
+        const displayPaymentId = p.payment_id || p.metadata?.payment_id;
 
         return `
           <tr>
@@ -888,7 +891,10 @@
             <td>${methodBadge}</td>
             <td><span style="font-size:.78rem; text-transform:uppercase; font-weight:700; color:var(--muted);">${p.tipo || 'Inscrição'}</span></td>
             <td><strong>R$ ${Number(p.valor || 0).toFixed(2).replace('.', ',')}</strong></td>
-            <td><code style="font-size: .74rem; background: #e2e8f0; padding: 2px 5px; border-radius: 4px;">${p.txid}</code></td>
+            <td>
+              ${displayPaymentId ? `<strong style="font-size: .8rem; font-family: monospace; display: block; color: var(--blue);">${displayPaymentId}</strong>` : ''}
+              <code style="font-size: .74rem; background: var(--bg-surface, #e2e8f0); padding: 2px 5px; border-radius: 4px;">${p.txid}</code>
+            </td>
             <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
             <td>
               <button class="action-btn view" onclick="verDetalhesPagamento('${p.txid}')" title="Ver auditoria e detalhes">
