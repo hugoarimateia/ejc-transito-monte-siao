@@ -7,10 +7,11 @@
 const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
 
-function calcularCRC16(str) {
+function calcularCRC16(payload) {
+  const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), "utf8");
   let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= (str.charCodeAt(i) << 8);
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= (buf[i] << 8);
     for (let j = 0; j < 8; j++) {
       if ((crc & 0x8000) !== 0) {
         crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
@@ -23,20 +24,113 @@ function calcularCRC16(str) {
 }
 
 function emvFormat(id, value) {
-  const len = String(value.length).padStart(2, "0");
-  return `${id}${len}${value}`;
+  const valStr = String(value !== undefined && value !== null ? value : "");
+  const len = String(Buffer.byteLength(valStr, "utf8")).padStart(2, "0");
+  return `${id}${len}${valStr}`;
+}
+
+function sanitizePixAscii(str, maxLen) {
+  if (!str) return "";
+  return String(str)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos e diacríticos
+    .replace(/[º°]/g, "")            // remove ordinais masculinos
+    .replace(/ª/g, "a")              // normaliza ordinais femininos
+    .replace(/[^a-zA-Z0-9\s.\-_@]/g, "") // mantém apenas caracteres ASCII permitidos
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+function parseTLVBytes(buf) {
+  let idx = 0;
+  const fields = [];
+  while (idx < buf.length) {
+    if (idx + 4 > buf.length) break;
+    const tag = buf.subarray(idx, idx + 2).toString("ascii");
+    const len = parseInt(buf.subarray(idx + 2, idx + 4).toString("ascii"), 10);
+    if (isNaN(len) || idx + 4 + len > buf.length) {
+      throw new Error(`TLV corrompido na tag ${tag}: comprimento inválido ou extrapolou buffer`);
+    }
+    const valBuf = buf.subarray(idx + 4, idx + 4 + len);
+    const valStr = valBuf.toString("utf8");
+    fields.push({ tag, len, valBuf, valStr });
+    idx += 4 + len;
+  }
+  return fields;
+}
+
+function validarPayloadPix(payload) {
+  if (!payload || typeof payload !== "string") {
+    throw new Error("Payload Pix nulo ou não é string");
+  }
+  const cleanPayload = payload.trim();
+  if (cleanPayload.length < 50) {
+    throw new Error("Payload Pix excessivamente curto");
+  }
+  if (!cleanPayload.includes("6304")) {
+    throw new Error("Payload Pix sem tag de checksum 6304");
+  }
+
+  const body = cleanPayload.slice(0, -4);
+  const declaredCrc = cleanPayload.slice(-4).toUpperCase();
+  const computedCrc = calcularCRC16(body);
+
+  if (declaredCrc !== computedCrc) {
+    throw new Error(`Inconsistência de CRC no Pix: declarado ${declaredCrc} !== calculado ${computedCrc}`);
+  }
+
+  const buf = Buffer.from(cleanPayload, "utf8");
+  const fields = parseTLVBytes(buf);
+  const tagMap = new Map();
+  fields.forEach(f => tagMap.set(f.tag, f));
+
+  // Tags obrigatórias no padrão BACEN EMVCo QRCPS-MPM
+  const requiredTags = ["00", "26", "52", "53", "58", "59", "60", "62", "63"];
+  for (const t of requiredTags) {
+    if (!tagMap.has(t)) {
+      throw new Error(`Tag obrigatória ${t} ausente no payload Pix`);
+    }
+  }
+
+  // Validação subcampos do campo 26
+  const tag26 = tagMap.get("26");
+  const sub26 = parseTLVBytes(tag26.valBuf);
+  const sub26Map = new Map();
+  sub26.forEach(sf => sub26Map.set(sf.tag, sf));
+
+  if (!sub26Map.has("00") || sub26Map.get("00").valStr !== "br.gov.bcb.pix") {
+    throw new Error("GUI br.gov.bcb.pix ausente ou incorreto no campo 26");
+  }
+  if (!sub26Map.has("01") || !sub26Map.get("01").valStr) {
+    throw new Error("Chave Pix ausente no subcampo 01 do campo 26");
+  }
+
+  // Validação subcampos do campo 62 (TXID)
+  const tag62 = tagMap.get("62");
+  const sub62 = parseTLVBytes(tag62.valBuf);
+  const sub62Map = new Map();
+  sub62.forEach(sf => sub62Map.set(sf.tag, sf));
+  if (!sub62Map.has("05") || !sub62Map.get("05").valStr) {
+    throw new Error("TXID / Referência adicional ausente no campo 62");
+  }
+
+  return { valid: true, crc: computedCrc, fields: tagMap };
 }
 
 function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
-  const cleanChave = chave.trim();
-  const cleanNome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 25).toUpperCase();
-  const cleanCidade = cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 15).toUpperCase();
+  const cleanChave = chave ? chave.trim() : "";
+  if (!cleanChave) throw new Error("Chave Pix não pode ser vazia para gerar BR Code.");
+
+  const cleanNome = sanitizePixAscii(nome || "EJC TRANSITO MONTE SIAO", 25).toUpperCase();
+  const cleanCidade = sanitizePixAscii(cidade || "CAMPINA GRANDE", 15).toUpperCase();
   const cleanTxid = (txid || "EJCTRANSITO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
+  const cleanInfo = sanitizePixAscii(info, 40).toUpperCase();
   const formattedValor = Number(valor).toFixed(2);
 
   let merchantInfo = emvFormat("00", "br.gov.bcb.pix");
   merchantInfo += emvFormat("01", cleanChave);
-  if (info) merchantInfo += emvFormat("02", info.slice(0, 40));
+  if (cleanInfo) merchantInfo += emvFormat("02", cleanInfo);
 
   const additionalData = emvFormat("05", cleanTxid);
 
@@ -45,7 +139,9 @@ function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
   payload += emvFormat("26", merchantInfo);
   payload += emvFormat("52", "0000");
   payload += emvFormat("53", "986");
-  payload += emvFormat("54", formattedValor);
+  if (Number(formattedValor) > 0) {
+    payload += emvFormat("54", formattedValor);
+  }
   payload += emvFormat("58", "BR");
   payload += emvFormat("59", cleanNome);
   payload += emvFormat("60", cleanCidade);
@@ -53,7 +149,12 @@ function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
   payload += "6304";
 
   const crc = calcularCRC16(payload);
-  return `${payload}${crc}`;
+  const finalPayload = `${payload}${crc}`;
+
+  // Validação estrita antes de retornar
+  validarPayloadPix(finalPayload);
+
+  return finalPayload;
 }
 
 module.exports = async (req, res) => {
@@ -442,3 +543,9 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Falha interna no processamento do checkout." });
   }
 };
+
+module.exports.calcularCRC16 = calcularCRC16;
+module.exports.emvFormat = emvFormat;
+module.exports.sanitizePixAscii = sanitizePixAscii;
+module.exports.validarPayloadPix = validarPayloadPix;
+module.exports.gerarPayloadPixBACEN = gerarPayloadPixBACEN;

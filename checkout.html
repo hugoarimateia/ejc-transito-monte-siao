@@ -375,10 +375,16 @@
     let pixTimerInterval = null;
     let pixPollingInterval = null;
 
-    function calcularCRC16(str) {
+    const textEncoder = new TextEncoder();
+    function getUtf8ByteLength(str) {
+      return textEncoder.encode(String(str || "")).length;
+    }
+
+    function calcularCRC16(payload) {
+      const bytes = typeof payload === "string" ? textEncoder.encode(payload) : payload;
       let crc = 0xFFFF;
-      for (let i = 0; i < str.length; i++) {
-        crc ^= (str.charCodeAt(i) << 8);
+      for (let i = 0; i < bytes.length; i++) {
+        crc ^= (bytes[i] << 8);
         for (let j = 0; j < 8; j++) {
           if ((crc & 0x8000) !== 0) {
             crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
@@ -391,18 +397,62 @@
     }
 
     function emvFormat(id, value) {
-      const len = String(value.length).padStart(2, "0");
-      return `${id}${len}${value}`;
+      const valStr = String(value !== undefined && value !== null ? value : "");
+      const len = String(getUtf8ByteLength(valStr)).padStart(2, "0");
+      return `${id}${len}${valStr}`;
     }
 
-    function gerarPayloadBACEN(chave, nome, cidade, valor, txid) {
-      const cleanChave = chave.trim();
-      const cleanNome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 25).toUpperCase();
-      const cleanCidade = cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 15).toUpperCase();
-      const cleanTxid = txid.slice(0, 25);
+    function sanitizePixAscii(str, maxLen) {
+      if (!str) return "";
+      return String(str)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .replace(/[º°]/g, "")            // remove ordinais
+        .replace(/ª/g, "a")              // normaliza ordinais femininos
+        .replace(/[^a-zA-Z0-9\s.\-_@]/g, "") // apenas caracteres ASCII seguros
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, maxLen);
+    }
+
+    function parseTLVBytes(buf) {
+      let idx = 0;
+      const fields = [];
+      while (idx < buf.length) {
+        if (idx + 4 > buf.length) break;
+        const tag = String.fromCharCode(buf[idx], buf[idx + 1]);
+        const len = parseInt(String.fromCharCode(buf[idx + 2], buf[idx + 3]), 10);
+        if (isNaN(len) || idx + 4 + len > buf.length) return null;
+        const valBuf = buf.subarray(idx + 4, idx + 4 + len);
+        fields.push({ tag, len, valBuf });
+        idx += 4 + len;
+      }
+      return fields;
+    }
+
+    function validarPayloadPix(payload) {
+      if (!payload || typeof payload !== "string") return false;
+      const clean = payload.trim();
+      if (clean.length < 50 || !clean.includes("6304")) return false;
+      const body = clean.slice(0, -4);
+      const declaredCrc = clean.slice(-4).toUpperCase();
+      if (declaredCrc !== calcularCRC16(body)) return false;
+      const bytes = textEncoder.encode(clean);
+      const fields = parseTLVBytes(bytes);
+      return Boolean(fields && fields.length >= 7);
+    }
+
+    function gerarPayloadBACEN(chave, nome, cidade, valor, txid, info) {
+      const cleanChave = (chave || "").trim();
+      const cleanNome = sanitizePixAscii(nome || "EJC TRANSITO MONTE SIAO", 25).toUpperCase();
+      const cleanCidade = sanitizePixAscii(cidade || "CAMPINA GRANDE", 15).toUpperCase();
+      const cleanTxid = (txid || "EJCTRANSITO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
+      const cleanInfo = sanitizePixAscii(info || "CHECKOUT EJC", 40).toUpperCase();
       const valStr = Number(valor).toFixed(2);
 
-      let merchant = emvFormat("00", "br.gov.bcb.pix") + emvFormat("01", cleanChave) + emvFormat("02", "CHECKOUT EJC");
+      let merchant = emvFormat("00", "br.gov.bcb.pix") + emvFormat("01", cleanChave);
+      if (cleanInfo) merchant += emvFormat("02", cleanInfo);
+
       let addData = emvFormat("05", cleanTxid);
 
       let p = "";
@@ -410,7 +460,9 @@
       p += emvFormat("26", merchant);
       p += emvFormat("52", "0000");
       p += emvFormat("53", "986");
-      p += emvFormat("54", valStr);
+      if (Number(valStr) > 0) {
+        p += emvFormat("54", valStr);
+      }
       p += emvFormat("58", "BR");
       p += emvFormat("59", cleanNome);
       p += emvFormat("60", cleanCidade);
@@ -453,17 +505,21 @@
       }
 
       // 1. Gera imediatamente o código BACEN com dados ativos para renderização instantânea
+      const descInfo = tipoCheckout === "inscricao" ? `TAXA EJC TRANSITO ${activePixConfig.loteAtual || ""}` : "CONTRIBUICAO EJC TRANSITO";
       const payloadPix = gerarPayloadBACEN(
         activePixConfig.chave,
         activePixConfig.beneficiario,
         activePixConfig.cidade,
         valorTotal,
-        activeTxid
+        activeTxid,
+        descInfo
       );
 
-      document.getElementById("pixCodeTextarea").value = payloadPix;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(payloadPix)}`;
-      document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+      if (validarPayloadPix(payloadPix)) {
+        document.getElementById("pixCodeTextarea").value = payloadPix;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(payloadPix)}`;
+        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+      }
 
       // 2. Inicia contagem regressiva 15 minutos
       let segundos = 15 * 60;
@@ -516,7 +572,7 @@
           const data = await res.json();
           if (data && data.txid) {
             activeTxid = data.txid;
-            if (data.pixCopiaECola) {
+            if (data.pixCopiaECola && validarPayloadPix(data.pixCopiaECola)) {
               document.getElementById("pixCodeTextarea").value = data.pixCopiaECola;
               const newQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(data.pixCopiaECola)}`;
               document.getElementById("pixQrCodeBox").innerHTML = `<img src="${newQrUrl}" alt="QR Code Pix">`;
@@ -708,8 +764,11 @@
 
     document.getElementById("btnCopyPixCheckout").addEventListener("click", () => {
       const textarea = document.getElementById("pixCodeTextarea");
+      const cleanVal = (textarea.value || "").trim();
+      if (!cleanVal) return;
+      textarea.value = cleanVal;
       textarea.select();
-      navigator.clipboard.writeText(textarea.value).then(() => {
+      navigator.clipboard.writeText(cleanVal).then(() => {
         const btn = document.getElementById("btnCopyPixCheckout");
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Código PIX Copiado!`;
         setTimeout(() => {

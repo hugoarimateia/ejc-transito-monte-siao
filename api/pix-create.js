@@ -5,55 +5,13 @@
 // ==============================================================================
 
 const settingsStore = require("./_settings-store");
-
-function calcularCRC16(str) {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= (str.charCodeAt(i) << 8);
-    for (let j = 0; j < 8; j++) {
-      if ((crc & 0x8000) !== 0) {
-        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
-      } else {
-        crc = (crc << 1) & 0xFFFF;
-      }
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
-
-function emvFormat(id, value) {
-  const len = String(value.length).padStart(2, "0");
-  return `${id}${len}${value}`;
-}
-
-function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
-  const cleanChave = chave.trim();
-  const cleanNome = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 25).toUpperCase();
-  const cleanCidade = cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 15).toUpperCase();
-  const cleanTxid = (txid || "EJCTRANSITO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
-  const formattedValor = Number(valor).toFixed(2);
-
-  let merchantInfo = emvFormat("00", "br.gov.bcb.pix");
-  merchantInfo += emvFormat("01", cleanChave);
-  if (info) merchantInfo += emvFormat("02", info.slice(0, 40));
-
-  const additionalData = emvFormat("05", cleanTxid);
-
-  let payload = "";
-  payload += emvFormat("00", "01");
-  payload += emvFormat("26", merchantInfo);
-  payload += emvFormat("52", "0000");
-  payload += emvFormat("53", "986");
-  payload += emvFormat("54", formattedValor);
-  payload += emvFormat("58", "BR");
-  payload += emvFormat("59", cleanNome);
-  payload += emvFormat("60", cleanCidade);
-  payload += emvFormat("62", additionalData);
-  payload += "6304";
-
-  const crc = calcularCRC16(payload);
-  return `${payload}${crc}`;
-}
+const {
+  calcularCRC16,
+  emvFormat,
+  sanitizePixAscii,
+  validarPayloadPix,
+  gerarPayloadPixBACEN
+} = require("./checkout-process");
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
