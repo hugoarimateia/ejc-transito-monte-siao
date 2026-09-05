@@ -792,12 +792,37 @@ async function approvePayment({ identificador, usuario, ip }) {
 
   const agora = new Date().toISOString();
   let supabaseUpdated = false;
+  let emailDispatched = false;
   const { url, key } = getSupabaseCredentials();
+
+  let matchedEmail = null;
+  let matchedNome = null;
+  let matchedValor = null;
+  let matchedMetodo = null;
+  let matchedSub = null;
+  let matchedTxid = null;
 
   if (url && key) {
     try {
-      // Tenta atualizar em 'inscricoes'
-      const resInsc = await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)})`, {
+      // 1. Tenta acionar a RPC de confirmação unificada se identificador for txid
+      try {
+        const rpcRes = await fetch(`${url}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+          method: "POST",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            p_txid: String(identificador),
+            p_gateway: "admin_manual",
+            p_executado_por: usuario || "admin_manual"
+          })
+        });
+        if (rpcRes.ok) {
+          supabaseUpdated = true;
+          matchedTxid = String(identificador);
+        }
+      } catch (eRpc) {}
+
+      // 2. Atualiza em 'inscricoes' (por whatsapp, token_acesso ou id)
+      const resInsc = await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
         method: "PATCH",
         headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -807,8 +832,8 @@ async function approvePayment({ identificador, usuario, ip }) {
         })
       });
 
-      // Tenta atualizar em 'pagamentos' (e 'checkout_transacoes' se existir)
-      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)})`, {
+      // 3. Atualiza em 'pagamentos' (por txid, whatsapp_pagador ou id)
+      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
         method: "PATCH",
         headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -821,13 +846,82 @@ async function approvePayment({ identificador, usuario, ip }) {
       if (resInsc.ok || resTx.ok) {
         supabaseUpdated = true;
       }
+
+      // 4. Busca dados da transação/inscrição para disparo do comprovante
+      try {
+        const payRes = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
+          headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+        });
+        if (payRes.ok) {
+          const pays = await payRes.json();
+          if (pays && pays.length > 0) {
+            matchedTxid = pays[0].txid || matchedTxid;
+            matchedEmail = pays[0].email;
+            matchedNome = pays[0].nome_pagador;
+            matchedValor = pays[0].valor;
+            matchedMetodo = pays[0].metodo;
+            matchedSub = pays[0].metadata?.sub || pays[0].sub;
+          }
+        }
+
+        // Se ainda não achou o email, busca na tabela inscricoes
+        if (!matchedEmail) {
+          const inscRes = await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
+            headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+          });
+          if (inscRes.ok) {
+            const inscs = await inscRes.json();
+            if (inscs && inscs.length > 0) {
+              matchedEmail = inscs[0].email;
+              matchedNome = matchedNome || inscs[0].nome_completo;
+              matchedSub = matchedSub || inscs[0].sub;
+            }
+          }
+        }
+      } catch (fetchErr) {
+        console.warn("[SettingsStore approvePayment] Falha ao consultar dados para email:", fetchErr.message);
+      }
     } catch (e) {
       console.warn("[SettingsStore approvePayment] Supabase sync erro:", e.message);
     }
   }
 
-  // Registra no histórico de auditoria
+  // 5. Atualiza no store local
   const localData = loadLocalStore();
+  if (Array.isArray(localData.pagamentos)) {
+    const idx = localData.pagamentos.findIndex(p => p.txid === identificador || p.whatsapp_pagador === identificador);
+    if (idx !== -1) {
+      localData.pagamentos[idx].status = "approved";
+      localData.pagamentos[idx].pago_em = agora;
+      matchedTxid = matchedTxid || localData.pagamentos[idx].txid;
+      matchedEmail = matchedEmail || localData.pagamentos[idx].email;
+      matchedNome = matchedNome || localData.pagamentos[idx].nome_pagador;
+      matchedValor = matchedValor || localData.pagamentos[idx].valor;
+      matchedMetodo = matchedMetodo || localData.pagamentos[idx].metodo;
+      matchedSub = matchedSub || localData.pagamentos[idx].sub;
+    }
+  }
+
+  // 6. Disparo do comprovante por e-mail com await
+  if (matchedEmail) {
+    try {
+      const { sendPaymentReceiptEmail } = require("./email-comprovante");
+      const emailResult = await sendPaymentReceiptEmail({
+        txid: matchedTxid || identificador,
+        nome: matchedNome || "Participante",
+        email: matchedEmail,
+        valor: matchedValor || 50,
+        metodo: matchedMetodo || "pix",
+        sub: matchedSub || "Geral",
+        executado_por: usuario || "admin_manual"
+      });
+      emailDispatched = Boolean(emailResult.success);
+    } catch (emailErr) {
+      console.warn("[SettingsStore approvePayment] Falha no disparo de comprovante:", emailErr.message);
+    }
+  }
+
+  // 7. Registra no histórico de auditoria
   const auditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     acao: "PAYMENT_MANUALLY_APPROVED",
@@ -837,7 +931,13 @@ async function approvePayment({ identificador, usuario, ip }) {
     valor_novo: "confirmado",
     motivo: `Aprovação manual de pagamento para: ${identificador}`,
     ip_origem: ip || "127.0.0.1",
-    criado_em: agora
+    criado_em: agora,
+    detalhes: {
+      identificador: identificador,
+      txid: matchedTxid,
+      email: matchedEmail,
+      email_enviado: emailDispatched
+    }
   };
 
   if (!Array.isArray(localData.historico)) localData.historico = [];
@@ -848,7 +948,8 @@ async function approvePayment({ identificador, usuario, ip }) {
     success: true,
     persisted: true,
     supabaseUpdated,
-    message: `Pagamento de ${identificador} aprovado e registrado com sucesso.`
+    emailDispatched,
+    message: `Pagamento de ${identificador} aprovado e registrado com sucesso.${emailDispatched ? ' Comprovante oficial enviado para ' + matchedEmail : ''}`
   };
 }
 

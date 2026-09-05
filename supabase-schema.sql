@@ -387,6 +387,10 @@ ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS cartao_ultimos_digitos VA
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS cartao_bandeira VARCHAR(30);
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS gateway_transaction_id TEXT;
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_enviado BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_em TIMESTAMPTZ;
+ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_erro TEXT;
+ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS pagamento_confirmado_em TIMESTAMPTZ;
 
 -- Índices de performance para checkout unificado
 CREATE INDEX IF NOT EXISTS idx_pagamentos_txid ON public.pagamentos(txid);
@@ -462,21 +466,35 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_pagamento_id UUID;
+    v_inscricao_id UUID := p_inscricao_id;
 BEGIN
+    -- Se inscricao_id não foi passado, tenta inferir automaticamente por whatsapp ou email
+    IF v_inscricao_id IS NULL THEN
+        SELECT id INTO v_inscricao_id
+        FROM public.inscricoes
+        WHERE (p_whatsapp_pagador IS NOT NULL AND p_whatsapp_pagador <> '' AND whatsapp = p_whatsapp_pagador)
+           OR (p_email IS NOT NULL AND p_email <> '' AND LOWER(email) = LOWER(p_email))
+        ORDER BY criado_em DESC
+        LIMIT 1;
+    END IF;
+
     INSERT INTO public.pagamentos (
         txid, nome_pagador, email, whatsapp_pagador, cpf_pagador, valor,
         metodo, parcelas, cartao_ultimos_digitos, cartao_bandeira,
         status, tipo, pix_copia_e_cola, qr_code_base64, expiracao,
         inscricao_id, metadata, gateway_transaction_id
     ) VALUES (
-        p_txid, p_nome_pagador, p_email, p_whatsapp_pagador, p_cpf_pagador, p_valor,
+        p_txid, p_nome_pagador, COALESCE(p_email, ''), p_whatsapp_pagador, p_cpf_pagador, p_valor,
         p_metodo, p_parcelas, p_cartao_ultimos_digitos, p_cartao_bandeira,
         p_status, p_tipo, p_pix_copia_e_cola, p_qr_code_base64, p_expiracao,
-        p_inscricao_id, p_metadata, p_txid
+        v_inscricao_id, p_metadata, p_txid
     )
     ON CONFLICT (txid) DO UPDATE
     SET valor = EXCLUDED.valor,
         status = EXCLUDED.status,
+        inscricao_id = COALESCE(EXCLUDED.inscricao_id, public.pagamentos.inscricao_id),
+        email = CASE WHEN EXCLUDED.email <> '' THEN EXCLUDED.email ELSE public.pagamentos.email END,
+        whatsapp_pagador = COALESCE(EXCLUDED.whatsapp_pagador, public.pagamentos.whatsapp_pagador),
         atualizado_em = now()
     RETURNING id INTO v_pagamento_id;
 
@@ -485,14 +503,15 @@ BEGIN
         transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
     ) VALUES (
         p_txid, 'criado', NULL, p_status, 'checkout',
-        json_build_object('metodo', p_metodo, 'valor', p_valor, 'email', p_email)
+        json_build_object('metodo', p_metodo, 'valor', p_valor, 'email', p_email, 'inscricao_id', v_inscricao_id)
     );
 
     RETURN json_build_object(
         'success', true,
         'id', v_pagamento_id,
         'txid', p_txid,
-        'status', p_status
+        'status', p_status,
+        'inscricao_id', v_inscricao_id
     );
 END;
 $$;
@@ -511,34 +530,56 @@ AS $$
 DECLARE
     v_pagamento RECORD;
     v_status_antigo TEXT;
+    v_target_inscricao_id UUID;
 BEGIN
     SELECT * INTO v_pagamento FROM public.pagamentos WHERE txid = p_txid FOR UPDATE;
     IF NOT FOUND THEN
         RETURN json_build_object('success', false, 'message', 'Transação não encontrada.');
     END IF;
 
-    -- Idempotência: se já aprovado, retorna sucesso sem duplicar auditoria
+    -- Idempotência: se já aprovado, retorna sucesso sem duplicar efeitos
     IF v_pagamento.status = 'approved' OR v_pagamento.status = 'confirmado' THEN
-        RETURN json_build_object('success', true, 'status', 'approved', 'txid', p_txid, 'mensagem', 'Já confirmado previamente.');
+        RETURN json_build_object(
+            'success', true,
+            'status', 'approved',
+            'txid', p_txid,
+            'inscricao_id', v_pagamento.inscricao_id,
+            'mensagem', 'Já confirmado previamente.',
+            'already_confirmed', true
+        );
     END IF;
 
     v_status_antigo := v_pagamento.status;
+    v_target_inscricao_id := v_pagamento.inscricao_id;
+
+    -- Se não tinha inscricao_id vinculado, busca reconciliação por whatsapp ou email
+    IF v_target_inscricao_id IS NULL THEN
+        SELECT id INTO v_target_inscricao_id
+        FROM public.inscricoes
+        WHERE (v_pagamento.whatsapp_pagador IS NOT NULL AND v_pagamento.whatsapp_pagador <> '' AND whatsapp = v_pagamento.whatsapp_pagador)
+           OR (v_pagamento.email IS NOT NULL AND v_pagamento.email <> '' AND LOWER(email) = LOWER(v_pagamento.email))
+        ORDER BY criado_em DESC
+        LIMIT 1;
+    END IF;
 
     UPDATE public.pagamentos
     SET status = 'approved',
         pago_em = now(),
         gateway = p_gateway,
         payload_webhook = p_payload,
+        inscricao_id = COALESCE(v_target_inscricao_id, v_pagamento.inscricao_id),
         atualizado_em = now()
     WHERE id = v_pagamento.id;
 
     -- Se vinculado a uma inscrição, atualiza status da inscrição
-    IF v_pagamento.inscricao_id IS NOT NULL THEN
+    IF v_target_inscricao_id IS NOT NULL THEN
         UPDATE public.inscricoes
         SET pagamento_status = 'confirmado',
+            pagamento_confirmado_em = now(),
             forma_pagamento = v_pagamento.metodo,
-            observacao_pagamento = 'Pagamento aprovado via Checkout Unificado (' || UPPER(v_pagamento.metodo) || ').'
-        WHERE id = v_pagamento.inscricao_id;
+            observacao_pagamento = 'Pagamento aprovado via Checkout Unificado (' || UPPER(v_pagamento.metodo) || ').',
+            atualizado_em = now()
+        WHERE id = v_target_inscricao_id;
     END IF;
 
     -- Registra auditoria
@@ -546,10 +587,15 @@ BEGIN
         transacao_id, acao, status_anterior, status_novo, executado_por, detalhes
     ) VALUES (
         p_txid, 'aprovado', v_status_antigo, 'approved', p_executado_por,
-        json_build_object('gateway', p_gateway, 'metodo', v_pagamento.metodo, 'valor', v_pagamento.valor)
+        json_build_object('gateway', p_gateway, 'metodo', v_pagamento.metodo, 'valor', v_pagamento.valor, 'inscricao_id', v_target_inscricao_id)
     );
 
-    RETURN json_build_object('success', true, 'status', 'approved', 'txid', p_txid);
+    RETURN json_build_object(
+        'success', true,
+        'status', 'approved',
+        'txid', p_txid,
+        'inscricao_id', v_target_inscricao_id
+    );
 END;
 $$;
 

@@ -1,6 +1,7 @@
 // ==============================================================================
 // VERCEL SERVERLESS FUNCTION: /api/email-comprovante
 // Envio e reenvio de comprovante transacional por e-mail com registro de auditoria
+// Integração resiliente com Resend, idempotência e rastreabilidade ponta a ponta
 // ==============================================================================
 
 function gerarHtmlComprovante({ txid, nome, email, valor, metodo, sub, dataHora, whatsappLink }) {
@@ -94,10 +95,197 @@ function gerarHtmlComprovante({ txid, nome, email, valor, metodo, sub, dataHora,
   `.trim();
 }
 
-module.exports = async (req, res) => {
+/**
+ * Função utilitária central de disparo de comprovante por e-mail.
+ * Pode ser invocada diretamente em processos serverless (in-process) para garantir execução síncrona com await.
+ */
+async function sendPaymentReceiptEmail({ txid, nome, email, valor, metodo, sub, executado_por, force_resend = false }) {
+  if (!txid || !email) {
+    throw new Error("txid e email são campos obrigatórios para disparo de comprovante.");
+  }
+
+  const emailLimpo = String(email).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) {
+    throw new Error(`Formato de e-mail inválido: "${emailLimpo}".`);
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // 1. Verificação de idempotência (a menos que force_resend seja verdadeiro)
+  if (!force_resend && supabaseUrl && supabaseKey) {
+    try {
+      const checkRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(txid)}&select=id,status,comprovante_email_enviado`, {
+        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+      });
+      if (checkRes.ok) {
+        const rows = await checkRes.json();
+        if (rows && rows.length > 0 && rows[0].comprovante_email_enviado === true) {
+          console.log(`[Email Comprovante] E-mail já enviado anteriormente para transação ${txid}. Ignorando envio duplicado (idempotência).`);
+          return {
+            success: true,
+            already_sent: true,
+            txid: txid,
+            email: emailLimpo,
+            provedor: "idempotente_ja_enviado"
+          };
+        }
+      }
+    } catch (checkErr) {
+      console.warn("[Email Comprovante] Falha ao verificar idempotência no banco:", checkErr.message);
+    }
+  }
+
+  // 2. Consulta link do WhatsApp do Sub
+  let whatsappLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+  if (supabaseUrl && supabaseKey && sub) {
+    try {
+      const linkRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=eq.${encodeURIComponent(sub)}&select=link_grupo,ativo`, {
+        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+      });
+      if (linkRes.ok) {
+        const links = await linkRes.json();
+        if (links && links.length > 0 && links[0].ativo && links[0].link_grupo) {
+          whatsappLink = links[0].link_grupo;
+        }
+      }
+    } catch (e) {
+      console.warn("[Email Comprovante] Falha ao consultar link do WhatsApp:", e.message);
+    }
+  }
+
+  // 3. Monta HTML do comprovante
+  const htmlContent = gerarHtmlComprovante({
+    txid: txid,
+    nome: nome || "Participante",
+    email: emailLimpo,
+    valor: valor || 50,
+    metodo: metodo || "pix",
+    sub: sub || "Geral",
+    dataHora: new Date().toLocaleString("pt-BR"),
+    whatsappLink: whatsappLink
+  });
+
+  let envioRealizado = false;
+  let provedorUsado = "simulado_sem_chave";
+  let erroEnvio = null;
+
+  // 4. Disparo via Resend (se RESEND_API_KEY configurado)
+  if (process.env.RESEND_API_KEY) {
+    const senderOptions = [
+      process.env.EMAIL_FROM || "EJC Trânsito <onboarding@resend.dev>",
+      "EJC Trânsito <onboarding@resend.dev>"
+    ];
+
+    for (const sender of senderOptions) {
+      try {
+        const resendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: sender,
+            to: [emailLimpo],
+            subject: `Comprovante de Pagamento EJC - TXID ${txid}`,
+            html: htmlContent
+          })
+        });
+
+        if (resendRes.ok) {
+          envioRealizado = true;
+          provedorUsado = "resend";
+          erroEnvio = null;
+          break;
+        } else {
+          const errBody = await resendRes.text();
+          erroEnvio = `Resend (${resendRes.status}): ${errBody}`;
+          console.warn(`[Email Comprovante] Tentativa com remetente "${sender}" falhou:`, erroEnvio);
+          // Se for erro de domínio não verificado, continua para tentar o fallback onboarding@resend.dev
+          if (!errBody.toLowerCase().includes("domain") && !errBody.toLowerCase().includes("verify")) {
+            break;
+          }
+        }
+      } catch (sendErr) {
+        erroEnvio = sendErr.message;
+        console.warn("[Email Comprovante] Exceção no envio via Resend:", erroEnvio);
+      }
+    }
+  } else {
+    console.log(`[Email Comprovante] RESEND_API_KEY não configurada. Operando em modo de registro local/auditoria para ${emailLimpo}.`);
+  }
+
+  // 5. Atualiza status de envio na tabela 'pagamentos'
+  const agora = new Date().toISOString();
+  if (supabaseUrl && supabaseKey) {
+    try {
+      await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(txid)}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          comprovante_email_enviado: envioRealizado,
+          comprovante_email_em: envioRealizado ? agora : null,
+          comprovante_email_erro: erroEnvio ? erroEnvio.slice(0, 255) : null,
+          atualizado_em: agora
+        })
+      });
+    } catch (patchErr) {
+      console.warn("[Email Comprovante] Falha ao atualizar status de email em pagamentos:", patchErr.message);
+    }
+
+    // 6. Registra na tabela de auditoria de transações
+    try {
+      await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/auditoria_transacoes`, {
+        method: "POST",
+        headers: {
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transacao_id: txid,
+          acao: envioRealizado ? "comprovante_enviado" : "comprovante_falha",
+          status_anterior: null,
+          status_novo: envioRealizado ? "comprovante_emitido" : "falha_despacho",
+          executado_por: executado_por || "sistema_email",
+          detalhes: {
+            email: emailLimpo,
+            metodo: metodo,
+            valor: valor,
+            provedor: provedorUsado,
+            enviado_com_sucesso: envioRealizado,
+            erro: erroEnvio
+          }
+        })
+      });
+    } catch (auditErr) {
+      console.warn("[Email Comprovante] Falha ao registrar auditoria:", auditErr.message);
+    }
+  }
+
+  return {
+    success: envioRealizado || (!process.env.RESEND_API_KEY && !erroEnvio),
+    email_delivered: envioRealizado,
+    message: envioRealizado
+      ? `Comprovante enviado com sucesso para ${emailLimpo}.`
+      : (erroEnvio ? `Falha no envio de e-mail: ${erroEnvio}` : `Comprovante registrado em auditoria para ${emailLimpo} (ambiente sem chave de envio configurada).`),
+    txid: txid,
+    email: emailLimpo,
+    provedor: provedorUsado,
+    erro: erroEnvio
+  };
+}
+
+// Handler HTTP Serverless da Vercel
+const handler = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -108,116 +296,29 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { txid, nome, email, valor, metodo, sub, executado_por } = req.body || {};
+    const { txid, nome, email, valor, metodo, sub, executado_por, force_resend } = req.body || {};
 
-    if (!txid || !email) {
-      return res.status(400).json({ error: "txid e email são campos obrigatórios." });
-    }
-
-    const emailLimpo = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) {
-      return res.status(400).json({ error: "Formato de e-mail inválido." });
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    // Obtém link do WhatsApp do Sub
-    let whatsappLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
-    if (supabaseUrl && supabaseKey && sub) {
-      try {
-        const linkRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=eq.${encodeURIComponent(sub)}&select=link_grupo,ativo`, {
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-        });
-        if (linkRes.ok) {
-          const links = await linkRes.json();
-          if (links && links.length > 0 && links[0].ativo && links[0].link_grupo) {
-            whatsappLink = links[0].link_grupo;
-          }
-        }
-      } catch (e) {
-        console.warn("[Email Comprovante] Falha ao consultar link do WhatsApp no Supabase:", e.message);
-      }
-    }
-
-    const htmlContent = gerarHtmlComprovante({
-      txid: txid,
-      nome: nome || "Participante",
-      email: emailLimpo,
-      valor: valor || 50,
-      metodo: metodo || "pix",
-      sub: sub || "Geral",
-      dataHora: new Date().toLocaleString("pt-BR"),
-      whatsappLink: whatsappLink
+    const result = await sendPaymentReceiptEmail({
+      txid,
+      nome,
+      email,
+      valor,
+      metodo,
+      sub,
+      executado_por: executado_por || "api_email_handler",
+      force_resend: Boolean(force_resend)
     });
 
-    let envioRealizado = false;
-    let provedorUsado = "simulado_log";
-
-    // Integração Resend API (se configurado RESEND_API_KEY)
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const resendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "EJC Trânsito <comprovantes@ejctransito.com.br>",
-            to: [emailLimpo],
-            subject: `Comprovante de Pagamento EJC - TXID ${txid}`,
-            html: htmlContent
-          })
-        });
-        if (resendRes.ok) {
-          envioRealizado = true;
-          provedorUsado = "resend";
-        }
-      } catch (sendErr) {
-        console.warn("[Email Comprovante] Falha no envio via Resend:", sendErr.message);
-      }
-    }
-
-    // Registra envio na tabela de auditoria de transações
-    if (supabaseUrl && supabaseKey) {
-      try {
-        await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/auditoria_transacoes`, {
-          method: "POST",
-          headers: {
-            "apikey": supabaseKey,
-            "Authorization": `Bearer ${supabaseKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            transacao_id: txid,
-            acao: "comprovante_enviado",
-            status_anterior: null,
-            status_novo: "comprovante_emitido",
-            executado_por: executado_por || "sistema_email",
-            detalhes: {
-              email: emailLimpo,
-              metodo: metodo,
-              valor: valor,
-              provedor: provedorUsado,
-              enviado_com_sucesso: true
-            }
-          })
-        });
-      } catch (auditErr) {
-        console.warn("[Email Comprovante] Falha ao registrar auditoria:", auditErr.message);
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `Comprovante de pagamento registrado e enviado para ${emailLimpo}.`,
-      txid: txid,
-      email: emailLimpo,
-      provedor: provedorUsado
-    });
+    return res.status(200).json(result);
   } catch (err) {
     console.error("[Email Comprovante Exception]", err);
-    return res.status(500).json({ error: "Falha interna ao processar comprovante por e-mail." });
+    return res.status(err.message.includes("obrigatórios") || err.message.includes("inválido") ? 400 : 500).json({
+      success: false,
+      error: err.message || "Falha interna ao processar comprovante por e-mail."
+    });
   }
 };
+
+handler.sendPaymentReceiptEmail = sendPaymentReceiptEmail;
+handler.gerarHtmlComprovante = gerarHtmlComprovante;
+module.exports = handler;

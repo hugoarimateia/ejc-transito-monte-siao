@@ -1070,6 +1070,7 @@
           <p style="margin: 0 0 6px;"><strong>Meio:</strong> ${p.metodo === 'credit_card' ? `Cartão de Crédito (${p.cartao_bandeira || ''} final ${p.cartao_ultimos_digitos || ''}, ${p.parcelas || 1}x)` : 'Pix Instantâneo'}</p>
           <p style="margin: 0 0 6px;"><strong>Valor:</strong> R$ ${Number(p.valor || 0).toFixed(2).replace('.', ',')}</p>
           <p style="margin: 0 0 6px;"><strong>Status Atual:</strong> <span class="status-badge ${isApproved(p.status) ? 'status-approved' : 'status-' + p.status}">${p.status}</span></p>
+          <p style="margin: 0 0 6px;"><strong>Comprovante por E-mail:</strong> <span style="font-weight: 700; color: ${p.comprovante_email_enviado ? '#10b981' : (p.comprovante_email_erro ? '#ef4444' : '#f59e0b')}">${p.comprovante_email_enviado ? '✓ Enviado com Sucesso' : (p.comprovante_email_erro ? '⚠️ Falha: ' + p.comprovante_email_erro : '⏳ Aguardando / Não Enviado')}</span></p>
           ${p.pago_em ? `<p style="margin: 0;"><strong>Aprovado em:</strong> ${new Date(p.pago_em).toLocaleString("pt-BR")}</p>` : ''}
         </div>
         <h4 style="margin: 14px 0 6px; font-size: .88rem; text-transform: uppercase; color: var(--muted); letter-spacing: .05em;">Trilha de Auditoria</h4>
@@ -1102,22 +1103,24 @@
             email: emailDestino,
             valor: p.valor,
             metodo: p.metodo,
-            executado_por: "admin_coordenacao"
+            force_resend: true,
+            executado_por: currentUserRole || "admin_coordenacao"
           })
         });
 
         const data = await res.json();
-        if (res.ok) {
+        if (res.ok && data.success) {
           alert(`✓ Comprovante reenviado com sucesso para ${emailDestino}!`);
-          // Adiciona à auditoria local
+          p.comprovante_email_enviado = true;
           auditoriaData.unshift({
             transacao_id: txid,
             acao: "comprovante_enviado",
-            executado_por: "admin_coordenacao",
+            executado_por: currentUserRole || "admin_coordenacao",
             criado_em: new Date().toISOString()
           });
+          renderizarTudo();
         } else {
-          alert(`Erro ao enviar comprovante: ${data.error || 'Falha no envio'}`);
+          alert(`Aviso: ${data.message || data.error || 'Não foi possível confirmar a entrega do e-mail'}`);
         }
       } catch(err) {
         alert("Comprovante registrado para despacho.");
@@ -1131,7 +1134,7 @@
     });
 
     // Aprovação manual de transação
-    window.aprovarTransacaoManual = function(txid) {
+    window.aprovarTransacaoManual = async function(txid) {
       if (!confirm(`Deseja aprovar manualmente a transação ${txid}?`)) return;
 
       const p = pagamentosData.find(item => item.txid === txid);
@@ -1147,23 +1150,51 @@
       auditoriaData.unshift({
         transacao_id: txid,
         acao: "status_alterado_admin",
-        executado_por: "admin_coordenacao",
+        executado_por: currentUserRole || "admin_coordenacao",
         criado_em: new Date().toISOString()
       });
       localStorage.setItem("ejc_auditoria", JSON.stringify(auditoriaData));
 
-      // Tenta RPC no Supabase
+      // Chama API administrativa central no backend para disparar RPC e e-mail
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify({
+            action: "approve_payment",
+            identificador: txid,
+            usuario: currentUserRole || "admin_coordenacao",
+            admin_pass: currentAdminPass
+          })
+        });
+        const apiData = await res.json();
+        if (apiData?.emailDispatched) {
+          if (p) p.comprovante_email_enviado = true;
+        }
+      } catch (errApi) {
+        console.warn("[Admin] Falha ao acionar API payment-settings:", errApi);
+      }
+
+      // Tenta RPC direta no Supabase como garantia adicional
       if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
-        const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-        client.rpc("confirmar_pagamento_unificado", {
-          p_txid: txid,
-          p_gateway: "admin_manual",
-          p_executado_por: "admin_coordenacao"
-        }).catch(err => console.warn("Supabase RPC:", err));
+        try {
+          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+          await client.rpc("confirmar_pagamento_unificado", {
+            p_txid: txid,
+            p_gateway: "admin_manual",
+            p_executado_por: currentUserRole || "admin_coordenacao"
+          });
+        } catch (err) {
+          console.warn("Supabase RPC:", err);
+        }
       }
 
       renderizarTudo();
-      alert("Transação aprovada com sucesso!");
+      alert("✓ Transação aprovada e comprovante despachado com sucesso!");
     };
 
     // Event listeners para filtros e busca

@@ -260,6 +260,8 @@
     const nomeParticipante = urlParams.get("nome") || "Participante EJC";
     const emailParam = urlParams.get("email") || "";
     const wppParam = urlParams.get("whatsapp") || "";
+    const inscricaoIdParam = urlParams.get("inscricao_id") || "";
+    const tokenParam = urlParams.get("token") || "";
     const extraShirtParam = urlParams.get("camisa_extra") === "true";
 
     // Leitura síncrona imediata da configuração financeira ativa (prevenção de FOUC)
@@ -426,7 +428,8 @@
       }
     }
 
-    function inicializarPix() {
+    async function inicializarPix() {
+      // 1. Gera imediatamente o código BACEN com dados ativos para renderização instantânea
       const payloadPix = gerarPayloadBACEN(
         activePixConfig.chave,
         activePixConfig.beneficiario,
@@ -439,7 +442,7 @@
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(payloadPix)}`;
       document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
 
-      // Inicia contagem regressiva 15 minutos
+      // 2. Inicia contagem regressiva 15 minutos
       let segundos = 15 * 60;
       clearInterval(pixTimerInterval);
       pixTimerInterval = setInterval(() => {
@@ -453,7 +456,7 @@
         }
       }, 1000);
 
-      // Salva no registro
+      // 3. Registra no armazenamento local inicial
       registrarTransacaoLocal({
         txid: activeTxid,
         metodo: "pix",
@@ -463,7 +466,48 @@
         sub: subSelecionado
       });
 
-      // Polling de monitoramento
+      // 4. Registra transação pendente no servidor e Supabase
+      const emailFinal = emailInput.value.trim() || emailParam;
+      try {
+        const res = await fetch("/api/checkout-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            metodo: "pix",
+            tipo: tipoCheckout,
+            valor: valorTotal,
+            nome: nomeParticipante,
+            email: emailFinal || "participante@ejctransito.com.br",
+            whatsapp: wppParam || null,
+            sub: subSelecionado,
+            inscricao_id: inscricaoIdParam || null
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.txid) {
+            activeTxid = data.txid;
+            if (data.pixCopiaECola) {
+              document.getElementById("pixCodeTextarea").value = data.pixCopiaECola;
+              const newQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(data.pixCopiaECola)}`;
+              document.getElementById("pixQrCodeBox").innerHTML = `<img src="${newQrUrl}" alt="QR Code Pix">`;
+            }
+            registrarTransacaoLocal({
+              txid: activeTxid,
+              metodo: "pix",
+              valor: data.valor || valorTotal,
+              status: "pending",
+              nome: nomeParticipante,
+              sub: subSelecionado
+            });
+          }
+        }
+      } catch (errApi) {
+        console.warn("[Checkout] Falha ao registrar Pix no backend, operando em modo offline resiliente:", errApi);
+      }
+
+      // 5. Polling de monitoramento ativo no backend e banco
       iniciarPolling(activeTxid);
     }
 
@@ -554,12 +598,54 @@
 
     function iniciarPolling(txid) {
       clearInterval(pixPollingInterval);
-      pixPollingInterval = setInterval(() => {
-        const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
-        const item = pagamentos.find(p => p.txid === txid);
-        if (item && (item.status === "approved" || item.status === "confirmado")) {
-          concluirPagamentoComSucesso(item);
+      if (!txid) return;
+
+      let pollingActive = true;
+      pixPollingInterval = setInterval(async () => {
+        if (!pollingActive) return;
+
+        // 1. Consulta em tempo real na API do Servidor (backend e Supabase)
+        try {
+          const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(txid)}&_t=${Date.now()}`, {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+          if (res.ok) {
+            const serverData = await res.json();
+            if (serverData && (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid")) {
+              pollingActive = false;
+              clearInterval(pixPollingInterval);
+              concluirPagamentoComSucesso(serverData);
+              return;
+            }
+          }
+        } catch (ePoll) {}
+
+        // 2. Consulta direta no Supabase (se configurado no cliente)
+        if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY) {
+          try {
+            const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+            const { data } = await client.from("pagamentos").select("txid, status, valor, metodo, pago_em, email, metadata").eq("txid", txid).maybeSingle();
+            if (data && (data.status === "approved" || data.status === "confirmado")) {
+              pollingActive = false;
+              clearInterval(pixPollingInterval);
+              concluirPagamentoComSucesso(data);
+              return;
+            }
+          } catch (eSupa) {}
         }
+
+        // 3. Fallback no armazenamento local
+        try {
+          const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
+          const item = pagamentos.find(p => p.txid === txid);
+          if (item && (item.status === "approved" || item.status === "confirmado")) {
+            pollingActive = false;
+            clearInterval(pixPollingInterval);
+            concluirPagamentoComSucesso(item);
+            return;
+          }
+        } catch (eLoc) {}
       }, 3000);
     }
 
@@ -650,11 +736,13 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             metodo: "credit_card",
-            tipo: "inscricao",
+            tipo: tipoCheckout,
             valor: valorTotal,
             nome: nomeParticipante || holder,
             email: email,
+            whatsapp: wppParam || null,
             sub: subSelecionado,
+            inscricao_id: inscricaoIdParam || null,
             parcelas: installments,
             cartao_ultimos_digitos: ultimosDigitos,
             cartao_bandeira: bandeira,
@@ -674,10 +762,12 @@
           valor: (data && data.valor) ? data.valor : valorTotal,
           status: "approved",
           nome: nomeParticipante || holder,
+          email: email,
           sub: subSelecionado,
           parcelas: installments,
           cartao_ultimos_digitos: ultimosDigitos,
-          cartao_bandeira: bandeira
+          cartao_bandeira: bandeira,
+          inscricao_id: inscricaoIdParam || null
         };
 
         registrarTransacaoLocal(pagamentoCard);
@@ -690,10 +780,12 @@
           valor: valorTotal,
           status: "approved",
           nome: nomeParticipante || holder,
+          email: email,
           sub: subSelecionado,
           parcelas: installments,
           cartao_ultimos_digitos: ultimosDigitos,
-          cartao_bandeira: bandeira
+          cartao_bandeira: bandeira,
+          inscricao_id: inscricaoIdParam || null
         };
 
         registrarTransacaoLocal(pagamentoCard);
@@ -711,34 +803,83 @@
       clearInterval(pixTimerInterval);
       clearInterval(pixPollingInterval);
 
+      // 1. Atualiza status no armazenamento local de pagamentos
+      try {
+        const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
+        const idx = localPagamentos.findIndex(p => p.txid === pagamento.txid);
+        const agora = new Date().toISOString();
+        if (idx !== -1) {
+          localPagamentos[idx].status = "approved";
+          localPagamentos[idx].pago_em = agora;
+        } else {
+          localPagamentos.unshift({
+            txid: pagamento.txid,
+            metodo: pagamento.metodo || "pix",
+            valor: pagamento.valor || valorTotal,
+            status: "approved",
+            pago_em: agora,
+            email: pagamento.email || emailInput.value.trim(),
+            nome_pagador: pagamento.nome || nomeParticipante,
+            sub: pagamento.sub || subSelecionado
+          });
+        }
+        localStorage.setItem("ejc_pagamentos", JSON.stringify(localPagamentos));
+      } catch (e) {}
+
+      // 2. Atualiza status da inscrição local como confirmada
+      try {
+        const localInscricoes = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+        let inscAtualizada = false;
+        localInscricoes.forEach(i => {
+          if ((inscricaoIdParam && i.id === inscricaoIdParam) ||
+              (wppParam && i.whatsapp === wppParam) ||
+              (pagamento.email && i.email === pagamento.email)) {
+            i.pagamento_status = "confirmado";
+            i.pagamento_confirmado_em = new Date().toISOString();
+            inscAtualizada = true;
+          }
+        });
+        if (inscAtualizada) {
+          localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
+        }
+      } catch (e) {}
+
+      // 3. Renderiza a tela de sucesso
       document.getElementById("paymentFormState").style.display = "none";
       document.getElementById("successScreen").style.display = "block";
 
       document.getElementById("resTxid").textContent = pagamento.txid;
-      document.getElementById("resMethod").textContent = pagamento.metodo === "credit_card" ? `Cartão de Crédito (${pagamento.cartao_bandeira} final ${pagamento.cartao_ultimos_digitos})` : "Pix Instantâneo";
+      document.getElementById("resMethod").textContent = pagamento.metodo === "credit_card"
+        ? `Cartão de Crédito (${pagamento.cartao_bandeira || "Cartão"} final ${pagamento.cartao_ultimos_digitos || "0000"})`
+        : "Pix Instantâneo";
       document.getElementById("resAmount").textContent = Number(pagamento.valor || valorTotal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       document.getElementById("resDate").textContent = new Date().toLocaleString("pt-BR");
       
-      const emailFinal = emailInput.value.trim() || pagamento.email || "seu e-mail informado";
+      const emailFinal = emailInput.value.trim() || pagamento.email || emailParam || "seu e-mail informado";
       document.getElementById("resEmail").textContent = emailFinal;
 
-      // Dispara envio de comprovante por e-mail via API
-      fetch("/api/email-comprovante", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          txid: pagamento.txid,
-          nome: nomeParticipante,
-          email: emailFinal,
-          valor: pagamento.valor || valorTotal,
-          metodo: pagamento.metodo,
-          sub: subSelecionado
-        })
-      }).catch(err => console.warn("Comprovante registrado para envio:", err));
+      // 4. Dispara envio/garantia de comprovante por e-mail via API (idempotente)
+      if (emailFinal && validarEmail(emailFinal)) {
+        fetch("/api/email-comprovante", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            txid: pagamento.txid,
+            nome: nomeParticipante,
+            email: emailFinal,
+            valor: pagamento.valor || valorTotal,
+            metodo: pagamento.metodo || "pix",
+            sub: subSelecionado
+          })
+        }).catch(err => console.warn("Comprovante registrado para envio:", err));
+      }
 
-      // Busca link do WhatsApp administrável para o Sub
+      // 5. Configura link oficial do WhatsApp do Sub e libera o botão
+      if (pagamento.whatsapp_link) {
+        document.getElementById("btnSuccessWhatsApp").href = pagamento.whatsapp_link;
+      }
       obterLinkWhatsAppSub(subSelecionado).then(link => {
-        document.getElementById("btnSuccessWhatsApp").href = link;
+        if (link) document.getElementById("btnSuccessWhatsApp").href = link;
       });
     }
 

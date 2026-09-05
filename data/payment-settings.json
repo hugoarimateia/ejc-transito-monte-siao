@@ -41,6 +41,23 @@
   ],
   "historico": [
     {
+      "id": "audit-1788579229092-w843",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "superadmin_teste",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: CARDMTNTW5N8IQF1",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-05T03:33:49.079Z",
+      "detalhes": {
+        "identificador": "CARDMTNTW5N8IQF1",
+        "txid": "CARDMTNTW5N8IQF1",
+        "email": "mariana.teste@ejctransito.com.br",
+        "email_enviado": true
+      }
+    },
+    {
       "id": "audit-1788576166859-s64i",
       "acao": "PIX_KEY_UPDATED",
       "usuario": "sistema",
@@ -322,5 +339,40 @@
   "whatsapp": {
     "verde": "https://chat.whatsapp.com/TESTE_VERDE_NOVO",
     "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
-  }
+  },
+  "pagamentos": [
+    {
+      "txid": "CARDMTNTW5N8IQF1",
+      "nome_pagador": "Mariana Souza",
+      "email": "mariana.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83977776666",
+      "valor": 50,
+      "metodo": "credit_card",
+      "status": "approved",
+      "tipo": "inscricao",
+      "parcelas": 3,
+      "cartao_ultimos_digitos": "4242",
+      "cartao_bandeira": "Visa",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-05T03:33:49.079Z",
+      "criado_em": "2026-09-05T03:33:49.077Z"
+    },
+    {
+      "txid": "PIXMTNTW4PQUZ6Q",
+      "nome_pagador": "Gabriel Silva Teste",
+      "email": "participante.teste@ejctransito.com.br",
+      "whatsapp_pagador": "83988887777",
+      "valor": 50,
+      "metodo": "pix",
+      "status": "approved",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0120leoeuler03@gmail.com0225TAXA EJC TRANSITO 1º LOTE520400005303986540550.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62190515PIXMTNTW4PQUZ6Q6304BD9A",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "criado_em": "2026-09-05T03:33:48.111Z",
+      "pago_em": "2026-09-05T03:33:48.173Z"
+    }
+  ]
 }

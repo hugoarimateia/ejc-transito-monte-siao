@@ -378,6 +378,7 @@ if (signupForm) {
     let proofPath = null;
     let registrationSuccess = false;
     let userToken = crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : String(Date.now());
+    let registeredId = null;
 
     // 1. Tenta envio pelo Supabase se disponível
     if (supabaseClient) {
@@ -421,6 +422,7 @@ if (signupForm) {
         if (!insertError) {
           registrationSuccess = true;
           if (registrationResult?.token) userToken = registrationResult.token;
+          if (registrationResult?.id) registeredId = registrationResult.id;
           // Se tiver coluna email no Supabase inscricoes, atualiza
           if (registrationResult?.id) {
             supabaseClient.from("inscricoes").update({ email: emailValue }).eq("id", registrationResult.id).catch(() => {});
@@ -454,7 +456,7 @@ if (signupForm) {
       const proofDataUrl = proof instanceof File && proof.size ? await fileToDataUrl(proof) : proofPath;
 
       const newRegistration = {
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        id: registeredId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
         criado_em: new Date().toISOString(),
         nome_completo: normalizedName,
         email: emailValue,
@@ -477,6 +479,8 @@ if (signupForm) {
         token_acesso: userToken
       };
 
+      if (!registeredId) registeredId = newRegistration.id;
+
       localInscricoes.push(newRegistration);
       localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
       registrationSuccess = true;
@@ -486,7 +490,9 @@ if (signupForm) {
 
     if (registrationSuccess) {
       const activeValor = Number(window.EJC_ACTIVE_PRICE || 50);
-      const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}`;
+      const inscricaoIdParam = registeredId || "";
+      const tokenAcessoParam = userToken || "";
+      const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}&inscricao_id=${encodeURIComponent(inscricaoIdParam)}&token=${encodeURIComponent(tokenAcessoParam)}`;
 
       const btnPayAfterSignup = document.getElementById("btnPayAfterSignup");
       if (btnPayAfterSignup) {
