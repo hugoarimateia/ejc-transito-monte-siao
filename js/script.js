@@ -491,9 +491,11 @@ if (signupForm) {
 
     if (registrationSuccess) {
       const activeValor = Number(window.EJC_ACTIVE_PRICE || 50);
+      const activeLote = window.EJC_ACTIVE_LOTE || "1º Lote";
+      const activeVersao = window.EJC_ACTIVE_VERSION || 0;
       const inscricaoIdParam = registeredId || "";
       const tokenAcessoParam = userToken || "";
-      const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}&inscricao_id=${encodeURIComponent(inscricaoIdParam)}&token=${encodeURIComponent(tokenAcessoParam)}`;
+      const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&lote=${encodeURIComponent(activeLote)}&v=${activeVersao}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}&inscricao_id=${encodeURIComponent(inscricaoIdParam)}&token=${encodeURIComponent(tokenAcessoParam)}`;
 
       const btnPayAfterSignup = document.getElementById("btnPayAfterSignup");
       if (btnPayAfterSignup) {
@@ -685,11 +687,16 @@ document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(
   btn.addEventListener("click", () => {
     const tipo = btn.dataset.tipo || "inscricao";
     const valor = tipo === "inscricao" ? Number(window.EJC_ACTIVE_PRICE || 50) : Number(btn.dataset.valor || 50);
+    const lote = tipo === "inscricao" ? (window.EJC_ACTIVE_LOTE || "1º Lote") : "";
+    const v = tipo === "inscricao" ? (window.EJC_ACTIVE_VERSION || 0) : 0;
     const nome = document.querySelector("#full-name")?.value || "";
     const email = document.querySelector("#email")?.value || "";
     const wpp = document.querySelector("#whatsapp")?.value || "";
     const sub = document.querySelector("#selected-sub")?.value || "Verde";
-    window.location.href = `/checkout?tipo=${tipo}&valor=${valor}&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&whatsapp=${encodeURIComponent(wpp)}&sub=${encodeURIComponent(sub)}`;
+    let checkoutUrl = `/checkout?tipo=${tipo}&valor=${valor}&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&whatsapp=${encodeURIComponent(wpp)}&sub=${encodeURIComponent(sub)}`;
+    if (lote) checkoutUrl += `&lote=${encodeURIComponent(lote)}`;
+    if (v) checkoutUrl += `&v=${v}`;
+    window.location.href = checkoutUrl;
   });
 });
 

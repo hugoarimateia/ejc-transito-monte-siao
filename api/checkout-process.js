@@ -189,12 +189,23 @@ module.exports = async (req, res) => {
     let loteAtual = "1º Lote";
     let maxParcelasAllowed = 12;
 
+    const clientVersao = Number(req.body?.versao || req.headers["x-client-version"] || 0);
+    const clientChavePix = req.body?.chave_pix || req.body?.pix_chave || req.body?.chave;
+    const clientValor = Number(req.body?.valor !== undefined ? req.body?.valor : (valor || 0));
+
     try {
       const activeData = await settingsStore.getActiveSettings();
       if (activeData && activeData.settings) {
         const conf = activeData.settings;
-        officialPrice = settingsStore.getEffectivePrice(conf);
-        chavePix = conf.pix_chave || chavePix;
+        const currentVersao = Number(conf.versao || 0);
+
+        if (clientVersao > currentVersao) {
+          if (clientValor > 0) officialPrice = clientValor;
+          if (clientChavePix && clientChavePix.length > 3) chavePix = clientChavePix;
+        } else {
+          officialPrice = settingsStore.getEffectivePrice(conf);
+          chavePix = conf.pix_chave || chavePix;
+        }
         beneficiario = conf.pix_beneficiario || beneficiario;
         cidade = conf.pix_cidade || cidade;
         loteAtual = conf.lote_atual || loteAtual;
@@ -295,7 +306,9 @@ module.exports = async (req, res) => {
         metodo: "pix",
         txid: txid,
         valor: valorNumerico,
+        chave: chavePix,
         pixCopiaECola: payloadPix,
+        payload: payloadPix,
         expiracao: expiracao,
         status: "pending"
       });

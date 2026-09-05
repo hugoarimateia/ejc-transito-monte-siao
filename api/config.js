@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://yggikbshdvnouaoxafcr.supabase.co";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_YiY0CCW6qw4r4G2GXgiD9g_2s7gO-R5";
+  const clientVersion = Number(req.headers["x-client-version"] || req.query?.v || 0);
 
   let activeData;
   try {
@@ -32,6 +33,7 @@ module.exports = async (req, res) => {
   }
 
   const s = activeData.settings;
+  const isStaleReplica = clientVersion > 0 && Number(s.versao || 0) < clientVersion;
   const w = activeData.whatsapp || {};
   const precoEfetivo = settingsStore.getEffectivePrice(s);
 
@@ -67,6 +69,7 @@ module.exports = async (req, res) => {
   return res.status(200).json({
     success: true,
     versao: s.versao,
+    is_stale_replica: isStaleReplica,
     supabaseUrl,
     supabaseAnonKey,
     preco_efetivo: precoEfetivo,

@@ -1293,7 +1293,7 @@
             // (ocorre quando a réplica serverless sobe com /tmp vazio e Supabase offline),
             // NÃO sobrepomos com os defaults antigos e re-hidratamos a réplica do backend!
             if (localCached && localVersion > serverVersion && localCached.valor_inscricao) {
-              console.warn(`[Admin Financeiro] Preservando versão local v${localVersion} mais recente que o servidor v${serverVersion}. Re-hidratando réplica...`);
+              console.warn(`[Admin Financeiro] Preservando versão local v${localVersion} mais recente que o servidor v${serverVersion}. Re-hidratando réplica integralmente...`);
               configFinanceiraAtiva = { ...localCached };
               fetch("/api/payment-settings", {
                 method: "POST",
@@ -1303,14 +1303,10 @@
                   "x-admin-token": currentAdminPass
                 },
                 body: JSON.stringify({
-                  action: "update_prices",
+                  action: "sync_full_settings",
                   usuario: "anti_downgrade_sync",
-                  lote_atual: configFinanceiraAtiva.lote_atual,
-                  valor_inscricao: configFinanceiraAtiva.valor_inscricao,
-                  valor_promocional: configFinanceiraAtiva.valor_promocional,
-                  taxa_adicional: configFinanceiraAtiva.taxa_adicional,
-                  max_parcelas: configFinanceiraAtiva.max_parcelas,
-                  motivo: "Re-hidratação automática anti-downgrade"
+                  settings: configFinanceiraAtiva,
+                  motivo: "Re-hidratação automática integral anti-downgrade"
                 })
               }).catch(() => {});
             } else {

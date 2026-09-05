@@ -162,7 +162,7 @@ module.exports = async (req, res) => {
     const adminUser = usuario || userRole || "admin";
 
     // Validação de permissões para ações financeiras estritas
-    if (["update_prices", "update_pix"].includes(action)) {
+    if (["update_prices", "update_pix", "sync_full_settings"].includes(action)) {
       if (!["superadmin", "financeiro"].includes(userRole)) {
         return res.status(403).json({
           error: "Permissão insuficiente. Apenas administradores financeiros ou coordenadores gerais podem editar dados financeiros."
@@ -258,7 +258,34 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ação C: Atualizar Links de WhatsApp dos Sub Grupos
+    // Ação C: Sincronização Integral Anti-Downgrade
+    if (action === "sync_full_settings") {
+      try {
+        const fullSettings = req.body.settings || {};
+        const result = await settingsStore.syncFullSettings({
+          settings: fullSettings,
+          usuario: adminUser,
+          motivo: motivo || "Re-hidratação integral anti-downgrade",
+          ip: String(clientIp)
+        });
+
+        return res.status(200).json({
+          success: true,
+          persisted: result.persisted,
+          message: result.message || "Sincronização integral realizada com sucesso.",
+          versao: result.versao,
+          settings: result.settings
+        });
+      } catch (err) {
+        console.error("[Sync Full Settings Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao sincronizar configurações no servidor."
+        });
+      }
+    }
+
+    // Ação D: Atualizar Links de WhatsApp dos Sub Grupos
     if (action === "update_whatsapp") {
       try {
         const result = await settingsStore.updateWhatsAppSettings({

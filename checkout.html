@@ -64,7 +64,7 @@
           <div class="price-breakdown">
             <div class="price-row">
               <span id="labelItemTaxa">Taxa de Inscrição</span>
-              <span id="valItemTaxa">R$ 50,00</span>
+              <span id="valItemTaxa">-</span>
             </div>
             <div class="price-row" id="rowExtraShirt" style="display: none;">
               <span id="labelExtraShirt">Camisa Adicional</span>
@@ -80,7 +80,7 @@
             </div>
             <div class="price-row total">
               <span>Total a Pagar</span>
-              <strong id="summaryTotalVal">R$ 50,00</strong>
+              <strong id="summaryTotalVal">-</strong>
             </div>
           </div>
 
@@ -278,12 +278,17 @@
       return regular;
     }
 
+    const urlValorParam = Number(urlParams.get("valor") || 0);
+    const urlLoteParam = urlParams.get("lote") || "";
+    const urlVersaoParam = Number(urlParams.get("v") || 0);
+
     let activePixConfig = {
+      versao: Number((localConfig && localConfig.versao) || urlVersaoParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.versao) || 0),
       chave: (localConfig && localConfig.pix_chave) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.chave) || "leoeuler03@gmail.com",
       beneficiario: (localConfig && localConfig.pix_beneficiario) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.beneficiario) || "EJC TRANSITO MONTE SIAO",
       cidade: (localConfig && localConfig.pix_cidade) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.cidade) || "CAMPINA GRANDE",
-      loteAtual: (localConfig && localConfig.lote_atual) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "1º Lote",
-      valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00),
+      loteAtual: (localConfig && localConfig.lote_atual) || urlLoteParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "1º Lote",
+      valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (urlValorParam > 0 ? urlValorParam : 0) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00),
       valorPromocional: (localConfig && localConfig.valor_promocional !== undefined && localConfig.valor_promocional !== null) ? Number(localConfig.valor_promocional) : null,
       maxParcelas: Number((localConfig && localConfig.max_parcelas) || 12)
     };
@@ -292,7 +297,7 @@
     if (tipoCheckout === "inscricao") {
       valorBase = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
     } else {
-      valorBase = Math.max(1, Number(urlParams.get("valor") || 50));
+      valorBase = Math.max(1, Number(urlParams.get("valor") || activePixConfig.valorTaxaInscricao || 50));
     }
     let valorTotal = valorBase;
 
@@ -489,11 +494,16 @@
       try {
         const res = await fetch("/api/checkout-process", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-client-version": String(activePixConfig.versao || 0)
+          },
           body: JSON.stringify({
             metodo: "pix",
             tipo: tipoCheckout,
             valor: valorTotal,
+            versao: activePixConfig.versao || 0,
+            chave_pix: activePixConfig.chave,
             nome: nomeParticipante,
             email: emailFinal || "participante@ejctransito.com.br",
             whatsapp: wppParam || null,
@@ -555,6 +565,20 @@
       const rawPromo = pixData.valorPromocional !== undefined ? pixData.valorPromocional : (pixData.valor_promocional !== undefined ? pixData.valor_promocional : cfg.valor_promocional);
       activePixConfig.valorPromocional = (rawPromo !== undefined && rawPromo !== null && rawPromo !== "") ? Number(rawPromo) : null;
       activePixConfig.maxParcelas = Number(pixData.maxParcelas || pixData.max_parcelas || cfg.max_parcelas || activePixConfig.maxParcelas || 12);
+
+      // Persistência reativa no localStorage para sobrevivência a F5 e novas abas
+      try {
+        localStorage.setItem("ejc_config_financeira", JSON.stringify({
+          versao: activePixConfig.versao,
+          lote_atual: activePixConfig.loteAtual,
+          valor_inscricao: activePixConfig.valorTaxaInscricao,
+          valor_promocional: activePixConfig.valorPromocional,
+          pix_chave: activePixConfig.chave,
+          pix_beneficiario: activePixConfig.beneficiario,
+          pix_cidade: activePixConfig.cidade,
+          max_parcelas: activePixConfig.maxParcelas
+        }));
+      } catch (eStorage) {}
 
       atualizarValoresUI();
 

@@ -955,6 +955,96 @@ async function approvePayment({ identificador, usuario, ip }) {
   };
 }
 
+// ==============================================================================
+// ESCRITA 5: SINCRONIZAÇÃO INTEGRAL ATÔMICA (SYNC_FULL_SETTINGS)
+// Garante que containers frios recebam o estado mais recente de preço E pix
+// ==============================================================================
+async function syncFullSettings({ settings, usuario, motivo, ip }) {
+  if (!settings || typeof settings !== "object") {
+    throw new Error("Configurações inválidas para sincronização.");
+  }
+  const current = await getActiveSettings();
+  const incomingVersao = Number(settings.versao || 0);
+  const currentVersao = Number(current.settings?.versao || 0);
+
+  if (incomingVersao > currentVersao || (incomingVersao === currentVersao && settings.valor_inscricao)) {
+    const updatedSettings = {
+      ...current.settings,
+      ...settings,
+      versao: Math.max(incomingVersao, currentVersao)
+    };
+    updatedSettings.preco_efetivo = getEffectivePrice(updatedSettings);
+
+    const localData = loadLocalStore();
+    localData.settings = updatedSettings;
+
+    const agora = new Date().toISOString();
+    const auditEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      acao: "FULL_SETTINGS_SYNCED",
+      usuario: usuario || "admin_sync",
+      campo_afetado: "configuracao_geral",
+      valor_anterior: `v${currentVersao}`,
+      valor_novo: `v${updatedSettings.versao} (R$ ${Number(updatedSettings.valor_inscricao).toFixed(2)} - ${updatedSettings.pix_chave})`,
+      motivo: motivo || "Sincronização integral anti-downgrade",
+      ip_origem: ip || "127.0.0.1",
+      criado_em: agora
+    };
+    if (!Array.isArray(localData.historico)) localData.historico = [];
+    localData.historico.unshift(auditEntry);
+    if (localData.historico.length > 100) localData.historico.pop();
+
+    saveLocalStore(localData);
+
+    const { url, key } = getSupabaseCredentials();
+    if (url && key) {
+      try {
+        await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ativo: false, atualizado_em: agora })
+        });
+        await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+          method: "POST",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            versao: updatedSettings.versao,
+            ativo: true,
+            lote_atual: updatedSettings.lote_atual,
+            valor_inscricao: updatedSettings.valor_inscricao,
+            valor_promocional: updatedSettings.valor_promocional,
+            taxa_adicional: updatedSettings.taxa_adicional,
+            max_parcelas: updatedSettings.max_parcelas,
+            pix_chave: updatedSettings.pix_chave,
+            pix_tipo_chave: updatedSettings.pix_tipo_chave,
+            pix_beneficiario: updatedSettings.pix_beneficiario,
+            pix_documento: updatedSettings.pix_documento,
+            pix_cidade: updatedSettings.pix_cidade,
+            motivo_alteracao: motivo || "Sincronização integral",
+            atualizado_por: usuario || "admin_sync",
+            atualizado_em: agora
+          })
+        });
+      } catch(e) {}
+    }
+
+    return {
+      success: true,
+      persisted: true,
+      settings: updatedSettings,
+      versao: updatedSettings.versao
+    };
+  }
+
+  return {
+    success: true,
+    persisted: false,
+    message: "Versão do servidor é igual ou superior à enviada.",
+    settings: current.settings,
+    versao: currentVersao
+  };
+}
+
 module.exports = {
   getActiveSettings,
   getEffectivePrice,
@@ -963,6 +1053,7 @@ module.exports = {
   updatePixSettings,
   updateWhatsAppSettings,
   approvePayment,
+  syncFullSettings,
   loadLocalStore,
   saveLocalStore,
   getDefaultSettings,
