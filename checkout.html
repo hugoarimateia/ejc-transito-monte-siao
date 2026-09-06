@@ -666,6 +666,7 @@
     let activePaymentId = null;
     let activeOrderId = null;
     let activePixPayload = null;
+    let activePixQrCodeBase64 = null;
     let pixTimerInterval = null;
     let pixPollingInterval = null;
     let isTransitioningToStep2 = false;
@@ -847,6 +848,9 @@
             activePaymentId = data.payment_id || data.txid;
             activeOrderId = data.order_id || null;
             pixCode = data.pixCopiaECola || data.payload || "";
+            if (data.qr_code_base64) {
+              activePixQrCodeBase64 = data.qr_code_base64;
+            }
           }
         }
       } catch (eErr) {
@@ -882,8 +886,12 @@
       document.getElementById("step2IdentifiedTotal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
       document.getElementById("pixCodeTextarea").value = activePixPayload;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
-      document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+      if (activePixQrCodeBase64) {
+        document.getElementById("pixQrCodeBox").innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial">`;
+      } else {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
+        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+      }
 
       // Atualiza link para página exclusiva de confirmação
       const linkConf = document.getElementById("linkGoToConfirmation");
@@ -903,6 +911,7 @@
           sub: subSelecionado,
           valor: valorTotal,
           pixPayload: activePixPayload,
+          qrCodeBase64: activePixQrCodeBase64,
           expiresAt: Date.now() + 15 * 60 * 1000
         }));
       } catch (eStore) {}
@@ -950,6 +959,7 @@
     document.getElementById("btnBackToStep1").addEventListener("click", () => {
       clearInterval(pixTimerInterval);
       clearInterval(pixPollingInterval);
+      activePixQrCodeBase64 = null;
 
       checkoutStep2.style.display = "none";
       checkoutStep1.style.display = "block";
@@ -1480,14 +1490,19 @@
           activePaymentId = sessionData.payment_id;
           activeOrderId = sessionData.order_id;
           activePixPayload = sessionData.pixPayload;
+          activePixQrCodeBase64 = sessionData.qrCodeBase64 || null;
 
           document.getElementById("step2IdentifiedName").textContent = sessionData.nome;
           document.getElementById("step2IdentifiedEmail").textContent = sessionData.email;
           document.getElementById("step2IdentifiedTotal").textContent = sessionData.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
           document.getElementById("pixCodeTextarea").value = activePixPayload;
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
-          document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+          if (activePixQrCodeBase64) {
+            document.getElementById("pixQrCodeBox").innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial">`;
+          } else {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
+            document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+          }
 
           const linkConf = document.getElementById("linkGoToConfirmation");
           if (linkConf) {

@@ -6,6 +6,7 @@
 
 const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
+const mercadoPago = require("./_mercadopago");
 
 function calcularCRC16(payload) {
   const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), "utf8");
@@ -407,35 +408,27 @@ module.exports = async (req, res) => {
         });
       }
 
-      // 2.5. Reconciliação Server-Side no Polling (se transação estiver 'pending' e houver chave de gateway configurada)
+      // 2.5. Reconciliação Server-Side no Polling (se transação estiver 'pending' e houver Mercado Pago configurado)
       if (transactionFound && (transactionFound.status === "pending" || !transactionFound.status) && queryTxid) {
-        const gatewayKey = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.GATEWAY_PIX_API_KEY;
-        if (gatewayKey) {
+        if (mercadoPago.isConfigured()) {
           try {
-            const mpSearchRes = await fetch(`https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(queryTxid)}`, {
-              headers: { "Authorization": `Bearer ${gatewayKey}` },
-              signal: AbortSignal.timeout(3000)
-            });
-            if (mpSearchRes.ok) {
-              const mpSearch = await mpSearchRes.json();
-              const approvedItem = mpSearch.results?.find(r => r.status === "approved");
-              if (approvedItem) {
-                const reconcileResult = await confirmarPagamentoResiliente({
-                  txid: queryTxid,
-                  gateway: "mercadopago_polling_reconciler",
-                  payload: approvedItem,
-                  executado_por: "polling_server_reconciler"
-                });
-                if (reconcileResult.paymentRecord) {
-                  transactionFound = reconcileResult.paymentRecord;
-                } else {
-                  transactionFound.status = "approved";
-                  transactionFound.pago_em = new Date().toISOString();
-                }
+            const approvedItem = await mercadoPago.consultarPagamentoPorExternalReference(queryTxid);
+            if (approvedItem && approvedItem.status === "approved") {
+              const reconcileResult = await confirmarPagamentoResiliente({
+                txid: queryTxid,
+                gateway: "mercadopago_polling_reconciler",
+                payload: approvedItem,
+                executado_por: "polling_server_reconciler"
+              });
+              if (reconcileResult.paymentRecord) {
+                transactionFound = reconcileResult.paymentRecord;
+              } else {
+                transactionFound.status = "approved";
+                transactionFound.pago_em = new Date().toISOString();
               }
             }
           } catch (eGw) {
-            console.warn("[Polling Reconciler] Aviso ao consultar API Gateway:", eGw.message);
+            console.warn("[Polling Reconciler] Aviso ao consultar API Mercado Pago:", eGw.message);
           }
         }
       }
@@ -672,14 +665,47 @@ module.exports = async (req, res) => {
       const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);
       const expiracao = new Date(Date.now() + tempoExpiracao * 60000).toISOString();
 
-      const payloadPix = gerarPayloadPixBACEN({
-        chave: chavePix,
-        nome: beneficiario,
-        cidade: cidade,
-        valor: valorNumerico,
-        txid: txid,
-        info: tipo === "inscricao" ? `TAXA EJC TRANSITO ${loteAtual}`.toUpperCase() : "CONTRIBUICAO EJC TRANSITO"
-      });
+      let payloadPix = "";
+      let qrCodeBase64 = null;
+      let ticketUrl = null;
+      let mpGenerated = false;
+
+      // 1. Tenta gerar Pix dinâmico oficial via Mercado Pago se configurado na Vercel
+      if (mercadoPago.isConfigured()) {
+        try {
+          const descricaoCob = tipo === "inscricao" ? `Inscrição EJC Trânsito ${loteAtual}` : "Contribuição EJC Trânsito";
+          const mpResult = await mercadoPago.criarPagamentoPix({
+            valor: valorNumerico,
+            nome: nomeFinal,
+            email: email,
+            cpf: cpf || null,
+            txid: txid,
+            descricao: descricaoCob
+          });
+
+          if (mpResult && mpResult.qr_code) {
+            payloadPix = mpResult.qr_code;
+            qrCodeBase64 = mpResult.qr_code_base64 || null;
+            ticketUrl = mpResult.ticket_url || null;
+            paymentId = `PAY${mpResult.id}`;
+            mpGenerated = true;
+          }
+        } catch (mpErr) {
+          console.warn("[Checkout Process] Falha ao criar Pix dinâmico no Mercado Pago, acionando gerador resiliente:", mpErr.message);
+        }
+      }
+
+      // 2. Fallback resiliente caso Mercado Pago não configurado ou indisponível
+      if (!payloadPix) {
+        payloadPix = gerarPayloadPixBACEN({
+          chave: chavePix,
+          nome: beneficiario,
+          cidade: cidade,
+          valor: valorNumerico,
+          txid: txid,
+          info: tipo === "inscricao" ? `TAXA EJC TRANSITO ${loteAtual}`.toUpperCase() : "CONTRIBUICAO EJC TRANSITO"
+        });
+      }
 
       // Persiste no Supabase usando a RPC de conciliação inteligente
       if (supabaseUrl && supabaseKey) {
@@ -705,7 +731,7 @@ module.exports = async (req, res) => {
               p_status: "pending",
               p_tipo: tipo || "inscricao",
               p_pix_copia_e_cola: payloadPix,
-              p_qr_code_base64: null,
+              p_qr_code_base64: qrCodeBase64,
               p_expiracao: expiracao,
               p_inscricao_id: inscricao_id || null,
               p_metadata: {
@@ -713,7 +739,9 @@ module.exports = async (req, res) => {
                 payment_id: paymentId,
                 external_reference: externalReference,
                 sub: sub || null,
-                gerado_via: "api_checkout_process",
+                gerado_via: mpGenerated ? "api_mercadopago" : "api_checkout_process",
+                provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
+                ticket_url: ticketUrl,
                 lote: loteAtual,
                 inscricao_id: inscricao_id || null
               }
@@ -742,6 +770,9 @@ module.exports = async (req, res) => {
           status: "pending",
           tipo: tipo || "inscricao",
           pix_copia_e_cola: payloadPix,
+          qr_code_base64: qrCodeBase64,
+          ticket_url: ticketUrl,
+          provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
           inscricao_id: inscricao_id || null,
           sub: sub || null,
           metadata: {
@@ -749,6 +780,7 @@ module.exports = async (req, res) => {
             payment_id: paymentId,
             external_reference: externalReference,
             sub: sub || null,
+            ticket_url: ticketUrl,
             lote: loteAtual
           },
           criado_em: new Date().toISOString()
@@ -771,6 +803,9 @@ module.exports = async (req, res) => {
         pixCopiaECola: payloadPix,
         pix_copia_cola: payloadPix,
         payload: payloadPix,
+        qr_code_base64: qrCodeBase64,
+        ticket_url: ticketUrl,
+        provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
         expiracao: expiracao,
         status: "pending"
       });

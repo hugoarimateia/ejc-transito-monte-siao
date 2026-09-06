@@ -7,6 +7,7 @@
 const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
 const { confirmarPagamentoResiliente } = require("./checkout-process");
+const mercadoPago = require("./_mercadopago");
 
 // Lista de tokens de status indicando aprovação/liquidação efetiva
 const APPROVED_STATUS_TOKENS = new Set([
@@ -72,23 +73,14 @@ module.exports = async (req, res) => {
     const mpPaymentId = isMercadoPagoEvent ? (payload.data?.id || payload.id) : null;
     let mpPayloadFetched = null;
 
-    if (mpPaymentId) {
-      const gatewayKey = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.GATEWAY_PIX_API_KEY;
-      if (gatewayKey) {
-        try {
-          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}`, {
-            headers: { "Authorization": `Bearer ${gatewayKey}` },
-            signal: AbortSignal.timeout(4000)
-          });
-          if (mpRes.ok) {
-            mpPayloadFetched = await mpRes.json();
-            if (mpPayloadFetched.external_reference) {
-              txid = mpPayloadFetched.external_reference;
-            }
-          }
-        } catch (eMp) {
-          console.warn("[Webhook MP Fetch Warning]", eMp.message);
+    if (mpPaymentId && mercadoPago.isConfigured()) {
+      try {
+        mpPayloadFetched = await mercadoPago.consultarPagamentoPorId(mpPaymentId);
+        if (mpPayloadFetched?.external_reference) {
+          txid = mpPayloadFetched.external_reference;
         }
+      } catch (eMp) {
+        console.warn("[Webhook MP Fetch Warning]", eMp.message);
       }
     }
 
