@@ -99,12 +99,16 @@ function getDefaultSettings() {
     valor_promocional: null,
     taxa_adicional: 0.0,
     max_parcelas: 12,
-    pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com",
-    pix_tipo_chave: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "EMAIL",
+    modalidade_pix: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook", // "api_webhook" ou "manual"
+    pix_mode: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook",
+    pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || "83996431326",
+    pix_tipo_chave: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "TELEFONE",
     pix_beneficiario: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO",
     pix_documento: "",
     pix_cidade: process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE",
     pix_instituicao: "",
+    pix_instrucoes_manual: "Faça o Pix para a chave acima e anexe o comprovante nesta tela para análise da coordenação.",
+    pix_permite_comprovante: true,
     motivo_alteracao: "Configuração padrão inicial",
     atualizado_por: "sistema",
     atualizado_em: new Date().toISOString()
@@ -572,27 +576,43 @@ async function updatePixSettings({
   pix_beneficiario,
   pix_documento,
   pix_cidade,
+  modalidade_pix,
+  pix_mode,
+  pix_instrucoes_manual,
+  pix_permite_comprovante,
   motivo,
   ip
 }) {
   // Consulta configuração ativa oficial (priorizando Supabase para reter o preço ativo vigente)
   const activeData = await getActiveSettings();
   const currentSettings = activeData.settings;
-  let chaveLimpa = String(pix_chave || "").trim();
+  let chaveLimpa = String(pix_chave !== undefined && pix_chave !== "" ? pix_chave : (currentSettings.pix_chave || "83996431326")).trim();
   if (chaveLimpa.includes("***")) {
-    chaveLimpa = currentSettings.pix_chave || "leoeuler03@gmail.com";
+    chaveLimpa = currentSettings.pix_chave || "83996431326";
   }
 
-  const tipoChave = String(pix_tipo_chave || currentSettings.pix_tipo_chave || "EMAIL").toUpperCase();
+  const tipoChave = String(pix_tipo_chave || currentSettings.pix_tipo_chave || "TELEFONE").toUpperCase();
   chaveLimpa = normalizarChavePix(chaveLimpa, tipoChave);
-  const beneficiarioLimpo = String(pix_beneficiario || currentSettings.pix_beneficiario || "").trim();
-  const cidadeLimpa = String(pix_cidade || currentSettings.pix_cidade || "").trim();
+  const beneficiarioLimpo = String(pix_beneficiario !== undefined && pix_beneficiario !== "" ? pix_beneficiario : (currentSettings.pix_beneficiario || "EJC TRANSITO MONTE SIAO")).trim();
+  const cidadeLimpa = String(pix_cidade !== undefined && pix_cidade !== "" ? pix_cidade : (currentSettings.pix_cidade || "CAMPINA GRANDE")).trim();
 
-  if (!chaveLimpa) throw new Error("A chave PIX não pode ser vazia.");
-  if (!beneficiarioLimpo) throw new Error("O nome do favorecido/beneficiário é obrigatório.");
-  if (!cidadeLimpa) throw new Error("A cidade da conta é obrigatória para conformidade BACEN.");
+  const inputMod = modalidade_pix !== undefined ? modalidade_pix : (pix_mode !== undefined ? pix_mode : undefined);
+  if (inputMod !== undefined && inputMod !== null && inputMod !== "") {
+    if (inputMod !== "api_webhook" && inputMod !== "manual") {
+      throw new Error("Modalidade operacional do Pix inválida. Valores aceitos: 'api_webhook' ou 'manual'.");
+    }
+  }
+
+  const modalidadeFinal = (inputMod === "manual" || inputMod === "api_webhook")
+    ? inputMod
+    : (currentSettings.modalidade_pix || currentSettings.pix_mode || "api_webhook");
+
+  if (!chaveLimpa && modalidadeFinal === "manual") throw new Error("A chave PIX não pode ser vazia.");
+  if (!beneficiarioLimpo && modalidadeFinal === "manual") throw new Error("O nome do favorecido/beneficiário é obrigatório.");
+  if (!cidadeLimpa && modalidadeFinal === "manual") throw new Error("A cidade da conta é obrigatória para conformidade BACEN.");
 
   const chaveAnterior = currentSettings.pix_chave;
+  const modalidadeAnterior = currentSettings.modalidade_pix || currentSettings.pix_mode || "api_webhook";
   const novaVersao = getNextMonotonicVersion(currentSettings.versao);
   const agora = new Date().toISOString();
 
@@ -600,11 +620,15 @@ async function updatePixSettings({
   const novoSettings = {
     ...currentSettings,
     versao: novaVersao,
+    modalidade_pix: modalidadeFinal,
+    pix_mode: modalidadeFinal,
     pix_chave: chaveLimpa,
     pix_tipo_chave: tipoChave,
     pix_beneficiario: beneficiarioLimpo,
     pix_documento: pix_documento !== undefined ? String(pix_documento).trim() : (currentSettings.pix_documento || ""),
     pix_cidade: cidadeLimpa,
+    pix_instrucoes_manual: pix_instrucoes_manual !== undefined ? String(pix_instrucoes_manual).trim() : (currentSettings.pix_instrucoes_manual || ""),
+    pix_permite_comprovante: pix_permite_comprovante !== undefined ? Boolean(pix_permite_comprovante) : (currentSettings.pix_permite_comprovante !== false),
     motivo_alteracao: motivo || "Atualização de dados PIX via painel",
     atualizado_por: usuario || "admin",
     atualizado_em: agora
@@ -616,14 +640,15 @@ async function updatePixSettings({
     acao: "PIX_KEY_UPDATED",
     usuario: usuario || "admin",
     campo_afetado: "pix_chave",
-    valor_anterior: `${chaveAnterior} (${currentSettings.pix_tipo_chave || 'EMAIL'})`,
-    valor_novo: `${chaveLimpa} (${tipoChave})`,
-    motivo: motivo || "Atualização da chave PIX",
+    valor_anterior: `${chaveAnterior} (${currentSettings.pix_tipo_chave || 'TELEFONE'}, mod: ${modalidadeAnterior})`,
+    valor_novo: `${chaveLimpa} (${tipoChave}, mod: ${modalidadeFinal})`,
+    motivo: motivo || "Atualização da chave/modalidade PIX",
     ip_origem: ip || "127.0.0.1",
     criado_em: agora,
     detalhes: {
       beneficiario: beneficiarioLimpo,
       cidade: cidadeLimpa,
+      modalidade_pix: modalidadeFinal,
       versao: novaVersao
     }
   };
@@ -680,11 +705,14 @@ async function updatePixSettings({
             valor_promocional: currentSettings.valor_promocional,
             taxa_adicional: currentSettings.taxa_adicional || 0.00,
             max_parcelas: currentSettings.max_parcelas || 12,
+            modalidade_pix: novoSettings.modalidade_pix,
             pix_chave: chaveLimpa,
             pix_tipo_chave: tipoChave,
             pix_beneficiario: beneficiarioLimpo,
             pix_documento: novoSettings.pix_documento,
             pix_cidade: cidadeLimpa,
+            pix_instrucoes_manual: novoSettings.pix_instrucoes_manual,
+            pix_permite_comprovante: novoSettings.pix_permite_comprovante,
             motivo_alteracao: motivo,
             atualizado_por: usuario || "admin",
             atualizado_em: agora
@@ -933,11 +961,15 @@ async function approvePayment({ identificador, usuario, ip }) {
 
   // 5. Atualiza no store local
   const localData = loadLocalStore();
+  let alreadyApproved = false;
   if (Array.isArray(localData.pagamentos)) {
     const idx = localData.pagamentos.findIndex(p => p.txid === identificador || p.whatsapp_pagador === identificador);
     if (idx !== -1) {
+      if (localData.pagamentos[idx].status === "approved" || localData.pagamentos[idx].status === "confirmado") {
+        alreadyApproved = true;
+      }
       localData.pagamentos[idx].status = "approved";
-      localData.pagamentos[idx].pago_em = agora;
+      localData.pagamentos[idx].pago_em = localData.pagamentos[idx].pago_em || agora;
       matchedTxid = matchedTxid || localData.pagamentos[idx].txid;
       matchedEmail = matchedEmail || localData.pagamentos[idx].email;
       matchedNome = matchedNome || localData.pagamentos[idx].nome_pagador;
@@ -947,8 +979,8 @@ async function approvePayment({ identificador, usuario, ip }) {
     }
   }
 
-  // 6. Disparo do comprovante por e-mail com await
-  if (matchedEmail) {
+  // 6. Disparo do comprovante por e-mail com await (se não foi enviado anteriormente)
+  if (matchedEmail && !alreadyApproved) {
     try {
       const { sendPaymentReceiptEmail } = require("./email-comprovante");
       const emailResult = await sendPaymentReceiptEmail({
@@ -966,22 +998,114 @@ async function approvePayment({ identificador, usuario, ip }) {
     }
   }
 
-  // 7. Registra no histórico de auditoria
+  // 7. Registra no histórico de auditoria se ainda não estava aprovado
+  if (!alreadyApproved) {
+    const auditEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      acao: "PAYMENT_MANUALLY_APPROVED",
+      usuario: usuario || "admin",
+      campo_afetado: "pagamento_status",
+      valor_anterior: "pendente",
+      valor_novo: "confirmado",
+      motivo: `Aprovação manual de pagamento para: ${identificador}`,
+      ip_origem: ip || "127.0.0.1",
+      criado_em: agora,
+      detalhes: {
+        identificador: identificador,
+        txid: matchedTxid,
+        email: matchedEmail,
+        email_enviado: emailDispatched
+      }
+    };
+
+    if (!Array.isArray(localData.historico)) localData.historico = [];
+    localData.historico.unshift(auditEntry);
+  }
+  saveLocalStore(localData);
+
+  return {
+    success: true,
+    persisted: true,
+    alreadyApproved,
+    supabaseUpdated,
+    emailDispatched,
+    message: alreadyApproved
+      ? `Pagamento de ${identificador} já estava aprovado.`
+      : `Pagamento de ${identificador} aprovado e registrado com sucesso.${emailDispatched ? ' Comprovante oficial enviado para ' + matchedEmail : ''}`
+  };
+}
+
+// ==============================================================================
+// ESCRITA 4.2: REJEIÇÃO MANUAL DE PAGAMENTO / COMPROVANTE (REJECT_PAYMENT)
+// ==============================================================================
+async function rejectPayment({ identificador, usuario, motivo, ip }) {
+  if (!identificador) {
+    throw new Error("Identificador (TXID ou WhatsApp) é obrigatório para rejeição.");
+  }
+
+  const agora = new Date().toISOString();
+  let supabaseUpdated = false;
+  let matchedTxid = null;
+  const motivoFinal = motivo || "Comprovante inconsistente ou pagamento não reconhecido";
+
+  // 1. Atualiza no Supabase se configurado
+  const { url, key } = getSupabaseCredentials();
+  if (url && key) {
+    try {
+      // 1.1 Atualiza em 'inscricoes'
+      await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
+        method: "PATCH",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pagamento_status: "recusado",
+          atualizado_em: agora
+        })
+      });
+
+      // 1.2 Atualiza em 'pagamentos'
+      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
+        method: "PATCH",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "rejected",
+          atualizado_em: agora
+        })
+      });
+      if (resTx.ok) supabaseUpdated = true;
+    } catch (e) {
+      console.warn("[SettingsStore rejectPayment] Supabase sync erro:", e.message);
+    }
+  }
+
+  // 2. Atualiza no store local
+  const localData = loadLocalStore();
+  if (Array.isArray(localData.pagamentos)) {
+    const idx = localData.pagamentos.findIndex(p => p.txid === identificador || p.whatsapp_pagador === identificador);
+    if (idx !== -1) {
+      localData.pagamentos[idx].status = "rejected";
+      localData.pagamentos[idx].status_analise_manual = "rejeitado";
+      localData.pagamentos[idx].motivo_rejeicao = motivoFinal;
+      localData.pagamentos[idx].rejeitado_por = usuario || "admin";
+      localData.pagamentos[idx].rejeitado_em = agora;
+      matchedTxid = localData.pagamentos[idx].txid;
+    }
+  }
+
+  // 3. Registra na trilha de auditoria
   const auditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    acao: "PAYMENT_MANUALLY_APPROVED",
+    acao: "PAYMENT_MANUALLY_REJECTED",
     usuario: usuario || "admin",
     campo_afetado: "pagamento_status",
-    valor_anterior: "pendente",
-    valor_novo: "confirmado",
-    motivo: `Aprovação manual de pagamento para: ${identificador}`,
+    valor_anterior: "aguardando_analise",
+    valor_novo: "rejeitado",
+    motivo: `Rejeição de pagamento para: ${identificador} - Motivo: ${motivoFinal}`,
     ip_origem: ip || "127.0.0.1",
     criado_em: agora,
     detalhes: {
       identificador: identificador,
-      txid: matchedTxid,
-      email: matchedEmail,
-      email_enviado: emailDispatched
+      txid: matchedTxid || identificador,
+      motivo: motivoFinal
     }
   };
 
@@ -993,8 +1117,8 @@ async function approvePayment({ identificador, usuario, ip }) {
     success: true,
     persisted: true,
     supabaseUpdated,
-    emailDispatched,
-    message: `Pagamento de ${identificador} aprovado e registrado com sucesso.${emailDispatched ? ' Comprovante oficial enviado para ' + matchedEmail : ''}`
+    status: "rejected",
+    message: `Pagamento de ${identificador} foi rejeitado. O pedido permanece não pago.`
   };
 }
 
@@ -1028,7 +1152,7 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
       usuario: usuario || "admin_sync",
       campo_afetado: "configuracao_geral",
       valor_anterior: `v${currentVersao}`,
-      valor_novo: `v${updatedSettings.versao} (R$ ${Number(updatedSettings.valor_inscricao).toFixed(2)} - ${updatedSettings.pix_chave})`,
+      valor_novo: `v${updatedSettings.versao} (R$ ${Number(updatedSettings.valor_inscricao).toFixed(2)} - ${updatedSettings.pix_chave} - ${updatedSettings.modalidade_pix || 'api_webhook'})`,
       motivo: motivo || "Sincronização integral anti-downgrade",
       ip_origem: ip || "127.0.0.1",
       criado_em: agora
@@ -1058,11 +1182,14 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
             valor_promocional: updatedSettings.valor_promocional,
             taxa_adicional: updatedSettings.taxa_adicional,
             max_parcelas: updatedSettings.max_parcelas,
+            modalidade_pix: updatedSettings.modalidade_pix || "api_webhook",
             pix_chave: updatedSettings.pix_chave,
             pix_tipo_chave: updatedSettings.pix_tipo_chave,
             pix_beneficiario: updatedSettings.pix_beneficiario,
             pix_documento: updatedSettings.pix_documento,
             pix_cidade: updatedSettings.pix_cidade,
+            pix_instrucoes_manual: updatedSettings.pix_instrucoes_manual,
+            pix_permite_comprovante: updatedSettings.pix_permite_comprovante,
             motivo_alteracao: motivo || "Sincronização integral",
             atualizado_por: usuario || "admin_sync",
             atualizado_em: agora
@@ -1096,6 +1223,7 @@ module.exports = {
   updatePixSettings,
   updateWhatsAppSettings,
   approvePayment,
+  rejectPayment,
   syncFullSettings,
   loadLocalStore,
   saveLocalStore,

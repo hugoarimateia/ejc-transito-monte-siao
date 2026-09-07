@@ -37,11 +37,19 @@ module.exports = async (req, res) => {
   const w = activeData.whatsapp || {};
   const precoEfetivo = settingsStore.getEffectivePrice(s);
 
+  const currentMod = s.modalidade_pix || s.pix_mode || "api_webhook";
   const pixConfig = {
+    modalidade: currentMod,
+    modalidade_pix: currentMod,
+    pix_mode: currentMod,
     chave: s.pix_chave,
     tipoChave: s.pix_tipo_chave,
     beneficiario: s.pix_beneficiario,
     cidade: s.pix_cidade,
+    instrucoesManual: s.pix_instrucoes_manual || "",
+    pix_instrucoes_manual: s.pix_instrucoes_manual || "",
+    permiteComprovante: s.pix_permite_comprovante !== false,
+    pix_permite_comprovante: s.pix_permite_comprovante !== false,
     valorTaxaInscricao: Number(s.valor_inscricao),
     valor_inscricao: Number(s.valor_inscricao),
     precoEfetivo: Number(precoEfetivo),
@@ -79,9 +87,12 @@ module.exports = async (req, res) => {
     taxa_adicional: pixConfig.taxa_adicional,
     max_parcelas: pixConfig.max_parcelas,
     lote_atual: pixConfig.lote_atual,
+    modalidade_pix: s.modalidade_pix || "api_webhook",
     pix_chave: pixConfig.chave,
     pix_beneficiario: pixConfig.beneficiario,
     pix_cidade: pixConfig.cidade,
+    pix_instrucoes_manual: pixConfig.pix_instrucoes_manual,
+    pix_permite_comprovante: pixConfig.pix_permite_comprovante,
     pix: pixConfig,
     whatsapp: whatsappConfig
   });

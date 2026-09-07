@@ -112,10 +112,13 @@ module.exports = async (req, res) => {
       const canEdit = ["superadmin", "financeiro"].includes(userRole);
       const maskedKey = mascararChave(settings.pix_chave, settings.pix_tipo_chave);
 
+      const modalidadeEfetiva = settings.modalidade_pix || settings.pix_mode || "api_webhook";
       return res.status(200).json({
         success: true,
         settings: {
           ...settings,
+          modalidade_pix: modalidadeEfetiva,
+          pix_mode: modalidadeEfetiva,
           pix_chave_mascarada: maskedKey,
           // Chave completa só enviada para papéis autorizados
           pix_chave: canEdit ? settings.pix_chave : maskedKey
@@ -152,19 +155,25 @@ module.exports = async (req, res) => {
       taxa_adicional,
       max_parcelas,
       // Dados para PIX
+      modalidade_pix,
+      pix_mode,
       pix_chave,
       pix_tipo_chave,
       pix_beneficiario,
       pix_documento,
       pix_cidade,
+      pix_instrucoes_manual,
+      pix_permite_comprovante,
       // Dados para WhatsApp
       subs,
-      // Dados para aprovação de pagamento
+      // Dados para aprovação de pagamento manual
+      txid,
+      payment_id,
       identificador
     } = req.body || {};
 
-    const clientIp = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1";
     const adminUser = usuario || userRole || "admin";
+    const clientIp = req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1";
 
     // Validação de permissões para ações financeiras estritas
     if (["update_prices", "update_pix", "sync_full_settings"].includes(action)) {
@@ -214,35 +223,53 @@ module.exports = async (req, res) => {
 
     // Ação B: Atualizar Dados do Recebedor PIX
     if (action === "update_pix") {
-      const tipoChave = String(pix_tipo_chave || "EMAIL").toUpperCase();
+      const rawModalidade = modalidade_pix !== undefined ? modalidade_pix : (pix_mode !== undefined ? pix_mode : undefined);
+      if (rawModalidade !== undefined && rawModalidade !== null && rawModalidade !== "") {
+        if (rawModalidade !== "api_webhook" && rawModalidade !== "manual") {
+          return res.status(400).json({ error: "Modalidade operacional do Pix inválida. Valores aceitos: 'api_webhook' ou 'manual'." });
+        }
+      }
+
+      const activeData = await settingsStore.getActiveSettings();
+      const currentSettings = activeData?.settings || {};
+      const modalidadeFinal = rawModalidade || currentSettings.modalidade_pix || currentSettings.pix_mode || "api_webhook";
+
+      const tipoChave = String(pix_tipo_chave || currentSettings.pix_tipo_chave || "EMAIL").toUpperCase();
       if (!VALID_KEY_TYPES.includes(tipoChave)) {
         return res.status(400).json({ error: `Tipo de chave PIX inválido. Tipos aceitos: ${VALID_KEY_TYPES.join(", ")}.` });
       }
 
-      const validacaoChave = validarFormatoChavePix(pix_chave, tipoChave);
-      if (!validacaoChave.valido) {
+      const chaveInformada = pix_chave !== undefined ? String(pix_chave).trim() : (currentSettings.pix_chave || "");
+      const validacaoChave = validarFormatoChavePix(chaveInformada, tipoChave);
+      if (!validacaoChave.valido && modalidadeFinal === "manual") {
         return res.status(400).json({ error: validacaoChave.erro });
       }
 
-      const beneficiarioLimpo = String(pix_beneficiario || "").trim();
-      const cidadeLimpa = String(pix_cidade || "").trim();
+      const beneficiarioLimpo = pix_beneficiario !== undefined ? String(pix_beneficiario).trim() : (currentSettings.pix_beneficiario || "");
+      const cidadeLimpa = pix_cidade !== undefined ? String(pix_cidade).trim() : (currentSettings.pix_cidade || "");
 
-      if (!beneficiarioLimpo) {
-        return res.status(400).json({ error: "O nome do favorecido/beneficiário é obrigatório." });
-      }
-      if (!cidadeLimpa) {
-        return res.status(400).json({ error: "A cidade da conta é obrigatória para conformidade BACEN EMV." });
+      if (modalidadeFinal === "manual") {
+        if (!beneficiarioLimpo) {
+          return res.status(400).json({ error: "O nome do favorecido/beneficiário é obrigatório no modo manual." });
+        }
+        if (!cidadeLimpa) {
+          return res.status(400).json({ error: "A cidade da conta é obrigatória para conformidade BACEN EMV no modo manual." });
+        }
       }
 
       try {
-        const chaveParaSalvar = validacaoChave.chaveNormalizada || (settingsStore.normalizarChavePix ? settingsStore.normalizarChavePix(pix_chave, tipoChave) : pix_chave);
+        const chaveParaSalvar = validacaoChave.chaveNormalizada || (settingsStore.normalizarChavePix ? settingsStore.normalizarChavePix(chaveInformada, tipoChave) : chaveInformada);
         const result = await settingsStore.updatePixSettings({
           usuario: adminUser,
-          pix_chave: chaveParaSalvar,
+          modalidade_pix: modalidadeFinal,
+          pix_mode: modalidadeFinal,
+          pix_chave: chaveParaSalvar || currentSettings.pix_chave || "83996431326",
           pix_tipo_chave: tipoChave,
-          pix_beneficiario: beneficiarioLimpo,
-          pix_documento: pix_documento,
-          pix_cidade: cidadeLimpa,
+          pix_beneficiario: beneficiarioLimpo || currentSettings.pix_beneficiario || "EJC TRANSITO MONTE SIAO",
+          pix_documento: pix_documento !== undefined ? pix_documento : currentSettings.pix_documento,
+          pix_cidade: cidadeLimpa || currentSettings.pix_cidade || "CAMPINA GRANDE",
+          pix_instrucoes_manual: pix_instrucoes_manual !== undefined ? pix_instrucoes_manual : currentSettings.pix_instrucoes_manual,
+          pix_permite_comprovante: pix_permite_comprovante !== undefined ? pix_permite_comprovante : currentSettings.pix_permite_comprovante,
           motivo: motivo,
           ip: String(clientIp)
         });
@@ -253,6 +280,8 @@ module.exports = async (req, res) => {
           message: result.message,
           nova_chave_mascarada: mascararChave(result.settings.pix_chave, tipoChave),
           versao: result.settings.versao,
+          modalidade_pix: result.settings.modalidade_pix,
+          pix_mode: result.settings.pix_mode,
           settings: result.settings
         });
       } catch (err) {
@@ -327,8 +356,27 @@ module.exports = async (req, res) => {
       }
     }
 
+    // Ação E: Rejeição Manual de Pagamento / Comprovante
+    if (action === "reject_payment") {
+      try {
+        const result = await settingsStore.rejectPayment({
+          identificador: identificador,
+          usuario: adminUser,
+          motivo: motivo,
+          ip: String(clientIp)
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        console.error("[Reject Payment Error]", err);
+        return res.status(500).json({
+          success: false,
+          error: err.message || "Falha ao rejeitar pagamento no servidor."
+        });
+      }
+    }
+
     return res.status(400).json({
-      error: "Ação não informada ou inválida. Use 'update_prices', 'update_pix', 'update_whatsapp' ou 'approve_payment'."
+      error: "Ação não informada ou inválida. Use 'update_prices', 'update_pix', 'update_whatsapp', 'approve_payment' ou 'reject_payment'."
     });
   }
 

@@ -1786,6 +1786,64 @@ button { font: inherit; }
   70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(8, 125, 249, 0); }
   100% { transform: scale(.95); box-shadow: 0 0 0 0 rgba(8, 125, 249, 0); }
 }
+/* Estados Visuais do Pix Simultâneo */
+.waiting-pulse-box.state-waiting {
+  background: #fefce8;
+  border-color: #fde047;
+  color: #a16207;
+}
+.waiting-pulse-box.state-waiting .pulse-indicator-dot {
+  background: #eab308;
+  box-shadow: 0 0 0 0 rgba(234, 179, 8, .7);
+}
+.waiting-pulse-box.state-received {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0284c7;
+}
+.waiting-pulse-box.state-received .pulse-indicator-dot {
+  background: #0284c7;
+  box-shadow: 0 0 0 0 rgba(2, 132, 199, .7);
+}
+.waiting-pulse-box.state-approved {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+.waiting-pulse-box.state-approved .pulse-indicator-dot {
+  background: #16a34a;
+  box-shadow: 0 0 0 0 rgba(22, 163, 74, .7);
+}
+.waiting-pulse-box.state-rejected {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+.waiting-pulse-box.state-rejected .pulse-indicator-dot {
+  background: #dc2626;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, .7);
+  animation: none;
+}
+[data-theme="dark"] .waiting-pulse-box.state-waiting {
+  background: rgba(234, 179, 8, .15);
+  border-color: rgba(234, 179, 8, .3);
+  color: #fde047;
+}
+[data-theme="dark"] .waiting-pulse-box.state-received {
+  background: rgba(2, 132, 199, .15);
+  border-color: rgba(2, 132, 199, .3);
+  color: #7dd3fc;
+}
+[data-theme="dark"] .waiting-pulse-box.state-approved {
+  background: rgba(22, 163, 74, .15);
+  border-color: rgba(22, 163, 74, .3);
+  color: #86efac;
+}
+[data-theme="dark"] .waiting-pulse-box.state-rejected {
+  background: rgba(220, 38, 38, .15);
+  border-color: rgba(220, 38, 38, .3);
+  color: #fca5a5;
+}
 .success-screen-card {
   display: none;
   text-align: center;

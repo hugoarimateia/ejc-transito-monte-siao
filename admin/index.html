@@ -304,54 +304,109 @@
             <div>
               <h4><i class="fa-brands fa-pix" style="color: #0d9488;"></i> Bloco B: Configuração do PIX</h4>
               <p style="color: var(--muted); font-size: .82rem; margin: 0 0 16px;">
-                Dados da conta destino usados para gerar o QR Code estático EMV e Copia e Cola do Banco Central.
+                Configure a modalidade de operação do Pix (API Mercado Pago ou Pix Manual), chave do recebedor e regras de comprovante.
               </p>
 
               <form id="formPixConfig">
-                <div class="form-field">
-                  <label for="inputPixTipoChave">Tipo da Chave PIX:</label>
-                  <select id="inputPixTipoChave" required>
-                    <option value="EMAIL">E-mail</option>
-                    <option value="CPF">CPF (11 dígitos)</option>
-                    <option value="CNPJ">CNPJ (14 dígitos)</option>
-                    <option value="TELEFONE">Telefone celular (com DDD)</option>
-                    <option value="ALEATORIA">Chave Aleatória (EVP)</option>
-                  </select>
-                  <small>Formato validado conforme padrão do Bacen.</small>
-                </div>
-
-                <div class="form-field">
-                  <label for="inputPixChave">Chave PIX:</label>
-                  <div class="input-action-wrap">
-                    <input type="password" id="inputPixChave" required placeholder="Digite a chave PIX">
-                    <button type="button" class="icon-action-btn" id="btnToggleMaskPix" title="Revelar/Ocultar Chave">
-                      <i class="fa-regular fa-eye" id="eyeIconPix"></i>
-                    </button>
-                    <button type="button" class="icon-action-btn" id="btnCopyPixAdmin" title="Copiar Chave">
-                      <i class="fa-regular fa-copy"></i>
-                    </button>
+                <!-- SELETOR DE MODALIDADE OPERACIONAL DO PIX -->
+                <div class="form-field" style="background: var(--bg-surface, #f8fafc); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color, #e2e8f0); margin-bottom: 16px;">
+                  <label style="font-weight: 700; color: var(--blue-dark); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-sliders"></i> Modalidade Operacional do Pix:
+                  </label>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: .88rem;">
+                      <input type="radio" name="radioModalidadePix" id="radioPixApi" value="api_webhook" checked style="margin-top: 3px;">
+                      <div>
+                        <strong>Pix via API Mercado Pago (Transparente + Webhook)</strong>
+                        <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                          QR Code dinâmico oficial gerado na API. Confirmação 100% automática por webhook.
+                        </div>
+                      </div>
+                    </label>
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: .88rem;">
+                      <input type="radio" name="radioModalidadePix" id="radioPixManual" value="manual" style="margin-top: 3px;">
+                      <div>
+                        <strong>Pix Manual (Chave Direta Estática)</strong>
+                        <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                          Exibe a chave Pix direta. O cliente anexa o comprovante na tela do checkout e a coordenação modera manualmente.
+                        </div>
+                      </div>
+                    </label>
                   </div>
-                  <small id="pixKeyHelp">Chave protegida por máscara visual para segurança de dados.</small>
                 </div>
 
-                <div class="form-field">
-                  <label for="inputPixBeneficiario">Nome do Beneficiário / Titular:</label>
-                  <input type="text" id="inputPixBeneficiario" required maxlength="25" placeholder="Ex: EJC TRANSITO MONTE SIAO">
-                  <small>Nome registrado na conta bancária (máx. 25 caracteres).</small>
+                <!-- BANNER VISUAL QUANDO MODO API MERCADO PAGO ATIVO -->
+                <div id="mpInfoBanner" style="padding: 16px; border-radius: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; margin-bottom: 16px;">
+                  <div style="display: flex; align-items: center; gap: 10px; color: #065f46; font-weight: 700; font-size: .92rem; margin-bottom: 6px;">
+                    <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem;"></i>
+                    <span>Pix via API Mercado Pago (Transparente + Webhook)</span>
+                  </div>
+                  <p style="margin: 0; font-size: .84rem; color: #047857; line-height: 1.5;">
+                    Pix será gerado automaticamente pelo Mercado Pago e confirmado através do Webhook.
+                  </p>
+                  <div style="margin-top: 10px; font-size: .78rem; color: #065f46; background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 6px;">
+                    <i class="fa-solid fa-lock"></i> <strong>Modo Transparente:</strong> O QR Code dinâmico e o código Copia e Cola são emitidos diretamente pelo Mercado Pago. Não é necessária configuração de chave manual neste modo.
+                  </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <!-- CONTAINER DE CAMPOS DO PIX MANUAL (DESABILITADO/OCULTO NO MODO API, VISÍVEL NO MODO MANUAL) -->
+                <div id="manualPixFieldsContainer" style="display: none;">
                   <div class="form-field">
-                    <label for="inputPixDocumento">Documento CPF/CNPJ (Opcional):</label>
-                    <input type="text" id="inputPixDocumento" placeholder="00.000.000/0000-00">
-                    <small>Para conferência administrativa.</small>
+                    <label for="inputPixTipoChave">Tipo da Chave PIX (Manual / Recebedor):</label>
+                    <select id="inputPixTipoChave">
+                      <option value="EMAIL">E-mail</option>
+                      <option value="CPF">CPF (11 dígitos)</option>
+                      <option value="CNPJ">CNPJ (14 dígitos)</option>
+                      <option value="TELEFONE">Telefone celular (com DDD)</option>
+                      <option value="ALEATORIA">Chave Aleatória (EVP)</option>
+                    </select>
+                    <small>Formato validado conforme padrão do Bacen.</small>
                   </div>
 
                   <div class="form-field">
-                    <label for="inputPixCidade">Cidade da Conta (BACEN EMV):</label>
-                    <input type="text" id="inputPixCidade" required maxlength="15" placeholder="CAMPINA GRANDE">
-                    <small>Exigido no Bacen EMV (máx. 15 caracteres).</small>
+                    <label for="inputPixChave">Chave PIX:</label>
+                    <div class="input-action-wrap">
+                      <input type="password" id="inputPixChave" placeholder="Digite a chave PIX">
+                      <button type="button" class="icon-action-btn" id="btnToggleMaskPix" title="Revelar/Ocultar Chave">
+                        <i class="fa-regular fa-eye" id="eyeIconPix"></i>
+                      </button>
+                      <button type="button" class="icon-action-btn" id="btnCopyPixAdmin" title="Copiar Chave">
+                        <i class="fa-regular fa-copy"></i>
+                      </button>
+                    </div>
+                    <small id="pixKeyHelp">Chave protegida por máscara visual para segurança de dados.</small>
                   </div>
+
+                  <div class="form-field">
+                    <label for="inputPixBeneficiario">Nome do Beneficiário / Titular:</label>
+                    <input type="text" id="inputPixBeneficiario" maxlength="25" placeholder="Ex: EJC TRANSITO MONTE SIAO">
+                    <small>Nome registrado na conta bancária (máx. 25 caracteres).</small>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-field">
+                      <label for="inputPixDocumento">Documento CPF/CNPJ (Opcional):</label>
+                      <input type="text" id="inputPixDocumento" placeholder="00.000.000/0000-00">
+                      <small>Para conferência administrativa.</small>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="inputPixCidade">Cidade da Conta (BACEN EMV):</label>
+                      <input type="text" id="inputPixCidade" maxlength="15" placeholder="CAMPINA GRANDE">
+                      <small>Exigido no Bacen EMV (máx. 15 caracteres).</small>
+                    </div>
+                  </div>
+
+                  <!-- Configurações adicionais de Comprovante no Modo Manual -->
+                  <div class="form-field" style="margin-top: 10px;">
+                    <label for="inputPixInstrucoesManual" style="font-size: .82rem;">Instruções para o Pagador (Modo Manual):</label>
+                    <input type="text" id="inputPixInstrucoesManual" placeholder="Ex: Faça o Pix para a chave acima e anexe o comprovante legível">
+                    <small>Exibido no checkout manual junto com os dados do recebedor.</small>
+                  </div>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: .84rem; cursor: pointer; margin-bottom: 12px;">
+                    <input type="checkbox" id="checkPixPermiteComprovante" checked>
+                    <span>Permitir envio de comprovante diretamente na tela do checkout</span>
+                  </label>
                 </div>
 
                 <div style="margin-top: 18px;">
@@ -550,16 +605,19 @@
 
     // Configuração ativa em memória
     let configFinanceiraAtiva = {
+      modalidade_pix: "api_webhook",
       lote_atual: "1º Lote",
       valor_inscricao: 50.00,
       valor_promocional: null,
       taxa_adicional: 0.00,
       max_parcelas: 12,
-      pix_chave: "leoeuler03@gmail.com",
-      pix_tipo_chave: "EMAIL",
+      pix_chave: "83996431326",
+      pix_tipo_chave: "TELEFONE",
       pix_beneficiario: "EJC TRANSITO MONTE SIAO",
       pix_documento: "",
       pix_cidade: "CAMPINA GRANDE",
+      pix_instrucoes_manual: "",
+      pix_permite_comprovante: true,
       versao: 1
     };
     let historicoFinanceiroData = [];
@@ -872,13 +930,21 @@
 
       tbody.innerHTML = filtered.map(p => {
         const isPix = p.metodo !== "credit_card";
-        const methodBadge = isPix
-          ? `<span class="method-badge pix"><i class="fa-brands fa-pix"></i> Pix</span>`
-          : `<span class="method-badge card"><i class="fa-solid fa-credit-card"></i> Cartão ${p.cartao_bandeira ? `(${p.cartao_bandeira} *${p.cartao_ultimos_digitos || ''})` : ''} ${p.parcelas > 1 ? `${p.parcelas}x` : ''}</span>`;
+        let methodBadge = "";
+        if (isPix) {
+          if (p.modalidade_pix === "manual") {
+            methodBadge = `<span class="method-badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;"><i class="fa-solid fa-hand-holding-dollar"></i> Pix Manual</span>`;
+          } else {
+            methodBadge = `<span class="method-badge pix"><i class="fa-brands fa-pix"></i> Pix API (MP)</span>`;
+          }
+        } else {
+          methodBadge = `<span class="method-badge card"><i class="fa-solid fa-credit-card"></i> Cartão ${p.cartao_bandeira ? `(${p.cartao_bandeira} *${p.cartao_ultimos_digitos || ''})` : ''} ${p.parcelas > 1 ? `${p.parcelas}x` : ''}</span>`;
+        }
 
         const statusClass = isApproved(p.status) ? "status-approved" : `status-${p.status || 'pending'}`;
-        const statusLabel = isApproved(p.status) ? "Aprovado" : (p.status === "rejected" ? "Recusado" : (p.status === "expired" ? "Expirado" : "Pendente"));
+        const statusLabel = isApproved(p.status) ? "Aprovado" : (p.status === "rejected" ? "Recusado" : (p.status === "aguardando_analise" ? "Aguardando Análise" : (p.status === "expired" ? "Expirado" : "Pendente")));
         const displayPaymentId = p.payment_id || p.metadata?.payment_id;
+        const proofUrl = p.comprovante_caminho || p.comprovante_url;
 
         return `
           <tr>
@@ -887,6 +953,7 @@
             <td>
               ${p.email || '<span style="color:var(--muted); font-style:italic;">Não informado</span>'}
               <br><small style="color:${p.comprovante_email_enviado ? '#10b981' : '#f59e0b'}; font-weight:600;"><i class="fa-solid ${p.comprovante_email_enviado ? 'fa-circle-check' : 'fa-clock'}"></i> ${p.comprovante_email_enviado ? 'Comprovante Enviado' : 'E-mail Pendente'}</small>
+              ${proofUrl ? `<br><a href="${proofUrl}" target="_blank" style="color:var(--blue); font-size:.76rem; font-weight:700;"><i class="fa-solid fa-paperclip"></i> Ver Comprovante</a>` : ''}
             </td>
             <td>${methodBadge}</td>
             <td><span style="font-size:.78rem; text-transform:uppercase; font-weight:700; color:var(--muted);">${p.tipo || 'Inscrição'}</span></td>
@@ -910,6 +977,10 @@
                 <button class="action-btn confirm" onclick="aprovarTransacaoManual('${p.txid}')" title="Aprovar manualmente">
                   <i class="fa-solid fa-check"></i>
                 </button>
+                ${p.status !== 'rejected' ? `
+                <button class="action-btn" onclick="rejeitarTransacaoManual('${p.txid}')" title="Rejeitar transação" style="background:#fee2e2; color:#b91c1c; border-color:#fca5a5;">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>` : ''}
               ` : ''}
             </td>
           </tr>
@@ -1226,6 +1297,59 @@
       alert("✓ Transação aprovada e comprovante despachado com sucesso!");
     };
 
+    // Rejeição manual de transação
+    window.rejeitarTransacaoManual = async function(txid) {
+      const motivo = prompt(`Informe o motivo da rejeição da transação ${txid}:`, "Comprovante ilegível ou divergência de dados");
+      if (motivo === null) return; // cancelou
+
+      if (!confirm(`Confirma a rejeição da transação ${txid}? O status será alterado para recusado.`)) return;
+
+      const p = pagamentosData.find(item => item.txid === txid);
+      if (p) {
+        p.status = "rejected";
+        p.motivo_rejeicao = motivo;
+      }
+
+      localStorage.setItem("ejc_pagamentos", JSON.stringify(pagamentosData));
+
+      auditoriaData.unshift({
+        transacao_id: txid,
+        acao: "rejeitado_admin",
+        status_novo: "rejected",
+        executado_por: currentUserRole || "admin_coordenacao",
+        criado_em: new Date().toISOString(),
+        detalhes: { motivo }
+      });
+      localStorage.setItem("ejc_auditoria", JSON.stringify(auditoriaData));
+
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify({
+            action: "reject_payment",
+            identificador: txid,
+            motivo: motivo,
+            usuario: currentUserRole || "admin_coordenacao",
+            admin_pass: currentAdminPass
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          console.warn("[Admin] Aviso ao rejeitar via API:", data?.error);
+        }
+      } catch (err) {
+        console.warn("[Admin] Falha ao acionar API reject_payment:", err);
+      }
+
+      renderizarTudo();
+      alert(`✓ Transação ${txid} rejeitada com sucesso.`);
+    };
+
     // Event listeners para filtros e busca
     document.getElementById("searchInput").addEventListener("input", renderizarTabelaInscricoes);
     document.getElementById("subFilter").addEventListener("change", renderizarTabelaInscricoes);
@@ -1389,6 +1513,25 @@
       }
     }
 
+    function aplicarVisibilidadeModalidadePix(modalidade) {
+      const isApi = (modalidade === "api_webhook");
+      const mpBanner = document.getElementById("mpInfoBanner");
+      const manualContainer = document.getElementById("manualPixFieldsContainer");
+
+      if (mpBanner) mpBanner.style.display = isApi ? "block" : "none";
+      if (manualContainer) manualContainer.style.display = isApi ? "none" : "block";
+
+      const inputChave = document.getElementById("inputPixChave");
+      const inputBeneficiario = document.getElementById("inputPixBeneficiario");
+      const inputCidade = document.getElementById("inputPixCidade");
+      const inputTipo = document.getElementById("inputPixTipoChave");
+
+      if (inputChave) inputChave.required = !isApi;
+      if (inputBeneficiario) inputBeneficiario.required = !isApi;
+      if (inputCidade) inputCidade.required = !isApi;
+      if (inputTipo) inputTipo.required = !isApi;
+    }
+
     function preencherFormulariosFinanceiros() {
       document.getElementById("inputLoteAtual").value = configFinanceiraAtiva.lote_atual || "1º Lote";
       document.getElementById("inputValorInscricao").value = Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2);
@@ -1396,9 +1539,27 @@
       document.getElementById("inputMaxParcelas").value = String(configFinanceiraAtiva.max_parcelas || 12);
       document.getElementById("inputTaxaAdicional").value = configFinanceiraAtiva.taxa_adicional ? Number(configFinanceiraAtiva.taxa_adicional).toFixed(2) : "0.00";
 
-      document.getElementById("inputPixTipoChave").value = configFinanceiraAtiva.pix_tipo_chave || "EMAIL";
+      // Modalidade Pix e campos contextuais
+      const mod = configFinanceiraAtiva.modalidade_pix || configFinanceiraAtiva.pix_mode || "api_webhook";
+      const radioApi = document.getElementById("radioPixApi");
+      const radioManual = document.getElementById("radioPixManual");
+
+      if (mod === "manual") {
+        if (radioManual) radioManual.checked = true;
+      } else {
+        if (radioApi) radioApi.checked = true;
+      }
+      aplicarVisibilidadeModalidadePix(mod);
+
+      const inputInstrucoes = document.getElementById("inputPixInstrucoesManual");
+      if (inputInstrucoes) inputInstrucoes.value = configFinanceiraAtiva.pix_instrucoes_manual || "";
+
+      const checkPermiteComp = document.getElementById("checkPixPermiteComprovante");
+      if (checkPermiteComp) checkPermiteComp.checked = (configFinanceiraAtiva.pix_permite_comprovante !== false);
+
+      document.getElementById("inputPixTipoChave").value = configFinanceiraAtiva.pix_tipo_chave || "TELEFONE";
       const pixKeyInput = document.getElementById("inputPixChave");
-      const chaveNorm = normalizarChavePix(configFinanceiraAtiva.pix_chave || "", configFinanceiraAtiva.pix_tipo_chave);
+      const chaveNorm = normalizarChavePix(configFinanceiraAtiva.pix_chave || "83996431326", configFinanceiraAtiva.pix_tipo_chave);
       pixKeyInput.value = chaveNorm;
       configFinanceiraAtiva.pix_chave = chaveNorm;
       pixKeyInput.type = isPixKeyVisible ? "text" : "password";
@@ -1406,6 +1567,18 @@
       document.getElementById("inputPixBeneficiario").value = configFinanceiraAtiva.pix_beneficiario || "EJC TRANSITO MONTE SIAO";
       document.getElementById("inputPixDocumento").value = configFinanceiraAtiva.pix_documento || "";
       document.getElementById("inputPixCidade").value = configFinanceiraAtiva.pix_cidade || "CAMPINA GRANDE";
+    }
+
+    // Toggle visual de modalidade Pix na interface
+    const radioPixApiEl = document.getElementById("radioPixApi");
+    const radioPixManualEl = document.getElementById("radioPixManual");
+    if (radioPixApiEl && radioPixManualEl) {
+      radioPixApiEl.addEventListener("change", () => {
+        aplicarVisibilidadeModalidadePix("api_webhook");
+      });
+      radioPixManualEl.addEventListener("change", () => {
+        aplicarVisibilidadeModalidadePix("manual");
+      });
     }
 
     // Toggle Revelar / Ocultar Chave PIX
@@ -1682,52 +1855,89 @@
         return;
       }
 
-      const tipoChave = document.getElementById("inputPixTipoChave").value;
+      const selectedModalidade = document.querySelector('input[name="radioModalidadePix"]:checked')?.value || "api_webhook";
+      const isManualMode = (selectedModalidade === "manual");
+      const instrucoesManual = document.getElementById("inputPixInstrucoesManual")?.value.trim() || "";
+      const permiteComprovante = document.getElementById("checkPixPermiteComprovante") ? document.getElementById("checkPixPermiteComprovante").checked : true;
+
+      const tipoChave = document.getElementById("inputPixTipoChave").value || configFinanceiraAtiva.pix_tipo_chave || "TELEFONE";
       const rawChave = document.getElementById("inputPixChave").value.trim();
-      const chavePix = normalizarChavePix(rawChave, tipoChave);
-      document.getElementById("inputPixChave").value = chavePix;
-      const beneficiario = document.getElementById("inputPixBeneficiario").value.trim();
-      const documento = document.getElementById("inputPixDocumento").value.trim();
-      const cidade = document.getElementById("inputPixCidade").value.trim();
+      const chavePix = rawChave ? normalizarChavePix(rawChave, tipoChave) : (configFinanceiraAtiva.pix_chave || "83996431326");
+      if (rawChave) {
+        document.getElementById("inputPixChave").value = chavePix;
+      }
+      const beneficiario = document.getElementById("inputPixBeneficiario").value.trim() || configFinanceiraAtiva.pix_beneficiario || "EJC TRANSITO MONTE SIAO";
+      const documento = document.getElementById("inputPixDocumento").value.trim() || configFinanceiraAtiva.pix_documento || "";
+      const cidade = document.getElementById("inputPixCidade").value.trim() || configFinanceiraAtiva.pix_cidade || "CAMPINA GRANDE";
 
-      const erroValidacao = validarChavePixFrontend(chavePix, tipoChave);
-      if (erroValidacao) {
-        alert(erroValidacao);
-        return;
+      if (isManualMode) {
+        const erroValidacao = validarChavePixFrontend(chavePix, tipoChave);
+        if (erroValidacao) {
+          alert(erroValidacao);
+          return;
+        }
+
+        if (!beneficiario) {
+          alert("O nome do favorecido/beneficiário é obrigatório no modo Pix Manual.");
+          return;
+        }
+
+        if (!cidade) {
+          alert("A cidade da conta é obrigatória para conformidade BACEN EMV no modo Pix Manual.");
+          return;
+        }
       }
 
-      if (!beneficiario) {
-        alert("O nome do favorecido/beneficiário é obrigatório.");
-        return;
-      }
-
-      if (!cidade) {
-        alert("A cidade da conta é obrigatória para conformidade BACEN EMV.");
-        return;
-      }
+      const currentModLabel = (configFinanceiraAtiva.modalidade_pix || configFinanceiraAtiva.pix_mode) === 'manual'
+        ? 'Pix Manual (Chave Direta)'
+        : 'Pix via API Mercado Pago (Transparente + Webhook)';
+      const novoModLabel = isManualMode
+        ? 'Pix Manual (Chave Direta Estática)'
+        : 'Pix via API Mercado Pago (Transparente + Webhook)';
 
       const diffBox = document.getElementById("diffPixContent");
-      diffBox.innerHTML = `
-        <div class="diff-row">
-          <span>Tipo da Chave:</span>
-          <span><span class="diff-old">${configFinanceiraAtiva.pix_tipo_chave || 'EMAIL'}</span> → <span class="diff-new">${tipoChave}</span></span>
-        </div>
-        <div class="diff-row">
-          <span>Chave PIX:</span>
-          <span><span class="diff-old">${configFinanceiraAtiva.pix_chave || '-'}</span> → <span class="diff-new">${chavePix}</span></span>
-        </div>
-        <div class="diff-row">
-          <span>Beneficiário:</span>
-          <span><span class="diff-old">${configFinanceiraAtiva.pix_beneficiario || '-'}</span> → <span class="diff-new">${beneficiario}</span></span>
-        </div>
-        <div class="diff-row">
-          <span>Cidade Bacen:</span>
-          <span><span class="diff-old">${configFinanceiraAtiva.pix_cidade || '-'}</span> → <span class="diff-new">${cidade}</span></span>
-        </div>
-      `;
+      if (!isManualMode) {
+        diffBox.innerHTML = `
+          <div class="diff-row">
+            <span>Modalidade Pix:</span>
+            <span><span class="diff-old">${currentModLabel}</span> → <span class="diff-new">${novoModLabel}</span></span>
+          </div>
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px 12px; border-radius: 8px; margin-top: 10px; font-size: 0.84rem; color: #065f46; line-height: 1.4;">
+            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> <strong>Operação Mercado Pago:</strong> O Pix será gerado automaticamente pelo Mercado Pago e confirmado através do Webhook.<br>
+            <span style="font-size: 0.78rem; color: #047857;">Os dados da sua chave manual permanecem salvos em segurança caso queira reativá-la no futuro.</span>
+          </div>
+        `;
+      } else {
+        diffBox.innerHTML = `
+          <div class="diff-row">
+            <span>Modalidade Pix:</span>
+            <span><span class="diff-old">${currentModLabel}</span> → <span class="diff-new">${novoModLabel}</span></span>
+          </div>
+          <div class="diff-row">
+            <span>Tipo da Chave:</span>
+            <span><span class="diff-old">${configFinanceiraAtiva.pix_tipo_chave || 'TELEFONE'}</span> → <span class="diff-new">${tipoChave}</span></span>
+          </div>
+          <div class="diff-row">
+            <span>Chave PIX:</span>
+            <span><span class="diff-old">${configFinanceiraAtiva.pix_chave || '-'}</span> → <span class="diff-new">${chavePix}</span></span>
+          </div>
+          <div class="diff-row">
+            <span>Beneficiário:</span>
+            <span><span class="diff-old">${configFinanceiraAtiva.pix_beneficiario || '-'}</span> → <span class="diff-new">${beneficiario}</span></span>
+          </div>
+          <div class="diff-row">
+            <span>Cidade Bacen:</span>
+            <span><span class="diff-old">${configFinanceiraAtiva.pix_cidade || '-'}</span> → <span class="diff-new">${cidade}</span></span>
+          </div>
+        `;
+      }
 
       pendingPixPayload = {
         action: "update_pix",
+        modalidade_pix: selectedModalidade,
+        pix_mode: selectedModalidade,
+        pix_instrucoes_manual: instrucoesManual,
+        pix_permite_comprovante: permiteComprovante,
         pix_chave: chavePix,
         pix_tipo_chave: tipoChave,
         pix_beneficiario: beneficiario,

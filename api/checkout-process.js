@@ -408,8 +408,10 @@ module.exports = async (req, res) => {
         });
       }
 
-      // 2.5. Reconciliação Server-Side no Polling (se transação estiver 'pending' e houver Mercado Pago configurado)
-      if (transactionFound && (transactionFound.status === "pending" || !transactionFound.status) && queryTxid) {
+      const isManual = transactionFound.modalidade_pix === "manual" || transactionFound.metadata?.modalidade_pix === "manual";
+
+      // 2.5. Reconciliação Server-Side no Polling (APENAS para modalidade api_webhook se transação estiver 'pending')
+      if (!isManual && transactionFound && (transactionFound.status === "pending" || !transactionFound.status) && queryTxid) {
         if (mercadoPago.isConfigured()) {
           try {
             const approvedItem = await mercadoPago.consultarPagamentoPorExternalReference(queryTxid);
@@ -450,7 +452,11 @@ module.exports = async (req, res) => {
         payment_id: transactionFound.payment_id || transactionFound.metadata?.payment_id || transactionFound.txid,
         order_id: transactionFound.order_id || transactionFound.metadata?.order_id || null,
         external_reference: transactionFound.external_reference || transactionFound.metadata?.external_reference || transactionFound.txid,
-        status: transactionFound.status || "pending",
+        modalidade_pix: isManual ? "manual" : "api_webhook",
+        status: transactionFound.status || (isManual ? "aguardando_analise" : "pending"),
+        status_analise_manual: transactionFound.status_analise_manual || transactionFound.metadata?.status_analise_manual || (isManual ? "pendente" : null),
+        comprovante_caminho: transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || null,
+        comprovante_enviado: Boolean(transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || transactionFound.metadata?.comprovante_caminho),
         pago: transactionFound.status === "approved" || transactionFound.status === "confirmado" || transactionFound.status === "paid",
         pago_em: transactionFound.pago_em || null,
         criado_em: transactionFound.criado_em || null,
@@ -599,6 +605,129 @@ module.exports = async (req, res) => {
       });
     }
 
+    // --------------------------------------------------------------------------
+    // AÇÃO 3: ENVIO DE COMPROVANTE DO PIX MANUAL (MESMA TELA DO CHECKOUT)
+    // --------------------------------------------------------------------------
+    if (action === "enviar_comprovante_manual" || action === "upload_comprovante") {
+      const targetTxid = bodyTxid || req.body?.id || req.body?.payment_id || req.body?.external_reference;
+      const comprovanteCaminho = req.body?.comprovante_caminho || req.body?.comprovante_url || req.body?.comprovante_base64;
+      const comprovanteNome = req.body?.comprovante_nome || "comprovante_pix.png";
+
+      if (!targetTxid) {
+        return res.status(400).json({ error: "Identificador da transação (TXID) é obrigatório." });
+      }
+      if (!comprovanteCaminho) {
+        return res.status(400).json({ error: "Arquivo ou link do comprovante é obrigatório." });
+      }
+
+      const agora = new Date().toISOString();
+      let comprovanteUrlFinal = comprovanteCaminho;
+
+      // Se for base64 e houver Supabase Storage configurado, tenta fazer upload
+      if (comprovanteCaminho.startsWith("data:") && supabaseUrl && supabaseKey) {
+        try {
+          const matches = comprovanteCaminho.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const mimeType = matches[1];
+            const buffer = Buffer.from(matches[2], "base64");
+            const fileExt = mimeType.includes("pdf") ? "pdf" : "png";
+            const storagePath = `comprovantes/manual_${targetTxid}_${Date.now()}.${fileExt}`;
+
+            const uploadRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/fotos/${storagePath}`, {
+              method: "POST",
+              headers: {
+                "apikey": supabaseKey,
+                "Authorization": `Bearer ${supabaseKey}`,
+                "Content-Type": mimeType
+              },
+              body: buffer
+            });
+            if (uploadRes.ok) {
+              comprovanteUrlFinal = `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/fotos/${storagePath}`;
+            }
+          }
+        } catch (eStorage) {
+          console.warn("[enviar_comprovante_manual] Storage upload fallback:", eStorage.message);
+        }
+      }
+
+      // 1. Atualiza no Supabase
+      if (supabaseUrl && supabaseKey) {
+        try {
+          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(targetTxid)}`, {
+            method: "PATCH",
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              comprovante_caminho: comprovanteUrlFinal,
+              status: "aguardando_analise",
+              atualizado_em: agora
+            })
+          });
+
+          // Também atualiza em inscricoes se houver vinculo
+          if (email) {
+            await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?email=eq.${encodeURIComponent(email)}`, {
+              method: "PATCH",
+              headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                comprovante_caminho: comprovanteUrlFinal,
+                pagamento_status: "aguardando_analise",
+                atualizado_em: agora
+              })
+            }).catch(() => {});
+          }
+        } catch (dbErr) {
+          console.warn("[enviar_comprovante_manual] Erro ao atualizar Supabase:", dbErr.message);
+        }
+      }
+
+      // 2. Atualiza no Store Local
+      try {
+        const localStore = settingsStore.loadLocalStore();
+        if (Array.isArray(localStore.pagamentos)) {
+          const pIdx = localStore.pagamentos.findIndex(p => p.txid === targetTxid);
+          if (pIdx !== -1) {
+            localStore.pagamentos[pIdx].comprovante_caminho = comprovanteUrlFinal;
+            localStore.pagamentos[pIdx].status = "aguardando_analise";
+            localStore.pagamentos[pIdx].status_analise_manual = "pendente";
+            localStore.pagamentos[pIdx].comprovante_enviado_em = agora;
+            if (!localStore.pagamentos[pIdx].metadata) localStore.pagamentos[pIdx].metadata = {};
+            localStore.pagamentos[pIdx].metadata.comprovante_url = comprovanteUrlFinal;
+            localStore.pagamentos[pIdx].metadata.status_analise_manual = "pendente";
+            localStore.pagamentos[pIdx].metadata.modalidade_pix = "manual";
+          }
+        }
+
+        // Auditoria
+        if (!Array.isArray(localStore.historico)) localStore.historico = [];
+        localStore.historico.unshift({
+          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          acao: "MANUAL_PROOF_UPLOADED",
+          usuario: nome || email || "participante",
+          campo_afetado: "comprovante_caminho",
+          valor_anterior: null,
+          valor_novo: comprovanteUrlFinal.slice(0, 100),
+          motivo: `Comprovante enviado para análise do Pix manual: ${targetTxid}`,
+          ip_origem: req.headers["x-forwarded-for"] || "127.0.0.1",
+          criado_em: agora,
+          detalhes: { txid: targetTxid }
+        });
+
+        settingsStore.saveLocalStore(localStore);
+      } catch (localErr) {
+        console.warn("[enviar_comprovante_manual] Erro localStore:", localErr.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        persisted: true,
+        status: "aguardando_analise",
+        status_analise_manual: "pendente",
+        comprovante_caminho: comprovanteUrlFinal,
+        message: "Comprovante enviado para análise pela coordenação."
+      });
+    }
+
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
@@ -609,7 +738,7 @@ module.exports = async (req, res) => {
     const ts36 = Date.now().toString(36).toUpperCase();
     const rnd4 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const orderId = `ORD${ts36}${rnd4}`;
-    const paymentId = `PAY${ts36}${rnd4}`;
+    let paymentId = `PAY${ts36}${rnd4}`;
     const txid = (metodoFinal === "credit_card" ? "CARD" : "PIX") + ts36 + rnd4;
     const externalReference = txid;
 
@@ -620,13 +749,14 @@ module.exports = async (req, res) => {
     let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     let loteAtual = "1º Lote";
     let maxParcelasAllowed = 12;
+    let activeData = null;
 
     const clientVersao = Number(req.body?.versao || req.headers["x-client-version"] || 0);
     const clientChavePix = req.body?.chave_pix || req.body?.pix_chave || req.body?.chave;
     const clientValor = Number(req.body?.valor !== undefined ? req.body?.valor : (valor || 0));
 
     try {
-      const activeData = await settingsStore.getActiveSettings();
+      activeData = await settingsStore.getActiveSettings();
       if (activeData && activeData.settings) {
         const conf = activeData.settings;
         const currentVersao = Number(conf.versao || 0);
@@ -662,6 +792,8 @@ module.exports = async (req, res) => {
     // PROCESSAMENTO PIX
     // --------------------------------------------------------------------------
     if (metodoFinal === "pix") {
+      const activeConf = (activeData && activeData.settings) ? activeData.settings : {};
+      const modalidadePix = (activeConf.modalidade_pix === "manual" || activeConf.pix_mode === "manual") ? "manual" : "api_webhook";
       const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);
       const expiracao = new Date(Date.now() + tempoExpiracao * 60000).toISOString();
 
@@ -669,42 +801,76 @@ module.exports = async (req, res) => {
       let qrCodeBase64 = null;
       let ticketUrl = null;
       let mpGenerated = false;
+      let mpPaymentId = null;
+      let initialStatus = "pending";
+      let manualDetails = null;
 
-      // 1. Tenta gerar Pix dinâmico oficial via Mercado Pago se configurado na Vercel
-      if (mercadoPago.isConfigured()) {
-        try {
-          const descricaoCob = tipo === "inscricao" ? `Inscrição EJC Trânsito ${loteAtual}` : "Contribuição EJC Trânsito";
-          const mpResult = await mercadoPago.criarPagamentoPix({
-            valor: valorNumerico,
-            nome: nomeFinal,
-            email: email,
-            cpf: cpf || null,
-            txid: txid,
-            descricao: descricaoCob
-          });
+      // ----------------------------------------------------------------------
+      // MODO A: PIX VIA API + WEBHOOK (MERCADO PAGO OFICIAL)
+      // ----------------------------------------------------------------------
+      if (modalidadePix === "api_webhook") {
+        if (mercadoPago.isConfigured()) {
+          try {
+            const descricaoCob = tipo === "inscricao" ? `Inscrição EJC Trânsito ${loteAtual}` : "Contribuição EJC Trânsito";
+            const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+            const notificationUrl = host ? `https://${host}/api/pix-webhook` : undefined;
 
-          if (mpResult && mpResult.qr_code) {
-            payloadPix = mpResult.qr_code;
-            qrCodeBase64 = mpResult.qr_code_base64 || null;
-            ticketUrl = mpResult.ticket_url || null;
-            paymentId = `PAY${mpResult.id}`;
-            mpGenerated = true;
+            const mpResult = await mercadoPago.criarPagamentoPix({
+              valor: valorNumerico,
+              nome: nomeFinal,
+              email: email,
+              cpf: cpf || null,
+              txid: txid,
+              descricao: descricaoCob,
+              notificationUrl
+            });
+
+            if (mpResult && mpResult.qr_code) {
+              payloadPix = mpResult.qr_code;
+              qrCodeBase64 = mpResult.qr_code_base64 || null;
+              ticketUrl = mpResult.ticket_url || null;
+              paymentId = `PAY${mpResult.id}`;
+              mpPaymentId = mpResult.id ? String(mpResult.id) : null;
+              mpGenerated = true;
+              initialStatus = "pending";
+
+              // Log de diagnóstico seguro (Seção 12 das diretrizes - sem expor credenciais)
+              console.log(`[CHECKOUT_PIX_DIAGNOSTICO] ORIGEM_QR=MERCADO_PAGO | PAYMENT_ID=${mpPaymentId} | EXTERNAL_REFERENCE=${txid} | QR_CODE_LEN=${payloadPix.length} | QR_BASE64_PRESENTE=${Boolean(qrCodeBase64)}`);
+            } else {
+              throw new Error("Mercado Pago retornou resposta sem qr_code oficial.");
+            }
+          } catch (mpErr) {
+            console.error("[Checkout Process] Falha na criação do Pix dinâmico no Mercado Pago:", mpErr.message);
+            // ZERO EMV local fallback quando API está ativa!
+            return res.status(502).json({
+              error: "Não foi possível gerar a cobrança Pix via Mercado Pago neste momento. Tente novamente em instantes.",
+              detail: mpErr.message
+            });
           }
-        } catch (mpErr) {
-          console.warn("[Checkout Process] Falha ao criar Pix dinâmico no Mercado Pago, acionando gerador resiliente:", mpErr.message);
+        } else {
+          // Se Mercado Pago não configurado (ex.: ambiente local sem credencial privada)
+          return res.status(503).json({
+            error: "Modalidade Pix via API ativa, porém MERCADOPAGO_ACCESS_TOKEN não está configurado na Vercel.",
+            hint: "Configure a credencial privada na Vercel ou ative o Modo Pix Manual no painel administrativo."
+          });
         }
       }
 
-      // 2. Fallback resiliente caso Mercado Pago não configurado ou indisponível
-      if (!payloadPix) {
-        payloadPix = gerarPayloadPixBACEN({
+      // ----------------------------------------------------------------------
+      // MODO B: PIX MANUAL (CHAVE MANUAL + ENVIO DE COMPROVANTE NA MESMA TELA)
+      // ----------------------------------------------------------------------
+      if (modalidadePix === "manual") {
+        initialStatus = "aguardando_analise";
+        payloadPix = chavePix;
+        manualDetails = {
           chave: chavePix,
-          nome: beneficiario,
+          tipo_chave: activeConf.pix_tipo_chave || "TELEFONE",
+          beneficiario: beneficiario,
           cidade: cidade,
-          valor: valorNumerico,
-          txid: txid,
-          info: tipo === "inscricao" ? `TAXA EJC TRANSITO ${loteAtual}`.toUpperCase() : "CONTRIBUICAO EJC TRANSITO"
-        });
+          instrucoes: activeConf.pix_instrucoes_manual || "Faça o Pix para a chave acima e anexe o comprovante nesta tela para análise da coordenação.",
+          permite_comprovante: activeConf.pix_permite_comprovante !== false
+        };
+        console.log(`[CHECKOUT_PIX_DIAGNOSTICO] ORIGEM_PIX=MANUAL | TXID=${txid} | CHAVE_LEN=${chavePix.length}`);
       }
 
       // Persiste no Supabase usando a RPC de conciliação inteligente
@@ -728,7 +894,7 @@ module.exports = async (req, res) => {
               p_parcelas: 1,
               p_cartao_ultimos_digitos: null,
               p_cartao_bandeira: null,
-              p_status: "pending",
+              p_status: initialStatus,
               p_tipo: tipo || "inscricao",
               p_pix_copia_e_cola: payloadPix,
               p_qr_code_base64: qrCodeBase64,
@@ -739,8 +905,10 @@ module.exports = async (req, res) => {
                 payment_id: paymentId,
                 external_reference: externalReference,
                 sub: sub || null,
-                gerado_via: mpGenerated ? "api_mercadopago" : "api_checkout_process",
-                provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
+                modalidade_pix: modalidadePix,
+                status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
+                gerado_via: mpGenerated ? "api_mercadopago" : "pix_manual",
+                provedor: mpGenerated ? "mercadopago" : "pix_manual",
                 ticket_url: ticketUrl,
                 lote: loteAtual,
                 inscricao_id: inscricao_id || null
@@ -767,18 +935,22 @@ module.exports = async (req, res) => {
           whatsapp_pagador: whatsapp || null,
           valor: valorNumerico,
           metodo: "pix",
-          status: "pending",
+          modalidade_pix: modalidadePix,
+          status: initialStatus,
+          status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
           tipo: tipo || "inscricao",
           pix_copia_e_cola: payloadPix,
           qr_code_base64: qrCodeBase64,
           ticket_url: ticketUrl,
-          provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
+          provedor: mpGenerated ? "mercadopago" : "pix_manual",
           inscricao_id: inscricao_id || null,
           sub: sub || null,
           metadata: {
             order_id: orderId,
             payment_id: paymentId,
             external_reference: externalReference,
+            modalidade_pix: modalidadePix,
+            status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
             sub: sub || null,
             ticket_url: ticketUrl,
             lote: loteAtual
@@ -794,20 +966,24 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         success: true,
         metodo: "pix",
+        modalidade_pix: modalidadePix,
         txid: txid,
         payment_id: paymentId,
+        mp_payment_id: mpPaymentId,
         order_id: orderId,
         external_reference: externalReference,
         valor: valorNumerico,
-        chave: chavePix,
+        chave: (modalidadePix === "manual") ? chavePix : null,
         pixCopiaECola: payloadPix,
         pix_copia_cola: payloadPix,
         payload: payloadPix,
         qr_code_base64: qrCodeBase64,
         ticket_url: ticketUrl,
-        provedor: mpGenerated ? "mercadopago" : "bacen_resiliente",
+        provedor: mpGenerated ? "mercadopago" : "pix_manual",
         expiracao: expiracao,
-        status: "pending"
+        status: initialStatus,
+        status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
+        manual_details: manualDetails
       });
     }
 

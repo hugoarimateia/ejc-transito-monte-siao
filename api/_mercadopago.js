@@ -94,7 +94,7 @@ async function criarPagamentoPix({
       "X-Idempotency-Key": `PIX-${txid}`
     },
     body: JSON.stringify(bodyPayload),
-    signal: AbortSignal.timeout(8000)
+    signal: AbortSignal.timeout(12000)
   });
 
   const responseData = await response.json();
@@ -104,7 +104,12 @@ async function criarPagamentoPix({
       responseData?.message ||
       responseData?.error ||
       `Erro na API Mercado Pago (HTTP ${response.status})`;
-    const detailMsg = responseData?.cause?.[0]?.description || "";
+    let detailMsg = "";
+    if (Array.isArray(responseData?.cause)) {
+      detailMsg = responseData.cause.map(c => c.description || c.code || JSON.stringify(c)).join("; ");
+    } else if (responseData?.cause) {
+      detailMsg = typeof responseData.cause === "string" ? responseData.cause : JSON.stringify(responseData.cause);
+    }
     throw new Error(`${errorMsg}${detailMsg ? ` - ${detailMsg}` : ""}`);
   }
 

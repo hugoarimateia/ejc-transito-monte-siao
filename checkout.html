@@ -363,7 +363,7 @@
             <!-- PAINEL 1: PIX -->
             <div class="method-content-panel active" id="panelPix">
               <div class="pix-checkout-wrap">
-                <div class="pix-timer-badge">
+                <div class="pix-timer-badge" id="pixTimerBadgeWrap">
                   <i class="fa-regular fa-clock"></i>
                   <span>Expira em: <strong id="pixCountdownText">15:00</strong></span>
                 </div>
@@ -372,7 +372,7 @@
                   <span style="color: #64748b; font-size: .88rem; font-weight: 600;">Carregando QR Code...</span>
                 </div>
 
-                <p style="font-size: .86rem; color: var(--text-muted); max-width: 380px; margin: 0 auto 14px;">
+                <p id="pixInstructionsText" style="font-size: .86rem; color: var(--text-muted); max-width: 380px; margin: 0 auto 14px;">
                   Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code, ou utilize o código Copia e Cola:
                 </p>
 
@@ -381,9 +381,43 @@
                   <i class="fa-regular fa-copy" style="margin-right: 8px;"></i> Copiar Código Pix
                 </button>
 
-                <div class="waiting-pulse-box">
-                  <div class="pulse-indicator-dot"></div>
-                  <span>Aguardando confirmação do pagamento...</span>
+                <!-- BLOCO EXCLUSIVO PIX MANUAL: DADOS E ENVIO DE COMPROVANTE NA MESMA TELA -->
+                <div id="manualPixBox" style="display: none; margin-top: 18px; padding: 16px; border-radius: 12px; background: var(--bg-surface, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); text-align: left;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="background: #e0f2fe; color: #0369a1; font-size: .75rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase;">
+                      <i class="fa-solid fa-hand-holding-dollar"></i> Modalidade: Pix Manual
+                    </span>
+                    <span style="font-size: .82rem; color: var(--text-muted);">Transferência direta</span>
+                  </div>
+
+                  <div style="font-size: .88rem; line-height: 1.5; margin-bottom: 12px; color: var(--text-main);">
+                    <p style="margin: 0 0 4px;"><strong>Chave Pix:</strong> <code id="manualPixKeyDisplay" style="font-size: .95rem; font-weight: 700; color: var(--blue);">83996431326</code></p>
+                    <p style="margin: 0 0 4px;"><strong>Favorecido:</strong> <span id="manualPixBeneficiaryDisplay">EJC TRANSITO MONTE SIAO</span></p>
+                    <p style="margin: 0 0 4px;"><strong>Tipo de Chave:</strong> <span id="manualPixTypeDisplay">Telefone Celular (sem +55)</span></p>
+                    <p id="manualPixInstructions" style="margin: 8px 0 0; font-size: .82rem; color: var(--text-muted); font-style: italic;">
+                      Faça o Pix para a chave acima e anexe o comprovante abaixo para análise da coordenação.
+                    </p>
+                  </div>
+
+                  <!-- UPLOAD DE COMPROVANTE INTEGRADO NA MESMA TELA -->
+                  <div style="border-top: 1px dashed var(--border-color, #cbd5e1); padding-top: 12px; margin-top: 10px;">
+                    <label for="manualProofFileInput" style="display: block; font-size: .86rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main);">
+                      <i class="fa-solid fa-paperclip"></i> Anexar Comprovante de Pagamento:
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <input type="file" id="manualProofFileInput" accept="image/*,application/pdf" style="font-size: .85rem; padding: 8px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px;">
+                      <button type="button" id="btnUploadManualProof" class="button button-primary" style="min-height: 42px; font-size: .88rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovante para Análise
+                      </button>
+                    </div>
+                    <div id="manualProofFeedback" style="display: none; margin-top: 8px; font-size: .84rem; font-weight: 700; padding: 8px 12px; border-radius: 8px;"></div>
+                  </div>
+                </div>
+
+                <!-- 4 ESTADOS VISUAIS DO PIX SIMULTÂNEO -->
+                <div class="waiting-pulse-box state-waiting" id="pixStatusBox">
+                  <div class="pulse-indicator-dot" id="pixStatusDot"></div>
+                  <span id="pixStatusText">🟡 Aguardando pagamento...</span>
                 </div>
 
                 <button type="button" class="btn-check-now" id="btnCheckPaymentNow">
@@ -560,9 +594,13 @@
 
     let activePixConfig = {
       versao: Number((localConfig && localConfig.versao) || urlVersaoParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.versao) || 0),
-      chave: (localConfig && localConfig.pix_chave) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.chave) || "leoeuler03@gmail.com",
+      modalidade: (localConfig && (localConfig.modalidade_pix || localConfig.pix_mode)) || (window.EJC_PIX_CONFIG && (window.EJC_PIX_CONFIG.modalidade_pix || window.EJC_PIX_CONFIG.pix_mode)) || "api_webhook",
+      chave: (localConfig && localConfig.pix_chave) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.chave) || "83996431326",
+      tipoChave: (localConfig && localConfig.pix_tipo_chave) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.pix_tipo_chave) || "TELEFONE",
       beneficiario: (localConfig && localConfig.pix_beneficiario) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.beneficiario) || "EJC TRANSITO MONTE SIAO",
       cidade: (localConfig && localConfig.pix_cidade) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.cidade) || "CAMPINA GRANDE",
+      instrucoesManual: (localConfig && localConfig.pix_instrucoes_manual) || "",
+      permiteComprovante: (localConfig && localConfig.pix_permite_comprovante !== false),
       loteAtual: (localConfig && localConfig.lote_atual) || urlLoteParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "1º Lote",
       valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (urlValorParam > 0 ? urlValorParam : 0) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00),
       valorPromocional: (localConfig && localConfig.valor_promocional !== undefined && localConfig.valor_promocional !== null) ? Number(localConfig.valor_promocional) : null,
@@ -671,103 +709,6 @@
     let pixPollingInterval = null;
     let isTransitioningToStep2 = false;
 
-    // Helpers BACEN EMV e CRC16
-    const textEncoder = new TextEncoder();
-    function getUtf8ByteLength(str) {
-      return textEncoder.encode(String(str || "")).length;
-    }
-
-    function calcularCRC16(payload) {
-      const bytes = typeof payload === "string" ? textEncoder.encode(payload) : payload;
-      let crc = 0xFFFF;
-      for (let i = 0; i < bytes.length; i++) {
-        crc ^= (bytes[i] << 8);
-        for (let j = 0; j < 8; j++) {
-          if ((crc & 0x8000) !== 0) {
-            crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
-          } else {
-            crc = (crc << 1) & 0xFFFF;
-          }
-        }
-      }
-      return crc.toString(16).toUpperCase().padStart(4, "0");
-    }
-
-    function emvFormat(id, value) {
-      const valStr = String(value !== undefined && value !== null ? value : "");
-      const len = String(getUtf8ByteLength(valStr)).padStart(2, "0");
-      return `${id}${len}${valStr}`;
-    }
-
-    function sanitizePixAscii(str, maxLen) {
-      if (!str) return "";
-      return String(str)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[º°]/g, "")
-        .replace(/ª/g, "a")
-        .replace(/[^a-zA-Z0-9\s.\-_@]/g, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, maxLen);
-    }
-
-    function parseTLVBytes(buf) {
-      let idx = 0;
-      const fields = [];
-      while (idx < buf.length) {
-        if (idx + 4 > buf.length) break;
-        const tag = String.fromCharCode(buf[idx], buf[idx + 1]);
-        const len = parseInt(String.fromCharCode(buf[idx + 2], buf[idx + 3]), 10);
-        if (isNaN(len) || idx + 4 + len > buf.length) return null;
-        const valBuf = buf.subarray(idx + 4, idx + 4 + len);
-        fields.push({ tag, len, valBuf });
-        idx += 4 + len;
-      }
-      return fields;
-    }
-
-    function validarPayloadPix(payload) {
-      if (!payload || typeof payload !== "string") return false;
-      const clean = payload.trim();
-      if (clean.length < 50 || !clean.includes("6304")) return false;
-      const body = clean.slice(0, -4);
-      const declaredCrc = clean.slice(-4).toUpperCase();
-      if (declaredCrc !== calcularCRC16(body)) return false;
-      const bytes = textEncoder.encode(clean);
-      const fields = parseTLVBytes(bytes);
-      return Boolean(fields && fields.length >= 7);
-    }
-
-    function gerarPayloadBACEN(chave, nome, cidade, valor, txid, info) {
-      const cleanChave = (chave || "").trim();
-      const cleanNome = sanitizePixAscii(nome || "EJC TRANSITO MONTE SIAO", 25).toUpperCase();
-      const cleanCidade = sanitizePixAscii(cidade || "CAMPINA GRANDE", 15).toUpperCase();
-      const cleanTxid = (txid || "EJCTRANSITO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25);
-      const cleanInfo = sanitizePixAscii(info || "CHECKOUT EJC", 40).toUpperCase();
-      const valStr = Number(valor).toFixed(2);
-
-      let merchant = emvFormat("00", "br.gov.bcb.pix") + emvFormat("01", cleanChave);
-      if (cleanInfo) merchant += emvFormat("02", cleanInfo);
-
-      let addData = emvFormat("05", cleanTxid);
-
-      let p = "";
-      p += emvFormat("00", "01");
-      p += emvFormat("26", merchant);
-      p += emvFormat("52", "0000");
-      p += emvFormat("53", "986");
-      if (Number(valStr) > 0) {
-        p += emvFormat("54", valStr);
-      }
-      p += emvFormat("58", "BR");
-      p += emvFormat("59", cleanNome);
-      p += emvFormat("60", cleanCidade);
-      p += emvFormat("62", addData);
-      p += "6304";
-      return p + calcularCRC16(p);
-    }
-
     function atualizarOpcoesParcelas(valor, maxParcelas) {
       const select = document.getElementById("cardInstallments");
       if (!select) return;
@@ -808,6 +749,93 @@
       await avancarParaEtapa2(nomeVal, emailVal, wppVal);
     });
 
+    function atualizarEstadoVisualPix(estadoNum, mensagemCustom) {
+      const box = document.getElementById("pixStatusBox");
+      const text = document.getElementById("pixStatusText");
+      if (!box || !text) return;
+
+      box.classList.remove("state-waiting", "state-received", "state-approved", "state-rejected");
+
+      if (estadoNum === 1) {
+        box.classList.add("state-waiting");
+        text.textContent = mensagemCustom || "🟡 Aguardando pagamento...";
+      } else if (estadoNum === 2) {
+        box.classList.add("state-received");
+        text.textContent = mensagemCustom || "🔵 Pagamento recebido / identificando...";
+      } else if (estadoNum === 3) {
+        box.classList.add("state-approved");
+        text.textContent = mensagemCustom || "🟢 Pagamento aprovado!";
+      } else if (estadoNum === 4) {
+        box.classList.add("state-rejected");
+        text.textContent = mensagemCustom || "🔴 Pagamento não confirmado ou rejeitado.";
+      }
+    }
+
+    function vincularUploadComprovante(txid, email, nome) {
+      const btnUploadManual = document.getElementById("btnUploadManualProof");
+      const fileInputManual = document.getElementById("manualProofFileInput");
+      const feedbackManual = document.getElementById("manualProofFeedback");
+
+      if (btnUploadManual && fileInputManual) {
+        btnUploadManual.onclick = async () => {
+          if (!fileInputManual.files || fileInputManual.files.length === 0) {
+            if (feedbackManual) {
+              feedbackManual.style.display = "block";
+              feedbackManual.style.background = "#fef2f2";
+              feedbackManual.style.color = "#dc2626";
+              feedbackManual.textContent = "Selecione o arquivo do comprovante antes de enviar.";
+            }
+            return;
+          }
+
+          const file = fileInputManual.files[0];
+          btnUploadManual.disabled = true;
+          btnUploadManual.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando comprovante...`;
+
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const resUp = await fetch("/api/checkout-process", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "enviar_comprovante_manual",
+                  txid: txid,
+                  email: email,
+                  nome: nome,
+                  comprovante_base64: reader.result,
+                  comprovante_nome: file.name
+                })
+              });
+              const dataUp = await resUp.json();
+              if (resUp.ok && dataUp.success) {
+                if (feedbackManual) {
+                  feedbackManual.style.display = "block";
+                  feedbackManual.style.background = "#f0fdf4";
+                  feedbackManual.style.color = "#16a34a";
+                  feedbackManual.innerHTML = `<i class="fa-solid fa-circle-check"></i> Comprovante enviado com sucesso para análise da coordenação!`;
+                }
+                atualizarEstadoVisualPix(2, "🔵 Comprovante enviado. Em análise pela coordenação...");
+              } else {
+                throw new Error(dataUp.error || "Falha ao enviar comprovante.");
+              }
+            } catch (errUp) {
+              if (feedbackManual) {
+                feedbackManual.style.display = "block";
+                feedbackManual.style.background = "#fef2f2";
+                feedbackManual.style.color = "#dc2626";
+                feedbackManual.textContent = errUp.message || "Erro ao enviar comprovante.";
+              }
+            } finally {
+              btnUploadManual.disabled = false;
+              btnUploadManual.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Enviar Comprovante para Análise`;
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+      }
+    }
+
     async function avancarParaEtapa2(nome, email, whatsapp) {
       if (isTransitioningToStep2) return;
       isTransitioningToStep2 = true;
@@ -818,8 +846,11 @@
       // Atualiza nome na lateral
       document.getElementById("summaryParticipantName").textContent = nome;
 
-      // 1. Chama backend para registrar pagamento e gerar o Pix oficial sincronizado
+      // 1. Chama backend para registrar pagamento e obter cobrança oficial conforme modalidade
       let pixCode = "";
+      let isManualMode = false;
+      let manualDetailsData = null;
+
       try {
         const res = await fetch("/api/checkout-process", {
           method: "POST",
@@ -841,41 +872,38 @@
           })
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.txid) {
-            activeTxid = data.txid;
-            activePaymentId = data.payment_id || data.txid;
-            activeOrderId = data.order_id || null;
-            pixCode = data.pixCopiaECola || data.payload || "";
-            if (data.qr_code_base64) {
-              activePixQrCodeBase64 = data.qr_code_base64;
-            }
+        const data = await res.json();
+        if (res.ok && data && data.txid) {
+          activeTxid = data.txid;
+          activePaymentId = data.payment_id || data.txid;
+          activeOrderId = data.order_id || null;
+          isManualMode = (data.modalidade_pix === "manual");
+          manualDetailsData = data.manual_details || null;
+          pixCode = data.pixCopiaECola || data.payload || "";
+          if (data.qr_code_base64) {
+            activePixQrCodeBase64 = data.qr_code_base64;
           }
+        } else {
+          throw new Error(data?.error || "Falha ao gerar cobrança no servidor.");
         }
       } catch (eErr) {
-        console.warn("[Checkout] Falha de rede no checkout-process, utilizando gerador resiliente:", eErr);
-      }
-
-      // Fallback local caso servidor temporariamente inalcançável
-      if (!activeTxid) {
-        const ts36 = Date.now().toString(36).toUpperCase();
-        const rnd4 = Math.random().toString(36).substring(2, 6).toUpperCase();
-        activeTxid = "PIX" + ts36 + rnd4;
-        activePaymentId = "PAY" + ts36 + rnd4;
-        activeOrderId = "ORD" + ts36 + rnd4;
-      }
-
-      if (!pixCode || !validarPayloadPix(pixCode)) {
-        const descInfo = tipoCheckout === "inscricao" ? `TAXA EJC TRANSITO ${activePixConfig.loteAtual || ""}` : "CONTRIBUICAO EJC TRANSITO";
-        pixCode = gerarPayloadBACEN(
-          activePixConfig.chave,
-          activePixConfig.beneficiario,
-          activePixConfig.cidade,
-          valorTotal,
-          activeTxid,
-          descInfo
-        );
+        console.warn("[Checkout] Falha ao criar checkout:", eErr.message);
+        // Se a modalidade configurada for manual, permite fallback manual local
+        if (activePixConfig.modalidade === "manual") {
+          isManualMode = true;
+          const ts36 = Date.now().toString(36).toUpperCase();
+          const rnd4 = Math.random().toString(36).substring(2, 6).toUpperCase();
+          activeTxid = "MAN" + ts36 + rnd4;
+          activePaymentId = "PAY" + ts36 + rnd4;
+          activeOrderId = "ORD" + ts36 + rnd4;
+          pixCode = activePixConfig.chave;
+        } else {
+          alert("Não foi possível gerar a cobrança Pix oficial neste momento. " + (eErr.message || "Tente novamente."));
+          btnContinueToPayment.disabled = false;
+          btnContinueToPayment.innerHTML = `Continuar para Pagamento <i class="fa-solid fa-arrow-right"></i>`;
+          isTransitioningToStep2 = false;
+          return;
+        }
       }
 
       activePixPayload = pixCode;
@@ -885,12 +913,50 @@
       document.getElementById("step2IdentifiedEmail").textContent = email;
       document.getElementById("step2IdentifiedTotal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-      document.getElementById("pixCodeTextarea").value = activePixPayload;
-      if (activePixQrCodeBase64) {
-        document.getElementById("pixQrCodeBox").innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial">`;
-      } else {
+      const manualBox = document.getElementById("manualPixBox");
+      const instructionsText = document.getElementById("pixInstructionsText");
+
+      if (isManualMode) {
+        // Renderiza Modo Manual
+        if (manualBox) {
+          manualBox.style.display = "block";
+          const keyDisp = document.getElementById("manualPixKeyDisplay");
+          const beneDisp = document.getElementById("manualPixBeneficiaryDisplay");
+          const typeDisp = document.getElementById("manualPixTypeDisplay");
+          const instDisp = document.getElementById("manualPixInstructions");
+
+          if (keyDisp) keyDisp.textContent = manualDetailsData?.chave || activePixConfig.chave;
+          if (beneDisp) beneDisp.textContent = manualDetailsData?.beneficiario || activePixConfig.beneficiario;
+          if (typeDisp) typeDisp.textContent = manualDetailsData?.tipo_chave || activePixConfig.tipoChave || "Telefone Celular";
+          if (instDisp) instDisp.textContent = manualDetailsData?.instrucoes || activePixConfig.instrucoesManual || "Faça o Pix para a chave acima e anexe o comprovante abaixo para análise da coordenação.";
+        }
+        if (instructionsText) {
+          instructionsText.innerHTML = `Faça a transferência Pix no app do seu banco utilizando a chave ou o código Copia e Cola, e <strong>anexe o comprovante nesta tela</strong>:`;
+        }
+        document.getElementById("pixCodeTextarea").value = activePixPayload;
+        
+        // QR Code auxiliar da chave manual
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
-        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix Manual">`;
+
+        // Vincula upload de comprovante na mesma tela
+        vincularUploadComprovante(activeTxid, email, nome);
+
+        atualizarEstadoVisualPix(1, "🟡 Aguardando transferência e anexo do comprovante...");
+      } else {
+        // Renderiza Modo API Mercado Pago
+        if (manualBox) manualBox.style.display = "none";
+        if (instructionsText) {
+          instructionsText.innerHTML = `Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code oficial, ou utilize o código Copia e Cola:`;
+        }
+        document.getElementById("pixCodeTextarea").value = activePixPayload;
+        if (activePixQrCodeBase64) {
+          document.getElementById("pixQrCodeBox").innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial Mercado Pago">`;
+        } else {
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
+          document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+        }
+        atualizarEstadoVisualPix(1, "🟡 Aguardando pagamento...");
       }
 
       // Atualiza link para página exclusiva de confirmação
@@ -905,6 +971,7 @@
           txid: activeTxid,
           payment_id: activePaymentId,
           order_id: activeOrderId,
+          modalidade_pix: isManualMode ? "manual" : "api_webhook",
           nome,
           email,
           whatsapp,
@@ -922,8 +989,9 @@
         payment_id: activePaymentId,
         order_id: activeOrderId,
         metodo: "pix",
+        modalidade_pix: isManualMode ? "manual" : "api_webhook",
         valor: valorTotal,
-        status: "pending",
+        status: isManualMode ? "aguardando_analise" : "pending",
         nome: nome,
         email: email,
         sub: subSelecionado
@@ -1010,9 +1078,13 @@
       }
       if (incomingVersao > 0) activePixConfig.versao = incomingVersao;
 
+      activePixConfig.modalidade = cfg.modalidade_pix || pixData.modalidade_pix || activePixConfig.modalidade || "api_webhook";
       activePixConfig.chave = pixData.chave || pixData.pix_chave || cfg.pix_chave || activePixConfig.chave;
+      activePixConfig.tipoChave = cfg.pix_tipo_chave || pixData.pix_tipo_chave || activePixConfig.tipoChave || "TELEFONE";
       activePixConfig.beneficiario = pixData.beneficiario || pixData.pix_beneficiario || cfg.pix_beneficiario || activePixConfig.beneficiario;
       activePixConfig.cidade = pixData.cidade || pixData.pix_cidade || cfg.pix_cidade || activePixConfig.cidade;
+      activePixConfig.instrucoesManual = cfg.pix_instrucoes_manual || pixData.pix_instrucoes_manual || activePixConfig.instrucoesManual || "";
+      activePixConfig.permiteComprovante = cfg.pix_permite_comprovante !== false;
       activePixConfig.loteAtual = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || activePixConfig.loteAtual;
       activePixConfig.valorTaxaInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || activePixConfig.valorTaxaInscricao);
       
@@ -1024,12 +1096,16 @@
       try {
         localStorage.setItem("ejc_config_financeira", JSON.stringify({
           versao: activePixConfig.versao,
+          modalidade_pix: activePixConfig.modalidade,
           lote_atual: activePixConfig.loteAtual,
           valor_inscricao: activePixConfig.valorTaxaInscricao,
           valor_promocional: activePixConfig.valorPromocional,
           pix_chave: activePixConfig.chave,
+          pix_tipo_chave: activePixConfig.tipoChave,
           pix_beneficiario: activePixConfig.beneficiario,
           pix_cidade: activePixConfig.cidade,
+          pix_instrucoes_manual: activePixConfig.instrucoesManual,
+          pix_permite_comprovante: activePixConfig.permiteComprovante,
           max_parcelas: activePixConfig.maxParcelas
         }));
       } catch (eStorage) {}
@@ -1137,10 +1213,25 @@
           });
           if (res.ok) {
             const serverData = await res.json();
-            if (serverData && (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid")) {
-              clearInterval(pixPollingInterval);
-              concluirPagamentoComSucesso(serverData);
-              return;
+            if (serverData) {
+              if (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid") {
+                clearInterval(pixPollingInterval);
+                atualizarEstadoVisualPix(3, "🟢 Pagamento aprovado!");
+                concluirPagamentoComSucesso(serverData);
+                return;
+              } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
+                clearInterval(pixPollingInterval);
+                atualizarEstadoVisualPix(4, "🔴 Pagamento não confirmado ou rejeitado pela coordenação.");
+                return;
+              } else if (serverData.status === "in_process" || serverData.status === "em_processamento" || serverData.status === "identificando") {
+                atualizarEstadoVisualPix(2, "🔵 Pagamento recebido / identificando...");
+              } else if (serverData.status === "aguardando_analise") {
+                if (serverData.comprovante_caminho || serverData.comprovante_url) {
+                  atualizarEstadoVisualPix(2, "🔵 Comprovante enviado. Em análise pela coordenação...");
+                } else {
+                  atualizarEstadoVisualPix(1, "🟡 Aguardando transferência e anexo do comprovante...");
+                }
+              }
             }
           }
         } catch (ePoll) {}
@@ -1149,10 +1240,17 @@
         try {
           const pagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
           const item = pagamentos.find(p => p.txid === txid);
-          if (item && (item.status === "approved" || item.status === "confirmado")) {
-            clearInterval(pixPollingInterval);
-            concluirPagamentoComSucesso(item);
-            return;
+          if (item) {
+            if (item.status === "approved" || item.status === "confirmado") {
+              clearInterval(pixPollingInterval);
+              atualizarEstadoVisualPix(3, "🟢 Pagamento aprovado!");
+              concluirPagamentoComSucesso(item);
+              return;
+            } else if (item.status === "rejected" || item.status === "rejeitado") {
+              clearInterval(pixPollingInterval);
+              atualizarEstadoVisualPix(4, "🔴 Pagamento não confirmado ou rejeitado.");
+              return;
+            }
           }
         } catch (eLoc) {}
       }, 3000);
@@ -1173,9 +1271,24 @@
           });
           if (res.ok) {
             const serverData = await res.json();
-            if (serverData && (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid")) {
-              concluirPagamentoComSucesso(serverData);
-              return;
+            if (serverData) {
+              if (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid") {
+                atualizarEstadoVisualPix(3, "🟢 Pagamento aprovado!");
+                concluirPagamentoComSucesso(serverData);
+                return;
+              } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
+                atualizarEstadoVisualPix(4, "🔴 Pagamento não confirmado ou rejeitado pela coordenação.");
+                alert("O pagamento foi rejeitado ou não confirmado.");
+                return;
+              } else if (serverData.status === "in_process" || serverData.status === "em_processamento") {
+                atualizarEstadoVisualPix(2, "🔵 Pagamento recebido / identificando...");
+              } else if (serverData.status === "aguardando_analise") {
+                if (serverData.comprovante_caminho || serverData.comprovante_url) {
+                  atualizarEstadoVisualPix(2, "🔵 Comprovante enviado. Em análise pela coordenação...");
+                } else {
+                  atualizarEstadoVisualPix(1, "🟡 Aguardando transferência e anexo do comprovante...");
+                }
+              }
             }
           }
         } catch (e) {}
@@ -1495,6 +1608,35 @@
           document.getElementById("step2IdentifiedName").textContent = sessionData.nome;
           document.getElementById("step2IdentifiedEmail").textContent = sessionData.email;
           document.getElementById("step2IdentifiedTotal").textContent = sessionData.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+          const isManual = (sessionData.modalidade_pix === "manual");
+          const manualBox = document.getElementById("manualPixBox");
+          const instructionsText = document.getElementById("pixInstructionsText");
+
+          if (isManual) {
+            if (manualBox) {
+              manualBox.style.display = "block";
+              const keyDisp = document.getElementById("manualPixKeyDisplay");
+              const beneDisp = document.getElementById("manualPixBeneficiaryDisplay");
+              const typeDisp = document.getElementById("manualPixTypeDisplay");
+              const instDisp = document.getElementById("manualPixInstructions");
+              if (keyDisp) keyDisp.textContent = activePixConfig.chave;
+              if (beneDisp) beneDisp.textContent = activePixConfig.beneficiario;
+              if (typeDisp) typeDisp.textContent = activePixConfig.tipoChave || "Telefone Celular";
+              if (instDisp) instDisp.textContent = activePixConfig.instrucoesManual || "Faça o Pix para a chave acima e anexe o comprovante abaixo para análise da coordenação.";
+            }
+            if (instructionsText) {
+              instructionsText.innerHTML = `Faça a transferência Pix no app do seu banco utilizando a chave ou o código Copia e Cola, e <strong>anexe o comprovante nesta tela</strong>:`;
+            }
+            vincularUploadComprovante(activeTxid, sessionData.email, sessionData.nome);
+            atualizarEstadoVisualPix(1, "🟡 Aguardando transferência e anexo do comprovante...");
+          } else {
+            if (manualBox) manualBox.style.display = "none";
+            if (instructionsText) {
+              instructionsText.innerHTML = `Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code oficial, ou utilize o código Copia e Cola:`;
+            }
+            atualizarEstadoVisualPix(1, "🟡 Aguardando pagamento...");
+          }
 
           document.getElementById("pixCodeTextarea").value = activePixPayload;
           if (activePixQrCodeBase64) {
