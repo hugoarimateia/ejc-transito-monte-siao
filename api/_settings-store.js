@@ -30,6 +30,44 @@ function getEffectivePrice(settings) {
   return regular;
 }
 
+/**
+ * Normaliza chave Pix de telefone removendo prefixo internacional (+55 ou 55),
+ * garantindo o formato DDD + número (10 ou 11 dígitos, sem formatação de CPF).
+ *
+ * Exemplos:
+ *  +5583996431326 -> 83996431326
+ *  5583996431326  -> 83996431326
+ *  83996431326    -> 83996431326
+ */
+function normalizarChavePix(chave, tipo) {
+  let c = String(chave || "").trim();
+  if (!c || c.includes("***")) return c;
+
+  const tipoUpper = String(tipo || "").toUpperCase();
+  const digitsOnly = c.replace(/\D/g, "");
+
+  const isTelefone = tipoUpper === "TELEFONE" ||
+    c.startsWith("+55") ||
+    (!c.includes("@") && !c.includes("-") && (digitsOnly.length === 12 || digitsOnly.length === 13) && digitsOnly.startsWith("55"));
+
+  if (isTelefone) {
+    if ((digitsOnly.length === 13 || digitsOnly.length === 12) && digitsOnly.startsWith("55")) {
+      return digitsOnly.substring(2);
+    }
+    if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+      return digitsOnly;
+    }
+    if (c.startsWith("+55")) {
+      const stripped = digitsOnly.startsWith("55") ? digitsOnly.substring(2) : digitsOnly;
+      if (stripped.length === 10 || stripped.length === 11) {
+        return stripped;
+      }
+    }
+  }
+
+  return c;
+}
+
 // Helper: gera versão estritamente crescente entre todas as fontes (anti-shadowing)
 function getNextMonotonicVersion(knownCurrent = 0) {
   let maxV = Number(knownCurrent || 0);
@@ -304,6 +342,10 @@ async function getActiveSettings() {
     }
   }
 
+  if (localData.settings && localData.settings.pix_chave) {
+    localData.settings.pix_chave = normalizarChavePix(localData.settings.pix_chave, localData.settings.pix_tipo_chave);
+  }
+
   localData.settings.preco_efetivo = getEffectivePrice(localData.settings);
 
   return {
@@ -542,6 +584,7 @@ async function updatePixSettings({
   }
 
   const tipoChave = String(pix_tipo_chave || currentSettings.pix_tipo_chave || "EMAIL").toUpperCase();
+  chaveLimpa = normalizarChavePix(chaveLimpa, tipoChave);
   const beneficiarioLimpo = String(pix_beneficiario || currentSettings.pix_beneficiario || "").trim();
   const cidadeLimpa = String(pix_cidade || currentSettings.pix_cidade || "").trim();
 
@@ -1057,5 +1100,6 @@ module.exports = {
   loadLocalStore,
   saveLocalStore,
   getDefaultSettings,
-  getDefaultStore
+  getDefaultStore,
+  normalizarChavePix
 };

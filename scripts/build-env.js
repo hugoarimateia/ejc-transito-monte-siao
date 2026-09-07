@@ -6,12 +6,42 @@ const path = require("path");
 
 console.log("[Build] Gerando js/env-config.js a partir das variáveis de ambiente...");
 
+function normalizarChavePix(chave, tipo) {
+  let c = String(chave || "").trim();
+  if (!c || c.includes("***")) return c;
+  const tipoUpper = String(tipo || "").toUpperCase();
+  const digitsOnly = c.replace(/\D/g, "");
+  const isTelefone = tipoUpper === "TELEFONE" ||
+    c.startsWith("+55") ||
+    (!c.includes("@") && !c.includes("-") && (digitsOnly.length === 12 || digitsOnly.length === 13) && digitsOnly.startsWith("55"));
+
+  if (isTelefone) {
+    if ((digitsOnly.length === 13 || digitsOnly.length === 12) && digitsOnly.startsWith("55")) {
+      return digitsOnly.substring(2);
+    }
+    if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+      return digitsOnly;
+    }
+    if (c.startsWith("+55")) {
+      const stripped = digitsOnly.startsWith("55") ? digitsOnly.substring(2) : digitsOnly;
+      if (stripped.length === 10 || stripped.length === 11) {
+        return stripped;
+      }
+    }
+  }
+  return c;
+}
+
+const rawPixTipo = process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "EMAIL";
+const rawPixChave = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
+const normPixChave = normalizarChavePix(rawPixChave, rawPixTipo);
+
 // Lê variáveis da Vercel / process.env com fallbacks seguros
 const config = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://yggikbshdvnouaoxafcr.supabase.co",
   SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_YiY0CCW6qw4r4G2GXgiD9g_2s7gO-R5",
-  PIX_CHAVE: process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com",
-  PIX_TIPO_CHAVE: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "EMAIL",
+  PIX_CHAVE: normPixChave,
+  PIX_TIPO_CHAVE: rawPixTipo,
   PIX_BENEFICIARIO: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO",
   PIX_CIDADE: process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE",
   PIX_VALOR_INSCRICAO: Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00),

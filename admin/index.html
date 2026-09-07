@@ -1398,7 +1398,9 @@
 
       document.getElementById("inputPixTipoChave").value = configFinanceiraAtiva.pix_tipo_chave || "EMAIL";
       const pixKeyInput = document.getElementById("inputPixChave");
-      pixKeyInput.value = configFinanceiraAtiva.pix_chave || "";
+      const chaveNorm = normalizarChavePix(configFinanceiraAtiva.pix_chave || "", configFinanceiraAtiva.pix_tipo_chave);
+      pixKeyInput.value = chaveNorm;
+      configFinanceiraAtiva.pix_chave = chaveNorm;
       pixKeyInput.type = isPixKeyVisible ? "text" : "password";
 
       document.getElementById("inputPixBeneficiario").value = configFinanceiraAtiva.pix_beneficiario || "EJC TRANSITO MONTE SIAO";
@@ -1427,6 +1429,32 @@
         navigator.clipboard.writeText(chave).then(() => {
           alert("✓ Chave PIX copiada para a área de transferência!");
         });
+      }
+    });
+
+    // Normalização instantânea no campo da Chave PIX (sem +55 para telefone)
+    const adminPixKeyInput = document.getElementById("inputPixChave");
+    const adminPixTypeSelect = document.getElementById("inputPixTipoChave");
+
+    adminPixKeyInput.addEventListener("input", function() {
+      const tipo = adminPixTypeSelect.value;
+      const raw = this.value;
+      if (tipo === "TELEFONE" || raw.startsWith("+55") || /^55\d{10,11}$/.test(raw.replace(/\D/g, ""))) {
+        const norm = normalizarChavePix(raw, tipo);
+        if (norm !== raw && (raw.includes("+55") || raw.replace(/\D/g, "").length >= 12)) {
+          this.value = norm;
+        }
+      }
+    });
+
+    adminPixKeyInput.addEventListener("blur", function() {
+      const tipo = adminPixTypeSelect.value;
+      this.value = normalizarChavePix(this.value, tipo);
+    });
+
+    adminPixTypeSelect.addEventListener("change", function() {
+      if (this.value === "TELEFONE") {
+        adminPixKeyInput.value = normalizarChavePix(adminPixKeyInput.value, "TELEFONE");
       }
     });
 
@@ -1593,8 +1621,37 @@
     // ==============================================================================
     let pendingPixPayload = null;
 
+    function normalizarChavePix(chave, tipo) {
+      let c = String(chave || "").trim();
+      if (!c || c.includes("***")) return c;
+
+      const tipoUpper = String(tipo || "").toUpperCase();
+      const digitsOnly = c.replace(/\D/g, "");
+
+      const isTelefone = tipoUpper === "TELEFONE" ||
+        c.startsWith("+55") ||
+        (!c.includes("@") && !c.includes("-") && (digitsOnly.length === 12 || digitsOnly.length === 13) && digitsOnly.startsWith("55"));
+
+      if (isTelefone) {
+        if ((digitsOnly.length === 13 || digitsOnly.length === 12) && digitsOnly.startsWith("55")) {
+          return digitsOnly.substring(2);
+        }
+        if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+          return digitsOnly;
+        }
+        if (c.startsWith("+55")) {
+          const stripped = digitsOnly.startsWith("55") ? digitsOnly.substring(2) : digitsOnly;
+          if (stripped.length === 10 || stripped.length === 11) {
+            return stripped;
+          }
+        }
+      }
+
+      return c;
+    }
+
     function validarChavePixFrontend(chave, tipo) {
-      const c = chave.trim();
+      const c = normalizarChavePix(chave, tipo);
       if (!c) return "A chave PIX não pode ser vazia.";
       if (c.includes("***")) return null; // Preserva chave ativa existente
       if (tipo === "EMAIL" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) {
@@ -1606,8 +1663,11 @@
       if (tipo === "CNPJ" && c.replace(/\D/g, "").length !== 14) {
         return "Chave CNPJ deve conter exatamente 14 dígitos.";
       }
-      if (tipo === "TELEFONE" && (c.replace(/\D/g, "").length < 10 || c.replace(/\D/g, "").length > 13)) {
-        return "Telefone deve conter entre 10 e 13 dígitos numéricos com DDD.";
+      if (tipo === "TELEFONE") {
+        const phoneDigits = c.replace(/\D/g, "");
+        if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+          return "Telefone deve conter DDD + número (10 ou 11 dígitos, sem +55).";
+        }
       }
       if (tipo === "ALEATORIA" && c.length < 16) {
         return "Chave aleatória (EVP) deve conter no mínimo 16 caracteres.";
@@ -1623,7 +1683,9 @@
       }
 
       const tipoChave = document.getElementById("inputPixTipoChave").value;
-      const chavePix = document.getElementById("inputPixChave").value.trim();
+      const rawChave = document.getElementById("inputPixChave").value.trim();
+      const chavePix = normalizarChavePix(rawChave, tipoChave);
+      document.getElementById("inputPixChave").value = chavePix;
       const beneficiario = document.getElementById("inputPixBeneficiario").value.trim();
       const documento = document.getElementById("inputPixDocumento").value.trim();
       const cidade = document.getElementById("inputPixCidade").value.trim();

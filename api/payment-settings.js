@@ -10,9 +10,11 @@ const settingsStore = require("./_settings-store");
 const VALID_KEY_TYPES = ["EMAIL", "CPF", "CNPJ", "TELEFONE", "ALEATORIA"];
 
 function validarFormatoChavePix(chave, tipo) {
-  const c = String(chave || "").trim();
+  let c = String(chave || "").trim();
   if (!c) return { valido: false, erro: "A chave PIX não pode ser vazia." };
   if (c.includes("***")) return { valido: true, mascarada: true };
+
+  c = settingsStore.normalizarChavePix ? settingsStore.normalizarChavePix(c, tipo) : c;
 
   switch (tipo) {
     case "EMAIL":
@@ -34,8 +36,8 @@ function validarFormatoChavePix(chave, tipo) {
       break;
     case "TELEFONE":
       const phoneDigits = c.replace(/\D/g, "");
-      if (phoneDigits.length < 10 || phoneDigits.length > 13) {
-        return { valido: false, erro: "Telefone deve conter entre 10 e 13 dígitos numéricos (com DDD)." };
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+        return { valido: false, erro: "Telefone deve conter DDD + número (10 ou 11 dígitos, sem +55)." };
       }
       break;
     case "ALEATORIA":
@@ -48,7 +50,7 @@ function validarFormatoChavePix(chave, tipo) {
         return { valido: false, erro: "Chave PIX muito curta ou inválida." };
       }
   }
-  return { valido: true };
+  return { valido: true, chaveNormalizada: c };
 }
 
 function mascararChave(chave, tipo) {
@@ -104,6 +106,9 @@ module.exports = async (req, res) => {
     try {
       const activeData = await settingsStore.getActiveSettings();
       const settings = activeData.settings;
+      if (settings && settings.pix_chave && settingsStore.normalizarChavePix) {
+        settings.pix_chave = settingsStore.normalizarChavePix(settings.pix_chave, settings.pix_tipo_chave);
+      }
       const canEdit = ["superadmin", "financeiro"].includes(userRole);
       const maskedKey = mascararChave(settings.pix_chave, settings.pix_tipo_chave);
 
@@ -230,9 +235,10 @@ module.exports = async (req, res) => {
       }
 
       try {
+        const chaveParaSalvar = validacaoChave.chaveNormalizada || (settingsStore.normalizarChavePix ? settingsStore.normalizarChavePix(pix_chave, tipoChave) : pix_chave);
         const result = await settingsStore.updatePixSettings({
           usuario: adminUser,
-          pix_chave: pix_chave,
+          pix_chave: chaveParaSalvar,
           pix_tipo_chave: tipoChave,
           pix_beneficiario: beneficiarioLimpo,
           pix_documento: pix_documento,
