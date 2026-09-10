@@ -982,15 +982,22 @@ async function approvePayment({ identificador, usuario, ip }) {
   // 6. Disparo do comprovante por e-mail com await (se não foi enviado anteriormente)
   if (matchedEmail && !alreadyApproved) {
     try {
-      const { sendPaymentReceiptEmail } = require("./email-comprovante");
-      const emailResult = await sendPaymentReceiptEmail({
-        txid: matchedTxid || identificador,
-        nome: matchedNome || "Participante",
-        email: matchedEmail,
-        valor: matchedValor || 50,
-        metodo: matchedMetodo || "pix",
-        sub: matchedSub || "Geral",
-        executado_por: usuario || "admin_manual"
+      const emailService = require("./_email-service");
+      const emailResult = await emailService.sendPaymentApprovedEmail({
+        paymentRecord: {
+          txid: matchedTxid || identificador,
+          nome_pagador: matchedNome || "Participante",
+          email: matchedEmail,
+          valor: matchedValor || 50,
+          metodo: matchedMetodo || "pix",
+          sub: matchedSub || "Geral",
+          pago_em: agora,
+          metadata: {
+            sub: matchedSub || "Geral",
+            modalidade_pix: "manual"
+          }
+        },
+        origemAprovacao: "manual_coordenacao"
       });
       emailDispatched = Boolean(emailResult.success);
     } catch (emailErr) {
@@ -1048,6 +1055,9 @@ async function rejectPayment({ identificador, usuario, motivo, ip }) {
   let matchedTxid = null;
   const motivoFinal = motivo || "Comprovante inconsistente ou pagamento não reconhecido";
 
+  let matchedEmail = null;
+  let matchedNome = null;
+
   // 1. Atualiza no Supabase se configurado
   const { url, key } = getSupabaseCredentials();
   if (url && key) {
@@ -1072,6 +1082,19 @@ async function rejectPayment({ identificador, usuario, motivo, ip }) {
         })
       });
       if (resTx.ok) supabaseUpdated = true;
+
+      // Busca dados para email
+      const payRes = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
+        headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+      });
+      if (payRes.ok) {
+        const rows = await payRes.json();
+        if (rows && rows.length > 0) {
+          matchedEmail = rows[0].email;
+          matchedNome = rows[0].nome_pagador;
+          matchedTxid = rows[0].txid;
+        }
+      }
     } catch (e) {
       console.warn("[SettingsStore rejectPayment] Supabase sync erro:", e.message);
     }
@@ -1087,7 +1110,26 @@ async function rejectPayment({ identificador, usuario, motivo, ip }) {
       localData.pagamentos[idx].motivo_rejeicao = motivoFinal;
       localData.pagamentos[idx].rejeitado_por = usuario || "admin";
       localData.pagamentos[idx].rejeitado_em = agora;
-      matchedTxid = localData.pagamentos[idx].txid;
+      matchedTxid = matchedTxid || localData.pagamentos[idx].txid;
+      matchedEmail = matchedEmail || localData.pagamentos[idx].email;
+      matchedNome = matchedNome || localData.pagamentos[idx].nome_pagador;
+    }
+  }
+
+  // 3. Disparo de e-mail de rejeição para o participante
+  if (matchedEmail) {
+    try {
+      const emailService = require("./_email-service");
+      await emailService.sendManualProofRejectedEmail({
+        paymentRecord: {
+          txid: matchedTxid || identificador,
+          nome_pagador: matchedNome || "Participante",
+          email: matchedEmail
+        },
+        motivo: motivoFinal
+      });
+    } catch (eRej) {
+      console.warn("[SettingsStore rejectPayment] Falha no disparo de email:", eRej.message);
     }
   }
 

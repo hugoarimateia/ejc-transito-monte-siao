@@ -38,6 +38,14 @@
     {
       "source": "/checkout/confirmacao/",
       "destination": "/confirmacao-pagamento.html"
+    },
+    {
+      "source": "/recibo",
+      "destination": "/api/recibo"
+    },
+    {
+      "source": "/recibo/(.*)",
+      "destination": "/api/recibo"
     }
   ],
   "headers": [

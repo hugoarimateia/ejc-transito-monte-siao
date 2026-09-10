@@ -255,16 +255,11 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
   let emailStatus = { success: false, idempotente: true };
   if (paymentRecord && paymentRecord.email && !paymentRecord.comprovante_email_enviado) {
     try {
-      emailStatus = await sendPaymentReceiptEmail({
-        txid: paymentRecord.txid || cleanTxid,
-        payment_id: paymentRecord.payment_id || paymentRecord.metadata?.payment_id || cleanTxid,
-        order_id: paymentRecord.order_id || paymentRecord.metadata?.order_id,
-        nome: paymentRecord.nome_pagador || "Participante",
-        email: paymentRecord.email,
-        valor: paymentRecord.valor || 50,
-        metodo: paymentRecord.metodo || "pix",
-        sub: paymentRecord.metadata?.sub || paymentRecord.sub,
-        executado_por: executado_por
+      const emailService = require("./_email-service");
+      emailStatus = await emailService.sendPaymentApprovedEmail({
+        paymentRecord,
+        forceResend: false,
+        origemAprovacao: (gateway === "manual_admin" || paymentRecord.metadata?.modalidade_pix === "manual") ? "manual_coordenacao" : "api_gateway"
       });
     } catch (eEmail) {
       console.warn("[confirmarPagamentoResiliente] Erro ao enviar comprovante:", eEmail.message);
@@ -718,6 +713,33 @@ module.exports = async (req, res) => {
         console.warn("[enviar_comprovante_manual] Erro localStore:", localErr.message);
       }
 
+      // 3. Notificações por e-mail: confirmação de recebimento para o participante e alerta para a coordenação
+      try {
+        const emailService = require("./_email-service");
+        const clientEmail = email || (localStore.pagamentos?.find(p => p.txid === targetTxid)?.email);
+        const clientNome = nome || (localStore.pagamentos?.find(p => p.txid === targetTxid)?.nome_pagador) || "Participante";
+        const clientValor = localStore.pagamentos?.find(p => p.txid === targetTxid)?.valor;
+        const clientSub = localStore.pagamentos?.find(p => p.txid === targetTxid)?.sub;
+        const clientWpp = localStore.pagamentos?.find(p => p.txid === targetTxid)?.whatsapp_pagador;
+
+        const manualRecord = {
+          txid: targetTxid,
+          nome_pagador: clientNome,
+          email: clientEmail,
+          whatsapp_pagador: clientWpp,
+          valor: clientValor,
+          sub: clientSub,
+          comprovante_caminho: comprovanteUrlFinal
+        };
+
+        if (clientEmail) {
+          emailService.sendManualProofReceivedEmail({ paymentRecord: manualRecord }).catch(e => console.warn("[Manual Proof] Erro email cliente:", e.message));
+        }
+        emailService.sendAdminManualProofAlertEmail({ paymentRecord: manualRecord, comprovanteUrl: comprovanteUrlFinal }).catch(e => console.warn("[Manual Proof] Erro email admin:", e.message));
+      } catch (eNotif) {
+        console.warn("[Manual Proof] Falha ao despachar notificações:", eNotif.message);
+      }
+
       return res.status(200).json({
         success: true,
         persisted: true,
@@ -961,6 +983,27 @@ module.exports = async (req, res) => {
         settingsStore.saveLocalStore(localData);
       } catch (localErr) {
         console.warn("[Checkout Process] Erro ao salvar Pix localmente:", localErr.message);
+      }
+
+      // Se Pix via API Mercado Pago foi gerado com sucesso, despacha e-mail de pedido iniciado (sem confirmar pagamento)
+      if (modalidadePix === "api_webhook" && mpGenerated && email) {
+        try {
+          const emailService = require("./_email-service");
+          emailService.sendOrderCreatedEmail({
+            paymentRecord: {
+              txid: txid,
+              order_id: orderId,
+              payment_id: paymentId,
+              nome_pagador: nomeFinal,
+              email: email.trim().toLowerCase(),
+              valor: valorNumerico,
+              pix_copia_e_cola: payloadPix,
+              sub: sub,
+              metadata: { order_id: orderId, lote: loteAtual, sub: sub }
+            },
+            payloadPix
+          }).catch(e => console.warn("[Checkout Process] Erro no envio de email order_created:", e.message));
+        } catch (eEmail) {}
       }
 
       return res.status(200).json({

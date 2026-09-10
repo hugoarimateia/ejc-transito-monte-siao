@@ -2071,6 +2071,15 @@
   },
   "pagamentos": [
     {
+      "txid": "PIXFINMTVNOBPB",
+      "payment_id": "PIXFINMTVNOBPB",
+      "order_id": "PIXFINMTVNOBPB",
+      "status": "approved",
+      "pago_em": "2026-09-10T15:01:55.392Z",
+      "metodo": "pix",
+      "criado_em": "2026-09-10T15:01:55.392Z"
+    },
+    {
       "txid": "CARDMTQT1CSMV3U6",
       "payment_id": "PAYMTQT1CSMV3U6",
       "order_id": "ORDMTQT1CSMV3U6",
