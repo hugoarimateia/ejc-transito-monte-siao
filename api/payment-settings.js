@@ -344,7 +344,11 @@ module.exports = async (req, res) => {
         const result = await settingsStore.approvePayment({
           identificador: identificador,
           usuario: adminUser,
-          ip: String(clientIp)
+          ip: String(clientIp),
+          email: req.body?.email,
+          nome: req.body?.nome,
+          valor: req.body?.valor,
+          sub: req.body?.sub
         });
         return res.status(200).json(result);
       } catch (err) {

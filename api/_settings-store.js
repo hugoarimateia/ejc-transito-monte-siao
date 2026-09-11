@@ -858,7 +858,7 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
 // ==============================================================================
 // ESCRITA 4: APROVAÇÃO MANUAL DE PAGAMENTO (APPROVE_PAYMENT)
 // ==============================================================================
-async function approvePayment({ identificador, usuario, ip }) {
+async function approvePayment({ identificador, usuario, ip, email, nome, valor, sub }) {
   if (!identificador) {
     throw new Error("Identificador da inscrição ou transação é obrigatório.");
   }
@@ -868,12 +868,12 @@ async function approvePayment({ identificador, usuario, ip }) {
   let emailDispatched = false;
   const { url, key } = getSupabaseCredentials();
 
-  let matchedEmail = null;
-  let matchedNome = null;
-  let matchedValor = null;
-  let matchedMetodo = null;
-  let matchedSub = null;
-  let matchedTxid = null;
+  let matchedEmail = email || null;
+  let matchedNome = nome || null;
+  let matchedValor = valor || null;
+  let matchedMetodo = "pix";
+  let matchedSub = sub || null;
+  let matchedTxid = String(identificador);
 
   if (url && key) {
     try {
@@ -976,6 +976,21 @@ async function approvePayment({ identificador, usuario, ip }) {
       matchedValor = matchedValor || localData.pagamentos[idx].valor;
       matchedMetodo = matchedMetodo || localData.pagamentos[idx].metodo;
       matchedSub = matchedSub || localData.pagamentos[idx].sub;
+    } else {
+      localData.pagamentos.unshift({
+        txid: String(identificador),
+        payment_id: String(identificador),
+        order_id: String(identificador),
+        nome_pagador: matchedNome || "Participante",
+        email: matchedEmail,
+        valor: matchedValor || 50,
+        metodo: matchedMetodo || "pix",
+        sub: matchedSub || "Geral",
+        status: "approved",
+        pago_em: agora,
+        criado_em: agora,
+        comprovante_email_enviado: false
+      });
     }
   }
 
