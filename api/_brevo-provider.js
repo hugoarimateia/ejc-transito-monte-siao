@@ -8,10 +8,10 @@
 
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-// Configurações padrão do remetente institucional
+// Configurações padrão do remetente institucional (alinhado com o remetente verificado na Brevo)
 function getSenderConfig() {
-  const email = process.env.BREVO_FROM_EMAIL || "financeiro@ejctransito.com.br";
-  const name = process.env.BREVO_FROM_NAME || "EJC — Equipe do Trânsito";
+  const email = process.env.BREVO_FROM_EMAIL || "hugogeeta.gamer@gmail.com";
+  const name = process.env.BREVO_FROM_NAME || "EJC — AD Monte Sião";
   return { email, name };
 }
 
@@ -217,13 +217,23 @@ async function auditBrevo() {
     auditReport.errors.senders = e.message;
   }
 
-  // 3. Histórico de E-mails Transacionais (Últimos 10 e status de delivery)
+  // 3. Histórico de E-mails Transacionais por destinatário e estatísticas
   try {
-    const smtpRes = await fetch("https://api.brevo.com/v3/smtp/emails?limit=10&sort=desc", { headers, signal: AbortSignal.timeout(6000) });
+    const filterEmail = "leoeuler03@gmail.com";
+    const smtpRes = await fetch(`https://api.brevo.com/v3/smtp/emails?email=${encodeURIComponent(filterEmail)}&limit=10&sort=desc`, { headers, signal: AbortSignal.timeout(6000) });
     auditReport.smtp_history_status = smtpRes.status;
     auditReport.smtp_history = await smtpRes.json();
   } catch (e) {
     auditReport.errors.smtp = e.message;
+  }
+
+  // 4. Relatório Geral de Estatísticas Transacionais (Sent, Delivered, Blocked)
+  try {
+    const statsRes = await fetch("https://api.brevo.com/v3/smtp/statistics/reports?limit=10&days=7", { headers, signal: AbortSignal.timeout(6000) });
+    auditReport.stats_status = statsRes.status;
+    auditReport.stats = await statsRes.json();
+  } catch (e) {
+    auditReport.errors.stats = e.message;
   }
 
   return auditReport;
