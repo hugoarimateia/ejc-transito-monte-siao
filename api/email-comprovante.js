@@ -27,20 +27,32 @@ async function sendPaymentReceiptEmail({
     throw new Error("txid e email são campos obrigatórios para disparo de comprovante.");
   }
 
+  let existingRecord = null;
+  try {
+    const settingsStore = require("./_settings-store");
+    const store = settingsStore.loadLocalStore();
+    if (Array.isArray(store.pagamentos)) {
+      existingRecord = store.pagamentos.find(p => p.txid === txid || p.payment_id === txid || p.order_id === txid);
+    }
+  } catch (eStore) {}
+
   const paymentRecord = {
+    ...(existingRecord || {}),
     txid: txid,
-    order_id: order_id || txid,
-    payment_id: payment_id || txid,
-    nome_pagador: nome || "Participante",
-    email: String(email).trim().toLowerCase(),
-    valor: valor || 50,
-    metodo: metodo || "pix",
-    sub: sub || "Geral",
-    pago_em: new Date().toISOString(),
+    order_id: order_id || existingRecord?.order_id || txid,
+    payment_id: payment_id || existingRecord?.payment_id || txid,
+    nome_pagador: nome || existingRecord?.nome_pagador || "Participante",
+    email: String(email || existingRecord?.email).trim().toLowerCase(),
+    valor: valor || existingRecord?.valor || 50,
+    metodo: metodo || existingRecord?.metodo || "pix",
+    sub: sub || existingRecord?.sub || "Geral",
+    pago_em: existingRecord?.pago_em || new Date().toISOString(),
+    comprovante_email_enviado: Boolean(existingRecord?.comprovante_email_enviado),
     metadata: {
-      sub: sub || "Geral",
-      order_id: order_id || txid,
-      payment_id: payment_id || txid
+      ...(existingRecord?.metadata || {}),
+      sub: sub || existingRecord?.sub || "Geral",
+      order_id: order_id || existingRecord?.order_id || txid,
+      payment_id: payment_id || existingRecord?.payment_id || txid
     }
   };
 
