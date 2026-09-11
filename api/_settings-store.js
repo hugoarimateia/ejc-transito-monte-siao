@@ -1060,18 +1060,18 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
 // ==============================================================================
 // ESCRITA 4.2: REJEIÇÃO MANUAL DE PAGAMENTO / COMPROVANTE (REJECT_PAYMENT)
 // ==============================================================================
-async function rejectPayment({ identificador, usuario, motivo, ip }) {
+async function rejectPayment({ identificador, usuario, motivo, ip, email, nome }) {
   if (!identificador) {
     throw new Error("Identificador (TXID ou WhatsApp) é obrigatório para rejeição.");
   }
 
   const agora = new Date().toISOString();
   let supabaseUpdated = false;
-  let matchedTxid = null;
+  let matchedTxid = String(identificador);
   const motivoFinal = motivo || "Comprovante inconsistente ou pagamento não reconhecido";
 
-  let matchedEmail = null;
-  let matchedNome = null;
+  let matchedEmail = email || null;
+  let matchedNome = nome || null;
 
   // 1. Atualiza no Supabase se configurado
   const { url, key } = getSupabaseCredentials();

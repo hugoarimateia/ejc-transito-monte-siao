@@ -367,7 +367,9 @@ module.exports = async (req, res) => {
           identificador: identificador,
           usuario: adminUser,
           motivo: motivo,
-          ip: String(clientIp)
+          ip: String(clientIp),
+          email: req.body?.email,
+          nome: req.body?.nome
         });
         return res.status(200).json(result);
       } catch (err) {
