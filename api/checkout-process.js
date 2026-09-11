@@ -693,10 +693,37 @@ module.exports = async (req, res) => {
             localStore.pagamentos[pIdx].status = "aguardando_analise";
             localStore.pagamentos[pIdx].status_analise_manual = "pendente";
             localStore.pagamentos[pIdx].comprovante_enviado_em = agora;
+            if (email) localStore.pagamentos[pIdx].email = email;
+            if (nome) localStore.pagamentos[pIdx].nome_pagador = nome;
+            if (whatsapp) localStore.pagamentos[pIdx].whatsapp_pagador = whatsapp;
+            if (sub) localStore.pagamentos[pIdx].sub = sub;
             if (!localStore.pagamentos[pIdx].metadata) localStore.pagamentos[pIdx].metadata = {};
             localStore.pagamentos[pIdx].metadata.comprovante_url = comprovanteUrlFinal;
             localStore.pagamentos[pIdx].metadata.status_analise_manual = "pendente";
             localStore.pagamentos[pIdx].metadata.modalidade_pix = "manual";
+          } else {
+            localStore.pagamentos.unshift({
+              txid: targetTxid,
+              payment_id: targetTxid,
+              order_id: targetTxid,
+              nome_pagador: nome || "Participante",
+              email: email || null,
+              whatsapp_pagador: whatsapp || null,
+              sub: sub || "Geral",
+              valor: 50,
+              metodo: "pix",
+              status: "aguardando_analise",
+              status_analise_manual: "pendente",
+              comprovante_caminho: comprovanteUrlFinal,
+              comprovante_enviado_em: agora,
+              criado_em: agora,
+              metadata: {
+                comprovante_url: comprovanteUrlFinal,
+                status_analise_manual: "pendente",
+                modalidade_pix: "manual",
+                sub: sub || "Geral"
+              }
+            });
           }
         }
 
