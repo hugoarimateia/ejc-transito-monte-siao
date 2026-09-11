@@ -171,7 +171,7 @@ async function sendEmail({
 /**
  * Executa auditoria completa da conta Brevo, remetentes e histórico de entregas
  */
-async function auditBrevo() {
+async function auditBrevo(customFilterEmail) {
   const apiKey = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : "";
   if (!apiKey) {
     return {
@@ -219,7 +219,7 @@ async function auditBrevo() {
 
   // 3. Histórico de E-mails Transacionais por destinatário e estatísticas
   try {
-    const filterEmail = "leoeuler03@gmail.com";
+    const filterEmail = customFilterEmail || "leoeuler03@gmail.com";
     const smtpRes = await fetch(`https://api.brevo.com/v3/smtp/emails?email=${encodeURIComponent(filterEmail)}&limit=10&sort=desc`, { headers, signal: AbortSignal.timeout(6000) });
     auditReport.smtp_history_status = smtpRes.status;
     auditReport.smtp_history = await smtpRes.json();

@@ -108,7 +108,7 @@ const handler = async (req, res) => {
     // Apenas auditoria de conta e histórico
     if (req.query?.audit === "true") {
       try {
-        const audit = await brevoProvider.auditBrevo();
+        const audit = await brevoProvider.auditBrevo(req.query?.email);
         return res.status(200).json({ success: true, audit });
       } catch (eAudit) {
         return res.status(500).json({ success: false, error: eAudit.message });
