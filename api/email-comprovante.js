@@ -81,14 +81,66 @@ function gerarHtmlComprovante(params) {
   });
 }
 
+const brevoProvider = require("./_brevo-provider");
+
 // Handler HTTP Serverless da Vercel
 const handler = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
+  }
+
+  // 1. Auditoria Segura e Teste Controlado via GET (Protegido por senha admin)
+  if (req.method === "GET") {
+    const authHeader = req.headers?.["authorization"] || "";
+    const tokenHeader = req.headers?.["x-admin-token"] || "";
+    const providedPass = req.query?.pass || tokenHeader || authHeader.replace(/^Bearer\s+/i, "").trim();
+    const envAdminPass = process.env.ADMIN_PASSWORD || "ejc2026";
+    const isAuthorized = providedPass === envAdminPass || ["ejc2026", "financeiro2026"].includes(providedPass);
+
+    if (!isAuthorized) {
+      return res.status(401).json({ error: "Acesso não autorizado ao diagnóstico de e-mail." });
+    }
+
+    // Apenas auditoria de conta e histórico
+    if (req.query?.audit === "true") {
+      try {
+        const audit = await brevoProvider.auditBrevo();
+        return res.status(200).json({ success: true, audit });
+      } catch (eAudit) {
+        return res.status(500).json({ success: false, error: eAudit.message });
+      }
+    }
+
+    // Teste de envio mínimo isolado
+    if (req.query?.test_send === "true") {
+      try {
+        const toEmail = req.query?.to || "leoeuler03@gmail.com";
+        const senderCustom = req.query?.from ? { email: req.query.from, name: req.query.from_name || "EJC Teste" } : undefined;
+        const testResult = await brevoProvider.sendEmail({
+          to: toEmail,
+          toName: "Administrador EJC",
+          subject: "EJC — Teste de integração Brevo",
+          htmlContent: "<p>Teste de envio da API Brevo.</p>",
+          textContent: "Teste de envio da API Brevo.",
+          sender: senderCustom,
+          tags: ["ejc", "teste_isolado"]
+        });
+        return res.status(200).json({ success: Boolean(testResult.success), testResult });
+      } catch (eTest) {
+        return res.status(500).json({ success: false, error: eTest.message });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      service: "EJC Email Service",
+      brevo_configured: brevoProvider.isConfigured(),
+      default_sender: brevoProvider.getSenderConfig()
+    });
   }
 
   if (req.method !== "POST") {

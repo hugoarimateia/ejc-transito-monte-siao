@@ -232,7 +232,14 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
     if (idx !== -1) {
       localStore.pagamentos[idx].status = "approved";
       localStore.pagamentos[idx].pago_em = agora;
-      if (!paymentRecord) paymentRecord = localStore.pagamentos[idx];
+      if (!paymentRecord) {
+        paymentRecord = localStore.pagamentos[idx];
+      } else {
+        if (!paymentRecord.email && localStore.pagamentos[idx].email) paymentRecord.email = localStore.pagamentos[idx].email;
+        if (!paymentRecord.nome_pagador && localStore.pagamentos[idx].nome_pagador) paymentRecord.nome_pagador = localStore.pagamentos[idx].nome_pagador;
+        if (!paymentRecord.sub && localStore.pagamentos[idx].sub) paymentRecord.sub = localStore.pagamentos[idx].sub;
+        if (!paymentRecord.valor && localStore.pagamentos[idx].valor) paymentRecord.valor = localStore.pagamentos[idx].valor;
+      }
     } else {
       const novoReg = {
         txid: cleanTxid,
@@ -733,9 +740,9 @@ module.exports = async (req, res) => {
         };
 
         if (clientEmail) {
-          emailService.sendManualProofReceivedEmail({ paymentRecord: manualRecord }).catch(e => console.warn("[Manual Proof] Erro email cliente:", e.message));
+          await emailService.sendManualProofReceivedEmail({ paymentRecord: manualRecord }).catch(e => console.warn("[Manual Proof] Erro email cliente:", e.message));
         }
-        emailService.sendAdminManualProofAlertEmail({ paymentRecord: manualRecord, comprovanteUrl: comprovanteUrlFinal }).catch(e => console.warn("[Manual Proof] Erro email admin:", e.message));
+        await emailService.sendAdminManualProofAlertEmail({ paymentRecord: manualRecord, comprovanteUrl: comprovanteUrlFinal }).catch(e => console.warn("[Manual Proof] Erro email admin:", e.message));
       } catch (eNotif) {
         console.warn("[Manual Proof] Falha ao despachar notificações:", eNotif.message);
       }
@@ -989,7 +996,7 @@ module.exports = async (req, res) => {
       if (modalidadePix === "api_webhook" && mpGenerated && email) {
         try {
           const emailService = require("./_email-service");
-          emailService.sendOrderCreatedEmail({
+          await emailService.sendOrderCreatedEmail({
             paymentRecord: {
               txid: txid,
               order_id: orderId,

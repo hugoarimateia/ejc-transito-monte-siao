@@ -168,9 +168,72 @@ async function sendEmail({
   };
 }
 
+/**
+ * Executa auditoria completa da conta Brevo, remetentes e histórico de entregas
+ */
+async function auditBrevo() {
+  const apiKey = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : "";
+  if (!apiKey) {
+    return {
+      configured: false,
+      error: "BREVO_API_KEY não configurada no ambiente."
+    };
+  }
+
+  const headers = {
+    "accept": "application/json",
+    "api-key": apiKey
+  };
+
+  const auditReport = {
+    configured: true,
+    key_length: apiKey.length,
+    key_prefix: apiKey.slice(0, 8) + "...",
+    from_email_env: process.env.BREVO_FROM_EMAIL || null,
+    from_name_env: process.env.BREVO_FROM_NAME || null,
+    admin_email_env: process.env.BREVO_ADMIN_EMAIL || null,
+    default_sender: getSenderConfig(),
+    account: null,
+    senders: null,
+    smtp_history: null,
+    errors: {}
+  };
+
+  // 1. Informações da Conta (Plano, Créditos, E-mail do proprietário)
+  try {
+    const accRes = await fetch("https://api.brevo.com/v3/account", { headers, signal: AbortSignal.timeout(6000) });
+    auditReport.account_status = accRes.status;
+    auditReport.account = await accRes.json();
+  } catch (e) {
+    auditReport.errors.account = e.message;
+  }
+
+  // 2. Lista de Remetentes Autorizados/Verificados
+  try {
+    const sendersRes = await fetch("https://api.brevo.com/v3/senders", { headers, signal: AbortSignal.timeout(6000) });
+    auditReport.senders_status = sendersRes.status;
+    auditReport.senders = await sendersRes.json();
+  } catch (e) {
+    auditReport.errors.senders = e.message;
+  }
+
+  // 3. Histórico de E-mails Transacionais (Últimos 10 e status de delivery)
+  try {
+    const smtpRes = await fetch("https://api.brevo.com/v3/smtp/emails?limit=10&sort=desc", { headers, signal: AbortSignal.timeout(6000) });
+    auditReport.smtp_history_status = smtpRes.status;
+    auditReport.smtp_history = await smtpRes.json();
+  } catch (e) {
+    auditReport.errors.smtp = e.message;
+  }
+
+  return auditReport;
+}
+
 module.exports = {
   sendEmail,
+  auditBrevo,
   isConfigured,
   getSenderConfig,
   getAdminEmail
 };
+
