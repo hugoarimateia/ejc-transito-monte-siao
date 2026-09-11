@@ -612,7 +612,7 @@ module.exports = async (req, res) => {
     // --------------------------------------------------------------------------
     if (action === "enviar_comprovante_manual" || action === "upload_comprovante") {
       const targetTxid = bodyTxid || req.body?.id || req.body?.payment_id || req.body?.external_reference;
-      const comprovanteCaminho = req.body?.comprovante_caminho || req.body?.comprovante_url || req.body?.comprovante_base64;
+      const comprovanteCaminho = req.body?.comprovante_caminho || req.body?.comprovante_url || req.body?.comprovante_base64 || req.body?.comprovanteBase64;
       const comprovanteNome = req.body?.comprovante_nome || "comprovante_pix.png";
 
       if (!targetTxid) {
