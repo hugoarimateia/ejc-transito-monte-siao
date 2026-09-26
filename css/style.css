@@ -482,24 +482,7 @@ button { font: inherit; }
   opacity: 1;
   transform: scale(1);
 }
-.calendar-dots {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding-top: 14px;
-}
-.calendar-dots i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #c9d0e5;
-  transition: width .25s ease, background .25s ease;
-}
-.calendar-dots i.active {
-  width: 24px;
-  border-radius: 999px;
-  background: var(--blue);
-}
+
 .calendar-card span { position: absolute; right: 30px; bottom: 30px; padding: 10px 14px; color: var(--white); background: rgba(20,35,86,.9); border-radius: 999px; font-size: .78rem; font-weight: 800; }
 
 .social-section { padding-top: 0; background: var(--surface); }
@@ -1182,41 +1165,6 @@ button { font: inherit; }
 .pix-receipt-details span { color: var(--muted); }
 .pix-receipt-details strong { color: var(--ink); font-weight: 700; word-break: break-all; }
 
-/* Controles de Navegação Manual do Calendário */
-.calendar-card {
-  position: relative;
-}
-.calendar-nav-buttons {
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  right: 8px;
-  transform: translateY(-50%);
-  display: flex;
-  justify-content: space-between;
-  pointer-events: none;
-  z-index: 5;
-}
-.cal-nav-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, .88);
-  color: var(--blue-dark);
-  font-size: 1.6rem;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 6px 16px rgba(10, 20, 50, .18);
-  cursor: pointer;
-  pointer-events: auto;
-  transition: .2s ease;
-}
-.cal-nav-btn:hover {
-  background: #fff;
-  transform: scale(1.1);
-}
 
 /* ==============================================================================
    BOTÃO DE ALTERNÂNCIA DE TEMA (CLARO / ESCURO)
@@ -1310,10 +1258,7 @@ button { font: inherit; }
 [data-theme="dark"] .calendar-slides {
   background: var(--bg-surface);
 }
-[data-theme="dark"] .cal-nav-btn {
-  background: rgba(22, 34, 66, 0.9);
-  color: #fff;
-}
+
 [data-theme="dark"] .signup-section {
   background: var(--bg-surface);
 }

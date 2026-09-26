@@ -9,51 +9,7 @@ const backToTop = document.querySelector(".back-to-top");
 const modal = document.querySelector(".image-modal");
 const calendarCard = document.querySelector(".calendar-card");
 const closeModal = document.querySelector(".modal-close");
-const calendarSlides = [...document.querySelectorAll(".calendar-slide")];
-const calendarDots = [...document.querySelectorAll(".calendar-dots i")];
 const modalImage = modal ? modal.querySelector("img") : null;
-let activeCalendar = 0;
-let calendarTimer = null;
-
-// Rotação do Calendário com pausa segura
-function showCalendar(index) {
-  if (!calendarSlides.length) return;
-  activeCalendar = (index + calendarSlides.length) % calendarSlides.length;
-  calendarSlides.forEach((slide, i) => slide.classList.toggle("active", i === activeCalendar));
-  calendarDots.forEach((dot, i) => dot.classList.toggle("active", i === activeCalendar));
-}
-
-function startCalendarRotation() {
-  stopCalendarRotation();
-  calendarTimer = setInterval(() => showCalendar(activeCalendar + 1), 5000);
-}
-
-function stopCalendarRotation() {
-  if (calendarTimer) {
-    clearInterval(calendarTimer);
-    calendarTimer = null;
-  }
-}
-
-if (calendarSlides.length > 1) startCalendarRotation();
-
-// Botões manuais do Calendário
-const btnCalPrev = document.getElementById("btnCalPrev");
-const btnCalNext = document.getElementById("btnCalNext");
-if (btnCalPrev) {
-  btnCalPrev.addEventListener("click", (e) => {
-    e.stopPropagation();
-    showCalendar(activeCalendar - 1);
-    startCalendarRotation();
-  });
-}
-if (btnCalNext) {
-  btnCalNext.addEventListener("click", (e) => {
-    e.stopPropagation();
-    showCalendar(activeCalendar + 1);
-    startCalendarRotation();
-  });
-}
 
 // Scroll e cabeçalho fixo
 function handleScroll() {
@@ -113,34 +69,27 @@ const observer = new IntersectionObserver(
 );
 document.querySelectorAll(".reveal").forEach(element => observer.observe(element));
 
-// Modal de Zoom do Calendário (com pausa do timer)
+// Modal de Zoom do Calendário
 if (calendarCard && modal && modalImage) {
   calendarCard.addEventListener("click", () => {
-    const current = calendarSlides[activeCalendar];
-    if (current) {
-      modalImage.src = current.src;
-      modalImage.alt = current.alt;
+    const calendarImg = calendarCard.querySelector("img");
+    if (calendarImg) {
+      modalImage.src = calendarImg.src;
+      modalImage.alt = calendarImg.alt;
     }
-    stopCalendarRotation();
     if (typeof modal.showModal === "function") modal.showModal();
   });
 
   if (closeModal) {
     closeModal.addEventListener("click", () => {
       modal.close();
-      startCalendarRotation();
     });
   }
 
   modal.addEventListener("click", event => {
     if (event.target === modal) {
       modal.close();
-      startCalendarRotation();
     }
-  });
-
-  modal.addEventListener("close", () => {
-    startCalendarRotation();
   });
 }
 
