@@ -63,8 +63,8 @@
         const cur = img.getAttribute("src") || "";
         const isSubdir = cur.startsWith("../") || window.location.pathname.includes("/admin");
         const prefix = isSubdir ? "../images/" : "images/";
-        lightSrc = prefix + "10 EJC MONTE SIÃO2.png";
-        darkSrc = prefix + "10 EJC MONTE SIÃO.png";
+        lightSrc = prefix + "10 EJC MONTE SIÃO2.png?v=2";
+        darkSrc = prefix + "10 EJC MONTE SIÃO.png?v=2";
       }
       const targetSrc = isDark ? darkSrc : lightSrc;
       if (img.getAttribute("src") !== targetSrc) {
