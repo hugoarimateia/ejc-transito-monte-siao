@@ -159,28 +159,7 @@
 <h2>Escolha seu Sub</h2>
 <p>Veja as vagas disponíveis, escolha seu Sub e faça sua inscrição de forma simples e organizada.</p>
 </div>
-<div class="payment-notice reveal" role="note">
-<div class="payment-copy">
-<span class="eyebrow">Checkout Oficial da Equipe</span>
-<h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
-<p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu Sub.</p>
-<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
-<div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
-<a href="/checkout?tipo=inscricao" class="button button-primary" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
-  <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
-</a>
-</div>
-</div>
-<figure class="pix-figure" style="background: rgba(2, 50, 132, 0.06); border: 2px dashed rgba(2, 50, 132, 0.2); border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-<div style="font-size: 2.4rem; color: var(--blue); margin-bottom: 10px;">
-  <i class="fa-brands fa-pix" style="color: #32bcad; margin-right: 8px;"></i>
-  <i class="fa-solid fa-credit-card" style="color: var(--blue);"></i>
-</div>
-<strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout Transparente</strong>
-<p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com aprovação em segundos e todas as principais bandeiras de cartão.</p>
-<a href="/checkout?tipo=inscricao" id="linkGoToCheckoutSub" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
-</figure>
-</div>
+
 <div aria-label="Subs disponíveis" class="sub-choice-grid">
 <button class="sub-choice sub-green reveal" data-capacity="50" data-sub="Verde" type="button">
 <span class="sub-badge">Sub Verde</span>
@@ -337,6 +316,29 @@
 <small>Este acesso é individual e de uso único.</small>
 </div>
 </form>
+</div>
+
+<div class="payment-notice reveal" role="note" style="margin-top: 32px;">
+<div class="payment-copy">
+<span class="eyebrow">Checkout Oficial da Equipe</span>
+<h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
+<p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu Sub.</p>
+<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
+<div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
+<a href="/checkout?tipo=inscricao" class="button button-primary btn-open-checkout" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
+  <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
+</a>
+</div>
+</div>
+<figure class="pix-figure" style="background: rgba(2, 50, 132, 0.06); border: 2px dashed rgba(2, 50, 132, 0.2); border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+<div style="font-size: 2.4rem; color: var(--blue); margin-bottom: 10px;">
+  <i class="fa-brands fa-pix" style="color: #32bcad; margin-right: 8px;"></i>
+  <i class="fa-solid fa-credit-card" style="color: var(--blue);"></i>
+</div>
+<strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout Transparente</strong>
+<p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com aprovação em segundos e todas as principais bandeiras de cartão.</p>
+<a href="/checkout?tipo=inscricao" class="btn-open-checkout" id="linkGoToCheckoutSub" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
+</figure>
 </div>
 </div>
 </section>

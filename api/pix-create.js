@@ -38,12 +38,22 @@ module.exports = async (req, res) => {
       console.warn("[pix-create] Fallback para default settings:", e.message);
     }
 
-    const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id } = req.body || {};
+    const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id, sub } = req.body || {};
+
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+    let subFinal = null;
 
     let valorNumerico;
     if (tipo === "inscricao") {
+      const rawSub = sub ? String(sub).trim() : "";
+      const matchedSub = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
+      if (!matchedSub) {
+        return res.status(400).json({ error: "Sub inválido ou não selecionado. A escolha do Sub é obrigatória para realizar a inscrição." });
+      }
+      subFinal = matchedSub;
       valorNumerico = settingsStore.getEffectivePrice(activeSettings);
     } else {
+      subFinal = sub ? String(sub).trim() : null;
       valorNumerico = Number(valor || settingsStore.getEffectivePrice(activeSettings));
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da cobrança inválido" });

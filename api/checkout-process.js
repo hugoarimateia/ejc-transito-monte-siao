@@ -303,6 +303,81 @@ module.exports = async (req, res) => {
   // Permite à página de confirmação e ao checkout monitorar a transação
   // ==============================================================================
   if (req.method === "GET") {
+    // --------------------------------------------------------------------------
+    // SUB-AÇÃO GET: BUSCA DE INSCRIÇÕES PENDENTES (EMAIL, WHATSAPP, NOME OU ID)
+    // --------------------------------------------------------------------------
+    if (req.query.action === "buscar_inscricoes") {
+      const termo = String(req.query.termo || req.query.email || req.query.whatsapp || req.query.busca || "").trim();
+      if (!termo || termo.length < 3) {
+        return res.status(400).json({ error: "Informe ao menos 3 caracteres (e-mail, WhatsApp ou nome) para localizar inscrições." });
+      }
+
+      const cleanTermo = termo.toLowerCase();
+      const inscricoesEncontradas = [];
+
+      // 1. Busca no Supabase (se configurado)
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const query = `or=(email.ilike.%${encodeURIComponent(cleanTermo)}%,whatsapp.ilike.%${encodeURIComponent(cleanTermo)}%,nome_completo.ilike.%${encodeURIComponent(cleanTermo)}%,id.eq.${encodeURIComponent(termo)})&order=criado_em.desc&limit=10`;
+          const sbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${query}`, {
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+            signal: AbortSignal.timeout(3500)
+          });
+          if (sbRes.ok) {
+            const rows = await sbRes.json();
+            if (Array.isArray(rows)) {
+              rows.forEach(r => {
+                inscricoesEncontradas.push({
+                  id: r.id,
+                  nome_completo: r.nome_completo,
+                  email: r.email,
+                  whatsapp: r.whatsapp,
+                  sub: r.sub,
+                  pagamento_status: r.pagamento_status || "pendente",
+                  criado_em: r.criado_em
+                });
+              });
+            }
+          }
+        } catch (errDb) {
+          console.warn("[buscar_inscricoes] Falha na busca remota Supabase:", errDb.message);
+        }
+      }
+
+      // 2. Busca no localStore (pagamentos e histórico) como fallback / complemento
+      try {
+        const localStore = settingsStore.loadLocalStore();
+        if (Array.isArray(localStore.pagamentos)) {
+          localStore.pagamentos.forEach(p => {
+            const matchEmail = p.email && p.email.toLowerCase().includes(cleanTermo);
+            const matchWpp = p.whatsapp_pagador && p.whatsapp_pagador.includes(cleanTermo);
+            const matchNome = p.nome_pagador && p.nome_pagador.toLowerCase().includes(cleanTermo);
+            const matchTxid = p.txid && p.txid === termo;
+            if (matchEmail || matchWpp || matchNome || matchTxid) {
+              const jaExiste = inscricoesEncontradas.some(i => i.id === p.inscricao_id || (i.email === p.email && i.sub === p.sub));
+              if (!jaExiste) {
+                inscricoesEncontradas.push({
+                  id: p.inscricao_id || p.txid,
+                  nome_completo: p.nome_pagador,
+                  email: p.email,
+                  whatsapp: p.whatsapp_pagador,
+                  sub: p.sub || null,
+                  pagamento_status: p.status === "approved" ? "confirmado" : "pendente",
+                  criado_em: p.criado_em
+                });
+              }
+            }
+          });
+        }
+      } catch (eLocal) {}
+
+      return res.status(200).json({
+        success: true,
+        total: inscricoesEncontradas.length,
+        inscricoes: inscricoesEncontradas
+      });
+    }
+
     const queryTxid = req.query.txid || req.query.id || req.query.payment_id || req.query.order_id || req.query.reference || req.query.external_reference;
     const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : null;
     const queryNome = req.query.nome ? String(req.query.nome).trim().toLowerCase() : null;
@@ -788,6 +863,68 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
 
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+    let subFinal = null;
+
+    if (tipo === "inscricao") {
+      // 1. Validação obrigatória de Sub: NÃO permitir null, vazio ou omitido, nem fallback automático para Verde!
+      const rawSub = sub ? String(sub).trim() : "";
+      const matchedSub = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
+      if (!matchedSub) {
+        return res.status(400).json({
+          error: "Sub inválido ou não selecionado. A escolha do Sub é obrigatória para prosseguir com a inscrição."
+        });
+      }
+      subFinal = matchedSub;
+
+      // 2. Validação obrigatória contra pagamentos já confirmados/aprovados (idempotência de pagamento)
+      const cleanEmail = String(email).trim().toLowerCase();
+      if (supabaseUrl && supabaseKey) {
+        try {
+          let filterUrl = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
+          if (inscricao_id) {
+            filterUrl += `inscricao_id=eq.${encodeURIComponent(inscricao_id)}&status=in.(approved,confirmado,paid)&limit=1`;
+          } else {
+            filterUrl += `email=eq.${encodeURIComponent(cleanEmail)}&sub=eq.${encodeURIComponent(subFinal)}&status=in.(approved,confirmado,paid)&limit=1`;
+          }
+          const checkPaidRes = await fetch(filterUrl, {
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+            signal: AbortSignal.timeout(3000)
+          });
+          if (checkPaidRes.ok) {
+            const paidRows = await checkPaidRes.json();
+            if (Array.isArray(paidRows) && paidRows.length > 0) {
+              return res.status(400).json({
+                error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."
+              });
+            }
+          }
+        } catch (eCheck) {
+          console.warn("[Checkout Process] Checagem de pagamento já confirmado:", eCheck.message);
+        }
+      }
+
+      // Validação também no localStore
+      try {
+        const localStore = settingsStore.loadLocalStore();
+        if (Array.isArray(localStore.pagamentos)) {
+          const alreadyApproved = localStore.pagamentos.some(p => {
+            const isApproved = p.status === "approved" || p.status === "confirmado" || p.status === "paid";
+            const matchInscricao = inscricao_id && p.inscricao_id === inscricao_id;
+            const matchEmailSub = cleanEmail && p.email && p.email.toLowerCase() === cleanEmail && (p.sub === subFinal || p.metadata?.sub === subFinal);
+            return isApproved && (matchInscricao || matchEmailSub);
+          });
+          if (alreadyApproved) {
+            return res.status(400).json({
+              error: "Esta inscrição já possui um pagamento aprovado/confirmado no sistema."
+            });
+          }
+        }
+      } catch (eLocalStore) {}
+    } else {
+      subFinal = sub ? String(sub).trim() : null;
+    }
+
     const nomeFinal = (nome || nome_completo || "Participante").trim();
     const metodoFinal = (metodo || "pix").toLowerCase();
 
@@ -960,7 +1097,7 @@ module.exports = async (req, res) => {
                 order_id: orderId,
                 payment_id: paymentId,
                 external_reference: externalReference,
-                sub: sub || null,
+                sub: subFinal,
                 modalidade_pix: modalidadePix,
                 status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
                 gerado_via: mpGenerated ? "api_mercadopago" : "pix_manual",
@@ -1000,14 +1137,14 @@ module.exports = async (req, res) => {
           ticket_url: ticketUrl,
           provedor: mpGenerated ? "mercadopago" : "pix_manual",
           inscricao_id: inscricao_id || null,
-          sub: sub || null,
+          sub: subFinal,
           metadata: {
             order_id: orderId,
             payment_id: paymentId,
             external_reference: externalReference,
             modalidade_pix: modalidadePix,
             status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
-            sub: sub || null,
+            sub: subFinal,
             ticket_url: ticketUrl,
             lote: loteAtual
           },
@@ -1032,8 +1169,8 @@ module.exports = async (req, res) => {
               email: email.trim().toLowerCase(),
               valor: valorNumerico,
               pix_copia_e_cola: payloadPix,
-              sub: sub,
-              metadata: { order_id: orderId, lote: loteAtual, sub: sub }
+              sub: subFinal,
+              metadata: { order_id: orderId, lote: loteAtual, sub: subFinal }
             },
             payloadPix
           }).catch(e => console.warn("[Checkout Process] Erro no envio de email order_created:", e.message));
@@ -1104,7 +1241,7 @@ module.exports = async (req, res) => {
                 order_id: orderId,
                 payment_id: paymentId,
                 external_reference: externalReference,
-                sub: sub || null,
+                sub: subFinal,
                 titular: cartao_titular || null,
                 token: cartao_token ? "tokenizado" : "direto",
                 lote: loteAtual,
@@ -1144,7 +1281,7 @@ module.exports = async (req, res) => {
           email: email.trim().toLowerCase(),
           valor: valorNumerico,
           metodo: "credit_card",
-          sub: sub || "Geral",
+          sub: subFinal || "Geral",
           executado_por: "checkout_card"
         });
       } catch (emailErr) {
@@ -1172,12 +1309,12 @@ module.exports = async (req, res) => {
           cartao_ultimos_digitos: ultimosDigitos,
           cartao_bandeira: bandeira,
           inscricao_id: inscricao_id || null,
-          sub: sub || null,
+          sub: subFinal,
           metadata: {
             order_id: orderId,
             payment_id: paymentId,
             external_reference: externalReference,
-            sub: sub || null,
+            sub: subFinal,
             lote: loteAtual
           },
           comprovante_email_enviado: emailResult.success,

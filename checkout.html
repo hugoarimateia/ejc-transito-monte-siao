@@ -189,6 +189,253 @@
       margin-bottom: 16px;
     }
     [data-theme="dark"] .checkin-alert-box { color: #34d399; }
+
+    /* Estilos do Fluxo de Seleção de Sub e Inscrição Pendente */
+    .event-tag.event-tag-none {
+      background: rgba(148, 163, 184, 0.15) !important;
+      color: var(--text-muted) !important;
+      border: 1px dashed rgba(148, 163, 184, 0.4) !important;
+    }
+    .event-tag.sub-verde, .sub-badge-verde {
+      background: rgba(37, 165, 95, 0.15) !important;
+      color: #16a34a !important;
+      border: 1px solid rgba(37, 165, 95, 0.3) !important;
+    }
+    .event-tag.sub-vermelho, .sub-badge-vermelho {
+      background: rgba(232, 52, 65, 0.15) !important;
+      color: #dc2626 !important;
+      border: 1px solid rgba(232, 52, 65, 0.3) !important;
+    }
+    .event-tag.sub-amarelo, .sub-badge-amarelo {
+      background: rgba(217, 119, 6, 0.15) !important;
+      color: #d97706 !important;
+      border: 1px solid rgba(217, 119, 6, 0.3) !important;
+    }
+    .event-tag.sub-azul, .sub-badge-azul {
+      background: rgba(38, 117, 216, 0.15) !important;
+      color: #2563eb !important;
+      border: 1px solid rgba(38, 117, 216, 0.3) !important;
+    }
+
+    .sub-selection-flow-box {
+      margin-bottom: 22px;
+    }
+    .sub-flow-card {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px 20px;
+      animation: fadeIn .3s ease;
+    }
+    .sub-flow-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.02rem;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .sub-flow-desc {
+      margin: 0 0 14px;
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .sub-flow-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+    .sub-choice-action-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .sub-choice-action-btns {
+        grid-template-columns: 1fr;
+      }
+    }
+    .btn-flow-choice {
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: .92rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .2s ease;
+      text-align: center;
+    }
+    .btn-flow-choice:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: var(--bg-surface);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(2, 50, 132, 0.08);
+    }
+    .btn-flow-change {
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .btn-flow-change:hover {
+      opacity: .8;
+    }
+
+    .checkout-sub-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 650px) {
+      .checkout-sub-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .checkout-sub-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 13px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-main);
+    }
+    .checkout-sub-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+    }
+    .checkout-sub-btn .sub-btn-title {
+      font-weight: 800;
+      font-size: .9rem;
+    }
+    .checkout-sub-btn.sub-btn-verde:hover, .checkout-sub-btn.sub-btn-verde.active {
+      border-color: #25a55f;
+      background: rgba(37, 165, 95, 0.08);
+      color: #16a34a;
+    }
+    .checkout-sub-btn.sub-btn-vermelho:hover, .checkout-sub-btn.sub-btn-vermelho.active {
+      border-color: #e83441;
+      background: rgba(232, 52, 65, 0.08);
+      color: #dc2626;
+    }
+    .checkout-sub-btn.sub-btn-amarelo:hover, .checkout-sub-btn.sub-btn-amarelo.active {
+      border-color: #d97706;
+      background: rgba(217, 119, 6, 0.08);
+      color: #d97706;
+    }
+    .checkout-sub-btn.sub-btn-azul:hover, .checkout-sub-btn.sub-btn-azul.active {
+      border-color: #2675d8;
+      background: rgba(38, 117, 216, 0.08);
+      color: #2563eb;
+    }
+    .sub-radio-indicator {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      display: inline-block;
+      transition: all .2s ease;
+    }
+    .checkout-sub-btn.active .sub-radio-indicator {
+      border-color: currentColor;
+      background: currentColor;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .sub-flow-confirmed {
+      border-color: rgba(37, 165, 95, 0.35);
+      background: rgba(37, 165, 95, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .confirmed-sub-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .confirmed-sub-badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .search-pending-row {
+      display: flex;
+      gap: 10px;
+    }
+    .search-pending-row .card-input {
+      flex: 1;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      padding: 0 14px;
+      font-size: .92rem;
+    }
+    .pending-cards-list {
+      display: grid;
+      gap: 10px;
+    }
+    .pending-inscricao-card {
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-card);
+      padding: 14px 16px;
+      transition: all .2s ease;
+      cursor: pointer;
+    }
+    .pending-inscricao-card:hover, .pending-inscricao-card.selected {
+      border-color: var(--blue);
+      box-shadow: 0 6px 16px rgba(2, 50, 132, 0.08);
+      transform: translateY(-2px);
+    }
+    .pending-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .pending-status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: .75rem;
+      font-weight: 700;
+      background: rgba(245, 158, 11, 0.15);
+      color: #d97706;
+    }
+    .pending-status-tag.approved {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
   </style>
 </head>
 <body>
@@ -226,7 +473,7 @@
           <h2 id="summaryEventTitle">Inscrição na Equipe</h2>
           
           <div class="event-info-box">
-            <span class="event-tag" id="summarySubTag">Sub Verde</span>
+            <span class="event-tag event-tag-none" id="summarySubTag">Nenhum Sub selecionado</span>
             <h3 id="summaryParticipantName">Participante</h3>
             <p id="summaryDetailsText">Equipe do Trânsito — Encontro de Jovens com Cristo</p>
           </div>
@@ -283,6 +530,94 @@
               <p style="color: var(--text-muted); font-size: .92rem; margin: 0 0 20px;">
                 Preencha seu nome e e-mail para vincularmos sua inscrição e enviarmos seu comprovante oficial.
               </p>
+            </div>
+
+            <!-- BLOCO DE SELEÇÃO / VINCULAÇÃO DE SUB E INSCRIÇÃO PENDENTE -->
+            <div id="subSelectionFlow" class="sub-selection-flow-box">
+              <!-- Pergunta Principal: Você já possui uma inscrição com pagamento pendente? -->
+              <div id="boxQuestionExisting" class="sub-flow-card">
+                <div class="sub-flow-title">
+                  <i class="fa-solid fa-circle-question" style="color: var(--blue);"></i>
+                  <strong>Você já possui uma inscrição com pagamento pendente?</strong>
+                </div>
+                <p class="sub-flow-desc">
+                  Se você já preencheu o formulário anteriormente, podemos localizar e retomar sua inscrição. Caso contrário, escolha uma nova inscrição.
+                </p>
+                <div id="localPendingAlert" style="display: none; margin-bottom: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(8, 125, 249, 0.1); border: 1px solid rgba(8, 125, 249, 0.2); font-size: .85rem; color: var(--blue); font-weight: 600;">
+                  <i class="fa-solid fa-bell"></i> Identificamos inscrição pendente salva neste dispositivo.
+                </div>
+                <div class="sub-choice-action-btns">
+                  <button type="button" class="btn-flow-choice" id="btnChoiceExistingYes">
+                    <i class="fa-solid fa-check"></i> Sim, já fiz minha inscrição
+                  </button>
+                  <button type="button" class="btn-flow-choice" id="btnChoiceExistingNo">
+                    <i class="fa-solid fa-user-plus"></i> Não, quero fazer uma nova inscrição
+                  </button>
+                </div>
+              </div>
+
+              <!-- Painel A: Localização e seleção de inscrições pendentes -->
+              <div id="boxPendingSearch" class="sub-flow-card" style="display: none;">
+                <div class="sub-flow-header-row">
+                  <strong><i class="fa-solid fa-clock-rotate-left"></i> Inscrições com Pagamento Pendente</strong>
+                  <button type="button" class="btn-flow-change" id="btnBackToDecisionFromPending">Trocar opção</button>
+                </div>
+                <p class="sub-flow-desc">
+                  Selecione sua inscrição abaixo ou busque por seu e-mail ou WhatsApp:
+                </p>
+                <div class="search-pending-row">
+                  <input type="text" id="inputSearchPending" placeholder="Digite seu e-mail ou WhatsApp cadastrado" class="card-input">
+                  <button type="button" class="button button-primary" id="btnSearchPending" style="padding: 0 18px; white-space: nowrap;">
+                    <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                  </button>
+                </div>
+                <div id="pendingSearchResults" style="margin-top: 14px;"></div>
+              </div>
+
+              <!-- Painel B: Seleção obrigatória de Sub para Nova Inscrição -->
+              <div id="boxNewSubSelection" class="sub-flow-card" style="display: none;">
+                <div class="sub-flow-header-row">
+                  <strong><i class="fa-solid fa-flag"></i> Qual Sub você deseja participar?</strong>
+                  <button type="button" class="btn-flow-change" id="btnBackToDecisionFromNew">Trocar opção</button>
+                </div>
+                <p class="sub-flow-desc">
+                  Selecione obrigatoriamente um dos Subs disponíveis abaixo para prosseguir:
+                </p>
+                <div class="checkout-sub-cards-grid">
+                  <button type="button" class="checkout-sub-btn sub-btn-verde" data-sub="Verde">
+                    <span class="sub-radio-indicator"></span>
+                    <span class="sub-btn-title">Sub Verde</span>
+                  </button>
+                  <button type="button" class="checkout-sub-btn sub-btn-vermelho" data-sub="Vermelho">
+                    <span class="sub-radio-indicator"></span>
+                    <span class="sub-btn-title">Sub Vermelho</span>
+                  </button>
+                  <button type="button" class="checkout-sub-btn sub-btn-amarelo" data-sub="Amarelo">
+                    <span class="sub-radio-indicator"></span>
+                    <span class="sub-btn-title">Sub Amarelo</span>
+                  </button>
+                  <button type="button" class="checkout-sub-btn sub-btn-azul" data-sub="Azul">
+                    <span class="sub-radio-indicator"></span>
+                    <span class="sub-btn-title">Sub Azul</span>
+                  </button>
+                </div>
+                <div style="margin-top: 10px; font-size: .84rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                  <span>Prefere preencher a ficha completa com tamanhos de camisa?</span>
+                  <a href="./#inscricoes" style="color: var(--blue); font-weight: 700; text-decoration: underline;">Ir para a página de inscrição completa &rarr;</a>
+                </div>
+              </div>
+
+              <!-- Painel C: Sub e Inscrição Confirmados / Selecionados -->
+              <div id="boxSelectedSubBanner" class="sub-flow-card sub-flow-confirmed" style="display: none;">
+                <div class="confirmed-sub-content">
+                  <div class="confirmed-sub-badge sub-badge-verde" id="confirmedSubBadge">Sub Verde</div>
+                  <div class="confirmed-sub-info">
+                    <strong id="confirmedSubTitle">Sub Selecionado: Sub Verde</strong>
+                    <span id="confirmedSubSubtext" style="font-size: .82rem; color: var(--text-muted); display: block;">Inscrição vinculada com sucesso.</span>
+                  </div>
+                </div>
+                <button type="button" class="btn-flow-change" id="btnChangeSub">Alterar Sub</button>
+              </div>
             </div>
 
             <form id="step1Form" novalidate onsubmit="return false;">
@@ -566,11 +901,34 @@
     // ==============================================================================
     const urlParams = new URLSearchParams(window.location.search);
     const tipoCheckout = urlParams.get("tipo") || "inscricao";
-    const subSelecionado = urlParams.get("sub") || "Verde";
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+
+    // Determinação inicial do Sub (Sem fallback automático para Verde!)
+    let rawSub = (urlParams.get("sub") || "").trim();
+    if (!rawSub && tipoCheckout === "inscricao") {
+      try {
+        const storedSub = sessionStorage.getItem("ejc_checkout_sub");
+        if (storedSub) rawSub = storedSub;
+      } catch (e) {}
+    }
+
+    let subSelecionado = null;
+    if (rawSub) {
+      const matched = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
+      if (matched) subSelecionado = matched;
+    }
+
+    let inscricaoIdParam = (urlParams.get("inscricao_id") || urlParams.get("inscricao") || "").trim();
+    if (!inscricaoIdParam && tipoCheckout === "inscricao") {
+      try {
+        const storedInsc = sessionStorage.getItem("ejc_checkout_inscricao_id");
+        if (storedInsc) inscricaoIdParam = storedInsc;
+      } catch (e) {}
+    }
+
     const nomeParticipante = urlParams.get("nome") || "Participante EJC";
     const emailParam = urlParams.get("email") || "";
     const wppParam = urlParams.get("whatsapp") || "";
-    const inscricaoIdParam = urlParams.get("inscricao_id") || "";
     const tokenParam = urlParams.get("token") || "";
     const extraShirtParam = urlParams.get("camisa_extra") === "true";
 
@@ -645,8 +1003,6 @@
 
     // Elementos do Resumo
     document.getElementById("summaryParticipantName").textContent = nomeParticipante;
-    document.getElementById("summarySubTag").textContent = `Sub ${subSelecionado}`;
-    document.getElementById("summarySubTag").className = `event-tag sub-${subSelecionado.toLowerCase()}`;
     atualizarValoresUI();
 
     // Contêineres das etapas
@@ -660,6 +1016,331 @@
     const wppInput = document.getElementById("checkoutWhatsapp");
     const step1ErrorMsg = document.getElementById("step1ErrorMsg");
     const btnContinueToPayment = document.getElementById("btnContinueToPayment");
+
+    // Elementos do Fluxo de Seleção de Sub e Inscrição Pendente
+    const subSelectionFlow = document.getElementById("subSelectionFlow");
+    const boxQuestionExisting = document.getElementById("boxQuestionExisting");
+    const boxPendingSearch = document.getElementById("boxPendingSearch");
+    const boxNewSubSelection = document.getElementById("boxNewSubSelection");
+    const boxSelectedSubBanner = document.getElementById("boxSelectedSubBanner");
+    const confirmedSubBadge = document.getElementById("confirmedSubBadge");
+    const confirmedSubTitle = document.getElementById("confirmedSubTitle");
+    const confirmedSubSubtext = document.getElementById("confirmedSubSubtext");
+    const btnChoiceExistingYes = document.getElementById("btnChoiceExistingYes");
+    const btnChoiceExistingNo = document.getElementById("btnChoiceExistingNo");
+    const btnBackToDecisionFromPending = document.getElementById("btnBackToDecisionFromPending");
+    const btnBackToDecisionFromNew = document.getElementById("btnBackToDecisionFromNew");
+    const btnChangeSub = document.getElementById("btnChangeSub");
+    const btnSearchPending = document.getElementById("btnSearchPending");
+    const inputSearchPending = document.getElementById("inputSearchPending");
+    const pendingSearchResults = document.getElementById("pendingSearchResults");
+
+    function atualizarSubUI() {
+      const summaryTag = document.getElementById("summarySubTag");
+
+      if (tipoCheckout === "inscricao") {
+        if (subSelectionFlow) subSelectionFlow.style.display = "block";
+
+        if (subSelecionado) {
+          // Sub Válido Selecionado
+          if (summaryTag) {
+            summaryTag.textContent = `Sub ${subSelecionado}`;
+            summaryTag.className = `event-tag sub-${subSelecionado.toLowerCase()}`;
+          }
+
+          if (btnContinueToPayment) {
+            btnContinueToPayment.disabled = false;
+            btnContinueToPayment.style.opacity = "1";
+            btnContinueToPayment.style.cursor = "pointer";
+            btnContinueToPayment.innerHTML = `<span>Continuar para Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
+          }
+
+          if (boxSelectedSubBanner) {
+            boxSelectedSubBanner.style.display = "flex";
+            if (confirmedSubBadge) {
+              confirmedSubBadge.textContent = `Sub ${subSelecionado}`;
+              confirmedSubBadge.className = `confirmed-sub-badge sub-badge-${subSelecionado.toLowerCase()}`;
+            }
+            if (confirmedSubTitle) {
+              confirmedSubTitle.textContent = `Sub Selecionado: Sub ${subSelecionado}`;
+            }
+            if (confirmedSubSubtext) {
+              confirmedSubSubtext.textContent = inscricaoIdParam
+                ? `Inscrição nº ${String(inscricaoIdParam).slice(0, 10)} vinculada com sucesso.`
+                : "Inscrição pronta para ser confirmada no pagamento.";
+            }
+          }
+
+          if (boxQuestionExisting) boxQuestionExisting.style.display = "none";
+          if (boxPendingSearch) boxPendingSearch.style.display = "none";
+          if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+
+          document.querySelectorAll(".checkout-sub-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.sub === subSelecionado);
+          });
+
+          try {
+            sessionStorage.setItem("ejc_checkout_sub", subSelecionado);
+            if (inscricaoIdParam) sessionStorage.setItem("ejc_checkout_inscricao_id", inscricaoIdParam);
+          } catch (e) {}
+        } else {
+          // Nenhum Sub Selecionado
+          if (summaryTag) {
+            summaryTag.textContent = "Nenhum Sub selecionado";
+            summaryTag.className = "event-tag event-tag-none";
+          }
+
+          if (btnContinueToPayment) {
+            btnContinueToPayment.disabled = true;
+            btnContinueToPayment.style.opacity = "0.6";
+            btnContinueToPayment.style.cursor = "not-allowed";
+            btnContinueToPayment.innerHTML = `<span>Selecione seu Sub para continuar</span> <i class="fa-solid fa-lock"></i>`;
+          }
+
+          if (boxSelectedSubBanner) boxSelectedSubBanner.style.display = "none";
+
+          if (boxQuestionExisting && (!boxPendingSearch || boxPendingSearch.style.display === "none") && (!boxNewSubSelection || boxNewSubSelection.style.display === "none")) {
+            boxQuestionExisting.style.display = "block";
+          }
+
+          document.querySelectorAll(".checkout-sub-btn").forEach(btn => {
+            btn.classList.remove("active");
+          });
+
+          try {
+            sessionStorage.removeItem("ejc_checkout_sub");
+          } catch (e) {}
+        }
+      } else {
+        // Contribuição
+        if (summaryTag) {
+          summaryTag.textContent = "Doação Equipe";
+          summaryTag.className = "event-tag";
+        }
+        if (subSelectionFlow) subSelectionFlow.style.display = "none";
+        if (btnContinueToPayment) {
+          btnContinueToPayment.disabled = false;
+          btnContinueToPayment.style.opacity = "1";
+          btnContinueToPayment.style.cursor = "pointer";
+          btnContinueToPayment.innerHTML = `<span>Continuar para Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
+        }
+      }
+    }
+
+    async function buscarInscricoesPendentes(termo) {
+      if (!pendingSearchResults) return;
+      const cleanTermo = (termo || "").trim().toLowerCase();
+      pendingSearchResults.innerHTML = `<div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: .88rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Buscando inscrições pendentes...</div>`;
+
+      let encontradas = [];
+
+      // 1. Busca no localStorage ("ejc_inscricoes")
+      try {
+        const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+        local.forEach(item => {
+          const matchTermo = !cleanTermo ||
+            (item.email && item.email.toLowerCase().includes(cleanTermo)) ||
+            (item.whatsapp && String(item.whatsapp).includes(cleanTermo)) ||
+            (item.nome_completo && item.nome_completo.toLowerCase().includes(cleanTermo)) ||
+            (item.id && String(item.id).toLowerCase().includes(cleanTermo));
+          const isPending = item.pagamento_status !== "confirmado" && item.pagamento_status !== "paid" && item.pagamento_status !== "approved";
+          if (matchTermo && isPending) {
+            encontradas.push({
+              id: item.id,
+              nome_completo: item.nome_completo || "Participante",
+              email: item.email || "",
+              whatsapp: item.whatsapp || "",
+              sub: item.sub || null,
+              pagamento_status: "pendente"
+            });
+          }
+        });
+      } catch (eLocal) {}
+
+      // 2. Busca no backend remoto
+      if (cleanTermo.length >= 3) {
+        try {
+          const resp = await fetch(`/api/checkout-process?action=buscar_inscricoes&termo=${encodeURIComponent(cleanTermo)}`, {
+            signal: AbortSignal.timeout(4000)
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && Array.isArray(data.inscricoes)) {
+              data.inscricoes.forEach(item => {
+                const jaExiste = encontradas.some(e => e.id === item.id || (e.email && item.email && e.email === item.email && e.sub === item.sub));
+                if (!jaExiste) {
+                  encontradas.push(item);
+                }
+              });
+            }
+          }
+        } catch (eFetch) {}
+      }
+
+      if (encontradas.length === 0) {
+        pendingSearchResults.innerHTML = `
+          <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; color: var(--text-muted); font-size: .88rem;">
+            <p style="margin: 0 0 10px;">Nenhuma inscrição com pagamento pendente encontrada${cleanTermo ? ` para "<strong>${cleanTermo}</strong>"` : ""}.</p>
+            <button type="button" class="button button-secondary" id="btnGoToNewSubFromSearch" style="font-size: .85rem; padding: 8px 16px;">
+              Fazer uma nova inscrição &rarr;
+            </button>
+          </div>
+        `;
+        const btnNewFromSearch = document.getElementById("btnGoToNewSubFromSearch");
+        if (btnNewFromSearch) {
+          btnNewFromSearch.addEventListener("click", () => {
+            if (boxPendingSearch) boxPendingSearch.style.display = "none";
+            if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
+          });
+        }
+        return;
+      }
+
+      let html = `<div style="font-size: .85rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Encontramos inscrições com pagamento pendente. Selecione qual deseja pagar:</div>`;
+      html += `<div class="pending-cards-list">`;
+      encontradas.forEach(item => {
+        const subLow = item.sub ? item.sub.toLowerCase() : "none";
+        const subName = item.sub ? `Sub ${item.sub}` : "Nenhum Sub definido";
+        const shortId = String(item.id || "").slice(0, 10);
+        html += `
+          <div class="pending-inscricao-card" data-id="${item.id}" data-sub="${item.sub || ''}" data-name="${encodeURIComponent(item.nome_completo || '')}" data-email="${encodeURIComponent(item.email || '')}" data-wpp="${encodeURIComponent(item.whatsapp || '')}">
+            <div class="pending-card-header">
+              <span class="confirmed-sub-badge sub-badge-${subLow}">${subName}</span>
+              <span class="pending-status-tag"><i class="fa-solid fa-clock"></i> Pagamento pendente</span>
+            </div>
+            <div style="font-size: .95rem; font-weight: 700; color: var(--text-main); margin-bottom: 2px;">
+              ${item.nome_completo || 'Participante EJC'}
+            </div>
+            <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 6px;">
+              Inscrição nº: <code>${shortId}</code> ${item.email ? `• ${item.email}` : ''}
+            </div>
+            <button type="button" class="button button-primary" style="width: 100%; min-height: 38px; font-size: .85rem; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i class="fa-solid fa-check"></i> Selecionar e Pagar esta Inscrição
+            </button>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      pendingSearchResults.innerHTML = html;
+
+      pendingSearchResults.querySelectorAll(".pending-inscricao-card").forEach(card => {
+        card.addEventListener("click", () => {
+          const chosenSub = card.dataset.sub;
+          const chosenId = card.dataset.id;
+          const chosenName = decodeURIComponent(card.dataset.name || "");
+          const chosenEmail = decodeURIComponent(card.dataset.email || "");
+          const chosenWpp = decodeURIComponent(card.dataset.wpp || "");
+
+          if (chosenSub && VALID_SUBS.includes(chosenSub)) {
+            subSelecionado = chosenSub;
+          } else {
+            subSelecionado = null;
+            if (boxPendingSearch) boxPendingSearch.style.display = "none";
+            if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
+          }
+          inscricaoIdParam = chosenId;
+
+          if (chosenName && (!nameInput.value || nameInput.value === "Participante EJC")) nameInput.value = chosenName;
+          if (chosenEmail && !emailInput.value) emailInput.value = chosenEmail;
+          if (chosenWpp && !wppInput.value) wppInput.value = chosenWpp;
+
+          document.getElementById("summaryParticipantName").textContent = nameInput.value || "Participante EJC";
+          atualizarValoresUI();
+          atualizarSubUI();
+        });
+      });
+    }
+
+    // Configuração dos botões de decisão
+    if (btnChoiceExistingYes) {
+      btnChoiceExistingYes.addEventListener("click", () => {
+        if (boxQuestionExisting) boxQuestionExisting.style.display = "none";
+        if (boxPendingSearch) boxPendingSearch.style.display = "block";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+
+        const termoInicial = emailInput.value.trim() || wppInput.value.trim() || (inputSearchPending ? inputSearchPending.value.trim() : "");
+        if (inputSearchPending && termoInicial) {
+          inputSearchPending.value = termoInicial;
+        }
+        buscarInscricoesPendentes(termoInicial);
+      });
+    }
+
+    if (btnChoiceExistingNo) {
+      btnChoiceExistingNo.addEventListener("click", () => {
+        if (boxQuestionExisting) boxQuestionExisting.style.display = "none";
+        if (boxPendingSearch) boxPendingSearch.style.display = "none";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
+      });
+    }
+
+    if (btnBackToDecisionFromPending) {
+      btnBackToDecisionFromPending.addEventListener("click", () => {
+        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
+        if (boxPendingSearch) boxPendingSearch.style.display = "none";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+      });
+    }
+
+    if (btnBackToDecisionFromNew) {
+      btnBackToDecisionFromNew.addEventListener("click", () => {
+        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
+        if (boxPendingSearch) boxPendingSearch.style.display = "none";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+      });
+    }
+
+    if (btnChangeSub) {
+      btnChangeSub.addEventListener("click", () => {
+        subSelecionado = null;
+        inscricaoIdParam = "";
+        try {
+          sessionStorage.removeItem("ejc_checkout_sub");
+          sessionStorage.removeItem("ejc_checkout_inscricao_id");
+        } catch (e) {}
+        atualizarValoresUI();
+        atualizarSubUI();
+        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
+      });
+    }
+
+    if (btnSearchPending && inputSearchPending) {
+      btnSearchPending.addEventListener("click", () => {
+        buscarInscricoesPendentes(inputSearchPending.value.trim());
+      });
+      inputSearchPending.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          buscarInscricoesPendentes(inputSearchPending.value.trim());
+        }
+      });
+    }
+
+    // Botões de escolha de Sub para nova inscrição
+    document.querySelectorAll(".checkout-sub-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sub = btn.dataset.sub;
+        if (sub && VALID_SUBS.includes(sub)) {
+          subSelecionado = sub;
+          atualizarValoresUI();
+          atualizarSubUI();
+        }
+      });
+    });
+
+    // Detecção inicial de inscrições salvas localmente
+    try {
+      const localInsc = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+      const pendentes = localInsc.filter(i => i.pagamento_status !== "confirmado" && i.pagamento_status !== "paid" && i.pagamento_status !== "approved");
+      const alertEl = document.getElementById("localPendingAlert");
+      if (pendentes.length > 0 && alertEl) {
+        alertEl.style.display = "block";
+        alertEl.innerHTML = `<i class="fa-solid fa-bell"></i> Identificamos ${pendentes.length} inscrição(ões) pendente(s) neste dispositivo. Clique em "Sim, já fiz minha inscrição" para continuar.`;
+      }
+    } catch (e) {}
+
+    // Inicialização da interface do Sub
+    atualizarSubUI();
 
     if (nomeParticipante && nomeParticipante !== "Participante EJC") {
       nameInput.value = nomeParticipante;
@@ -731,6 +1412,16 @@
       const emailVal = emailInput.value.trim();
       const wppVal = wppInput.value.trim();
 
+      if (tipoCheckout === "inscricao") {
+        if (!subSelecionado || !VALID_SUBS.includes(subSelecionado)) {
+          step1ErrorMsg.textContent = "Por favor, selecione qual Sub você deseja participar para continuar.";
+          step1ErrorMsg.style.display = "block";
+          const subFlow = document.getElementById("subSelectionFlow");
+          if (subFlow) subFlow.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+
       if (!nomeVal || nomeVal.length < 3) {
         step1ErrorMsg.textContent = "Por favor, informe seu nome completo.";
         step1ErrorMsg.style.display = "block";
@@ -743,6 +1434,30 @@
         step1ErrorMsg.style.display = "block";
         emailInput.focus();
         return;
+      }
+
+      // Se for inscrição e ainda não possui ID de inscrição associado, registra como pendente antes de pagar
+      if (tipoCheckout === "inscricao" && !inscricaoIdParam) {
+        const newId = crypto.randomUUID ? crypto.randomUUID() : `INS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        inscricaoIdParam = newId;
+        try {
+          const localInsc = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
+          const exists = localInsc.some(i => i.id === newId || (i.email === emailVal && i.sub === subSelecionado));
+          if (!exists) {
+            localInsc.unshift({
+              id: newId,
+              criado_em: new Date().toISOString(),
+              nome_completo: nomeVal,
+              email: emailVal,
+              whatsapp: wppVal || null,
+              sub: subSelecionado,
+              forma_pagamento: "checkout_online",
+              pagamento_status: "pendente"
+            });
+            localStorage.setItem("ejc_inscricoes", JSON.stringify(localInsc));
+          }
+          sessionStorage.setItem("ejc_checkout_inscricao_id", newId);
+        } catch (eSave) {}
       }
 
       step1ErrorMsg.style.display = "none";

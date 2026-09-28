@@ -633,7 +633,8 @@ carregarConfiguracaoPublica();
 // REDIRECIONAMENTO PARA O CHECKOUT OFICIAL CENTRALIZADO (PIX & CARTÃO)
 // ==============================================================================
 document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
     const tipo = btn.dataset.tipo || "inscricao";
     const valor = tipo === "inscricao" ? Number(window.EJC_ACTIVE_PRICE || 50) : Number(btn.dataset.valor || 50);
     const lote = tipo === "inscricao" ? (window.EJC_ACTIVE_LOTE || "1º Lote") : "";
@@ -641,8 +642,12 @@ document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(
     const nome = document.querySelector("#full-name")?.value || "";
     const email = document.querySelector("#email")?.value || "";
     const wpp = document.querySelector("#whatsapp")?.value || "";
-    const sub = document.querySelector("#selected-sub")?.value || "Verde";
-    let checkoutUrl = `/checkout?tipo=${tipo}&valor=${valor}&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&whatsapp=${encodeURIComponent(wpp)}&sub=${encodeURIComponent(sub)}`;
+    const sub = document.querySelector("#selected-sub")?.value || "";
+    let checkoutUrl = `/checkout?tipo=${tipo}&valor=${valor}`;
+    if (nome) checkoutUrl += `&nome=${encodeURIComponent(nome)}`;
+    if (email) checkoutUrl += `&email=${encodeURIComponent(email)}`;
+    if (wpp) checkoutUrl += `&whatsapp=${encodeURIComponent(wpp)}`;
+    if (sub) checkoutUrl += `&sub=${encodeURIComponent(sub)}`;
     if (lote) checkoutUrl += `&lote=${encodeURIComponent(lote)}`;
     if (v) checkoutUrl += `&v=${v}`;
     window.location.href = checkoutUrl;
