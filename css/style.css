@@ -513,7 +513,7 @@ button { font: inherit; }
   position: fixed;
   z-index: 90;
   right: 22px;
-  width: 54px; height: 64px;
+  width: 54px; height: 54px;
   display: grid; place-items: center;
   border: 0;
   border-radius: 50%;
@@ -1589,12 +1589,72 @@ button { font: inherit; }
   transform: translateY(-2px);
 }
 
-/* Responsividade Mobile para o Formulário */
-@media (max-width: 680px) {
-  .signup-form {
-    padding: 22px 18px;
-    border-radius: 24px;
+/* ==============================================================================
+   RESPONSIVIDADE CIRÚRGICA: TABLET E MOBILE
+   Preserva 100% o design Desktop convencional
+   ============================================================================== */
+
+@media (max-width: 900px) {
+  /* Distribuição equilibrada dos cards de Sub em tablets */
+  .sub-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
+}
+
+@media (max-width: 680px) {
+  /* Grid de Subs em coluna única no mobile: amplitude e alinhamento perfeito */
+  .sub-choice-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .sub-choice {
+    padding: 18px 20px;
+    border-radius: 20px;
+  }
+  .sub-choice strong {
+    min-height: auto;
+    margin-bottom: 6px;
+    font-size: 1.08rem;
+  }
+  .sub-counter {
+    margin: 10px 0 8px;
+    font-size: .88rem;
+  }
+  .sub-button-text {
+    margin-top: 14px;
+    font-size: .92rem;
+  }
+
+  /* Container do formulário mobile */
+  .signup-workspace {
+    margin-top: 24px;
+    margin-bottom: 36px;
+  }
+  .signup-form {
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  /* Tipografia do cabeçalho */
+  .form-heading {
+    margin-bottom: 22px;
+  }
+  .form-heading .role-pill {
+    padding: 5px 12px;
+    font-size: .75rem;
+  }
+  .form-heading h3 {
+    font-size: 1.55rem;
+    margin: 10px 0 6px;
+    line-height: 1.2;
+  }
+  .form-heading-desc {
+    font-size: .88rem;
+    line-height: 1.45;
+  }
+
+  /* Grid e campos em coluna única */
   .form-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -1602,30 +1662,245 @@ button { font: inherit; }
   .field-wide {
     grid-column: auto;
   }
+
+  /* Seções do formulário */
   .form-section {
-    margin-top: 26px;
-    padding-top: 22px;
+    margin-top: 24px;
+    padding-top: 20px;
   }
   .form-section-header {
     gap: 12px;
+    margin-bottom: 16px;
   }
   .form-section-icon {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
-    font-size: 1.05rem;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    font-size: 1rem;
+    border-radius: 10px;
   }
   .form-section-title {
-    font-size: 1.05rem;
+    font-size: 1.02rem;
+    line-height: 1.25;
+  }
+  .form-section-subtitle {
+    font-size: .8rem;
+    line-height: 1.35;
+  }
+
+  /* Inputs, selects e textareas */
+  .field {
+    gap: 6px;
+  }
+  .field-label {
+    font-size: .86rem;
+    line-height: 1.35;
+  }
+  .field input, .field select, .field textarea, .contribution-interactive-card input {
+    padding: 12px 14px;
+    font-size: .9rem;
+    border-radius: 12px;
+  }
+  .input-icon-wrap input {
+    padding-left: 40px !important;
+  }
+  .input-icon {
+    left: 14px;
+    font-size: .95rem;
+  }
+  .field-hint {
+    font-size: .78rem;
+    line-height: 1.35;
+    margin-top: 1px;
+  }
+
+  /* Proporção equilibrada da textarea no mobile (Seção 1.7) */
+  .field textarea {
+    min-height: 64px;
+    height: 72px;
+    line-height: 1.45;
+    resize: vertical;
+  }
+
+  /* Controles Segmentados Radio Sim/Não e Pix/Espécie (Seção 1.4) */
+  .segmented-choice-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    height: 46px;
+  }
+  .segmented-choice-btn {
+    display: flex;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 10px;
+    font-size: .88rem;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+  .segmented-choice-btn i {
+    font-size: .9rem;
+    flex-shrink: 0;
+  }
+
+  /* Upload de Foto para identificação e crachá (Seção 1.8) */
+  .custom-upload-zone {
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+  .upload-icon-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+    margin-bottom: 2px;
+  }
+  .upload-zone-title {
+    font-size: .88rem;
+    line-height: 1.35;
+  }
+  .upload-zone-sub {
+    font-size: .76rem;
+    line-height: 1.35;
+    margin-top: 2px;
+  }
+  .upload-browse-btn {
+    margin-top: 6px;
+    padding: 6px 14px;
+    font-size: .78rem;
+  }
+  .custom-upload-compact {
+    padding: 14px 12px;
+  }
+  .custom-upload-compact .upload-icon-circle {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  /* Opções de Pagamento (alinhamento vertical rigoroso) */
+  .payment-cards-group {
+    gap: 10px;
+    margin-top: 8px;
   }
   .payment-card-option {
-    padding: 15px 16px;
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 14px;
+    border-radius: 16px;
     gap: 12px;
+  }
+  .payment-card-radio {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .custom-radio-mark {
+    width: 18px;
+    height: 18px;
+  }
+  .custom-radio-mark::after {
+    width: 8px;
+    height: 8px;
   }
   .payment-card-topline {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+  .payment-card-title {
+    font-size: .9rem;
+    line-height: 1.3;
+  }
+  .payment-badge-rec {
+    font-size: .68rem;
+    padding: 2px 7px;
+  }
+  .payment-card-desc {
+    font-size: .8rem;
+    line-height: 1.4;
+  }
+  .payment-conditional-box {
+    padding: 16px 14px;
+    border-radius: 16px;
+    margin-top: 14px;
+  }
+
+  /* Card de consentimento e termos */
+  .consent-card {
+    padding: 14px 14px;
+    margin: 20px 0 16px;
+    border-radius: 14px;
+  }
+  .consent-label {
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .custom-checkbox {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin-top: 2px;
+  }
+  .consent-text {
+    font-size: .8rem;
+    line-height: 1.45;
+  }
+
+  /* Ação final e envio */
+  .form-action-wrap {
+    padding-bottom: 16px;
+  }
+  .submit-signup {
+    width: 100%;
+    height: 50px;
+    font-size: 1rem;
+    border-radius: 14px;
+    justify-content: center;
+  }
+
+  /* Botões flutuantes ajustados para não cobrir conteúdo (Seção 1.10) */
+  .whatsapp-float, .back-to-top {
+    right: 14px;
+    width: 48px;
+    height: 48px;
+  }
+  .whatsapp-float {
+    bottom: 14px;
+    font-size: 1.6rem;
+  }
+  .back-to-top {
+    bottom: 68px;
+    font-size: 1.1rem;
+  }
+}
+
+/* Microtelas (320px - 360px) */
+@media (max-width: 360px) {
+  .signup-form {
+    padding: 16px 12px;
+  }
+  .form-heading h3 {
+    font-size: 1.38rem;
+  }
+  .segmented-choice-btn {
+    font-size: .82rem;
+    padding: 0 6px;
+    gap: 6px;
+  }
+  .payment-card-option {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  .field input, .field select, .field textarea {
+    padding: 11px 12px;
+    font-size: .86rem;
   }
 }
 
@@ -1989,6 +2264,73 @@ button { font: inherit; }
   background: var(--bg-card);
   border-color: var(--border-color);
   color: var(--text-main);
+}
+[data-theme="dark"] .sub-counter {
+  color: #cbd5e1;
+}
+[data-theme="dark"] .sub-counter b {
+  color: #f8fafc;
+  font-weight: 800;
+}
+[data-theme="dark"] .progress {
+  background: rgba(255, 255, 255, 0.14);
+}
+[data-theme="dark"] .sub-badge {
+  background: color-mix(in srgb, var(--sub-color) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sub-color) 35%, transparent);
+}
+[data-theme="dark"] .opt-label,
+[data-theme="dark"] .field-hint,
+[data-theme="dark"] .field-hint-inline,
+[data-theme="dark"] .form-heading-desc,
+[data-theme="dark"] .form-section-subtitle,
+[data-theme="dark"] .upload-zone-sub,
+[data-theme="dark"] .payment-card-desc,
+[data-theme="dark"] .consent-text,
+[data-theme="dark"] .contribution-copy > p,
+[data-theme="dark"] .notice p,
+[data-theme="dark"] .demo-alert p,
+[data-theme="dark"] .form-sub-reminder {
+  color: #cbd5e1;
+}
+[data-theme="dark"] .field input::placeholder,
+[data-theme="dark"] .field textarea::placeholder,
+[data-theme="dark"] .contribution-interactive-card input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+[data-theme="dark"] .segmented-choice-btn {
+  background: var(--bg-input);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #cbd5e1;
+}
+[data-theme="dark"] .segmented-choice-label:hover .segmented-choice-btn {
+  border-color: #60a5fa;
+  color: #f1f5f9;
+}
+[data-theme="dark"] .segmented-choice-label input:checked + .segmented-choice-btn {
+  background: rgba(8, 125, 249, 0.28);
+  border-color: #60a5fa;
+  color: #93c5fd;
+}
+[data-theme="dark"] .upload-browse-btn {
+  background: #1e2e56;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+}
+[data-theme="dark"] .payment-card-title {
+  color: #f8fafc;
+}
+[data-theme="dark"] .extra-shirt-badge {
+  background: rgba(8, 125, 249, 0.18);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #f1f5f9;
+}
+[data-theme="dark"] .extra-shirt-badge strong {
+  color: #93c5fd;
+}
+[data-theme="dark"] .form-sub-reminder.sub-selected {
+  color: #86efac;
 }
 [data-theme="dark"] .payment-notice {
   background: var(--bg-card);

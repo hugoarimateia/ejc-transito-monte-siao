@@ -233,16 +233,34 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
   });
 }
 
-// Contagem resiliente de vagas por Sub
+// Contagem unificada de vagas por Sub (Fonte Única Centralizada)
 async function updateSubCounts() {
   let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, Azul: 0 };
   let remoteLoaded = false;
 
-  if (supabaseClient) {
+  // 1. Consulta o endpoint central oficial com anti-cache estrito
+  try {
+    const res = await fetch(`/api/sub-counts?_t=${Date.now()}`, {
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+      cache: "no-store"
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.counts) {
+        counts = { ...counts, ...data.counts };
+        remoteLoaded = true;
+      }
+    }
+  } catch (errApi) {
+    console.warn("[updateSubCounts] Falha ao consultar /api/sub-counts:", errApi);
+  }
+
+  // 2. Se a API não respondeu e Supabase estiver configurado, tenta Supabase
+  if (!remoteLoaded && supabaseClient) {
     try {
       const { data, error } = await supabaseClient.rpc("contagem_inscricoes_por_sub");
       if (!error && data && Array.isArray(data)) {
-        counts = Object.fromEntries(data.map(item => [item.sub, Number(item.total)]));
+        counts = { ...counts, ...Object.fromEntries(data.map(item => [item.sub, Number(item.total)])) };
         remoteLoaded = true;
       }
     } catch (e) {
@@ -250,7 +268,7 @@ async function updateSubCounts() {
     }
   }
 
-  // Se não carregou do servidor, calcula a partir do localStorage
+  // 3. Fallback apenas se completamente offline
   if (!remoteLoaded) {
     const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
     local.forEach(i => {
@@ -479,11 +497,30 @@ if (signupForm) {
 
       if (!registeredId) registeredId = newRegistration.id;
 
+      // 2.1 Sincronização direta com a base persistente central (/api/sub-counts)
+      try {
+        const syncRes = await fetch("/api/sub-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newRegistration)
+        });
+        if (syncRes.ok) {
+          const syncJson = await syncRes.json();
+          if (syncJson && syncJson.success) {
+            registrationSuccess = true;
+            if (syncJson.id) registeredId = syncJson.id;
+          }
+        }
+      } catch (errSync) {
+        console.warn("[Signup] Sync central indisponível no momento, mantendo gravação local:", errSync);
+      }
+
+      // 2.2 Gravação local de segurança
       localInscricoes.push(newRegistration);
       localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
       registrationSuccess = true;
     } catch (e) {
-      console.error("Erro ao salvar localmente:", e);
+      console.error("Erro ao salvar inscrição:", e);
     }
 
     if (registrationSuccess) {
@@ -546,6 +583,18 @@ if (signupForm) {
 }
 
 updateSubCounts();
+
+// Sincronização automática contínua entre dispositivos
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    updateSubCounts();
+  }
+});
+setInterval(() => {
+  if (document.visibilityState === "visible") {
+    updateSubCounts();
+  }
+}, 30000);
 
 // Máscara dinâmica de telefone
 document.addEventListener("DOMContentLoaded", () => {

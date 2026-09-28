@@ -1,306 +1,282 @@
-<!DOCTYPE html><html lang="pt-BR"><head>
-<script>
-(function(){
-  try {
-    var s = localStorage.getItem("ejc_theme");
-    var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var t = s || (d ? "dark" : "light");
-    document.documentElement.setAttribute("data-theme", t);
-    var iconHref = t === "dark" ? "images/favicon-dark.png?v=2" : "images/favicon.png?v=2";
-    var l = document.querySelector('link[rel="icon"]');
-    if (l) { l.href = iconHref; }
-  } catch(e) {}
-})();
-</script>
-<meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1" name="viewport">
-<meta content="#282b30" name="theme-color">
-<meta content="Site oficial da Equipe do Trânsito do EJC da II Igreja Evangélica Congregacional." name="description">
-<title>EJC | Equipe do Trânsito</title>
-<link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
-<link rel="apple-touch-icon" href="images/favicon.png?v=2">
-<link href="https://fonts.googleapis.com" rel="preconnect">
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="css/style.css" rel="stylesheet">
-<link href="css/all.min.css" rel="stylesheet">
-</head>
-<body>
-<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
-<header class="site-header" id="topo">
-<div class="container nav-wrap">
-<a aria-label="Página inicial" class="brand" href="#topo">
-<img alt="Logo EJC Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
-</a>
-<nav aria-label="Navegação principal" class="nav" id="menu">
-<a href="#equipe">Equipe</a>
-<a href="#inscricoes">Inscrições</a>
-<a href="#responsabilidades">Responsabilidades</a>
-<a href="#contribuicao">Contribuição</a>
-<a href="#calendario">Calendário</a>
-<a class="nav-cta" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener" target="_blank">WhatsApp</a>
-</nav>
-<div class="nav-actions">
-<button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
-<i class="fa-solid fa-moon"></i>
-</button>
-<button aria-controls="menu" aria-expanded="false" class="menu-button" type="button">
-<span></span><span></span><span></span>
-<span class="sr-only">Abrir menu</span>
-</button>
-</div>
-</div>
-</header>
-<main id="conteudo">
-<section class="hero">
-<div class="hero-shape hero-shape-one"></div>
-<div class="hero-shape hero-shape-two"></div>
-<div class="container hero-grid">
-<div class="hero-copy reveal">
-<span class="eyebrow">IEAD Monte Sião</span>
-<h1>Trânsito<br>Monte Sião</h1>
-<p>
-            Equipe do Trânsito do Encontro de Jovens com Cristo. Servindo com amor, alegria, organização e responsabilidade para que cada jovem tenha uma experiência inesquecível com Cristo.
-          </p>
-<div class="hero-actions">
-<a class="button button-primary" href="#inscricoes">Inscrever-se para receber o acesso</a>
-<a class="button button-secondary" href="#equipe">Conhecer a equipe</a>
-</div>
-<nav aria-label="Acessos rápidos" class="hero-tags">
-<a href="#responsabilidades">Organização</a>
-<a href="#equipe">Acolhimento</a>
-<a href="#inscricoes">Serviço</a>
-</nav>
-</div>
-<div class="hero-visual reveal">
-<div class="logo-card">
-<img alt="EJC — Encontro de Jovens com Cristo, Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
-</div>
-</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
 
-</div>
-</div>
-<a aria-label="Ir para a próxima seção" class="scroll-hint" href="#equipe">↓</a>
-</section>
-<section class="section section-light" id="equipe">
-<div class="container">
-<div class="section-heading reveal">
-<span class="eyebrow">Conheça nosso trabalho</span>
-<h2>Nossa equipe</h2>
-<p>Pessoas que disseram “sim” ao chamado de servir com excelência.</p>
-</div>
-<article class="featured-person reveal">
-<div class="featured-photo">
-<img alt="Clébinho e Priscila, coordenadores da Equipe do Trânsito" src="images/clebinho-priscila.jpeg">
-</div>
-<div class="featured-copy">
-<span class="role-pill role-main">Coordenação</span>
-<h3>Clébinho e Priscila</h3>
-<p>
-              Com muita alegria e dedicação, estamos à frente da Equipe do Trânsito neste EJC. Nossa missão é zelar pela segurança, pela organização e pelo acolhimento de cada jovem e de suas famílias, servindo com amor e excelência para que todos tenham um encontro inesquecível e transformador com Cristo.
+<head>
+  <script>
+    (function () {
+      try {
+        var s = localStorage.getItem("ejc_theme");
+        var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var t = s || (d ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+        var iconHref = t === "dark" ? "images/favicon-dark.png?v=2" : "images/favicon.png?v=2";
+        var l = document.querySelector('link[rel="icon"]');
+        if (l) { l.href = iconHref; }
+      } catch (e) { }
+    })();
+  </script>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta content="#282b30" name="theme-color">
+  <meta content="Site oficial da Equipe do Trânsito do EJC da II Igreja Evangélica Congregacional." name="description">
+  <title>EJC | Equipe do Trânsito</title>
+  <link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
+  <link rel="apple-touch-icon" href="images/favicon.png?v=2">
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="site-header" id="topo">
+    <div class="container nav-wrap">
+      <a aria-label="Página inicial" class="brand" href="#topo">
+        <img alt="Logo EJC Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2"
+          data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
+      </a>
+      <nav aria-label="Navegação principal" class="nav" id="menu">
+        <a href="#equipe">Equipe</a>
+        <a href="#inscricoes">Inscrições</a>
+        <a href="#responsabilidades">Responsabilidades</a>
+        <a href="#contribuicao">Contribuição</a>
+        <a href="#calendario">Calendário</a>
+        <a class="nav-cta" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener"
+          target="_blank">WhatsApp</a>
+      </nav>
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <button aria-controls="menu" aria-expanded="false" class="menu-button" type="button">
+          <span></span><span></span><span></span>
+          <span class="sr-only">Abrir menu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main id="conteudo">
+    <section class="hero">
+      <div class="hero-shape hero-shape-one"></div>
+      <div class="hero-shape hero-shape-two"></div>
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <span class="eyebrow">IEAD Monte Sião</span>
+          <h1>Trânsito<br>Monte Sião</h1>
+          <p>
+            Equipe do Trânsito do Encontro de Jovens com Cristo. Servindo com amor, alegria, organização e
+            responsabilidade para que cada jovem tenha uma experiência inesquecível com Cristo.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#inscricoes">Inscrever-se para receber o acesso</a>
+            <a class="button button-secondary" href="#equipe">Conhecer a equipe</a>
+          </div>
+          <nav aria-label="Acessos rápidos" class="hero-tags">
+            <a href="#responsabilidades">Organização</a>
+            <a href="#equipe">Acolhimento</a>
+            <a href="#inscricoes">Serviço</a>
+          </nav>
+        </div>
+        <div class="hero-visual reveal">
+          <div class="logo-card">
+            <img alt="EJC — Encontro de Jovens com Cristo, Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2"
+              data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
+          </div>
+        </div>
+
+      </div>
+      </div>
+      <a aria-label="Ir para a próxima seção" class="scroll-hint" href="#equipe">↓</a>
+    </section>
+    <section class="section section-light" id="equipe">
+      <div class="container">
+        <div class="section-heading reveal">
+          <span class="eyebrow">Conheça nosso trabalho</span>
+          <h2>Nossa equipe</h2>
+          <p>Pessoas que disseram “sim” ao chamado de servir com excelência.</p>
+        </div>
+        <article class="featured-person reveal">
+          <div class="featured-photo">
+            <img alt="Clébinho e Priscila, coordenadores da Equipe do Trânsito" src="images/clebinho-priscila.jpeg">
+          </div>
+          <div class="featured-copy">
+            <span class="role-pill role-main">Coordenação</span>
+            <h3>Clebinho e Priscila</h3>
+            <p>
+              Com muita alegria e dedicação, estamos à frente da Equipe do Trânsito neste EJC. Nossa missão é zelar pela
+              segurança, pela organização e pelo acolhimento de cada jovem e de suas famílias, servindo com amor e
+              excelência para que todos tenham um encontro inesquecível e transformador com Cristo.
             </p>
-<p class="featured-note">
+            <p class="featured-note">
               Sejam bem-vindos! Vamos juntos viver essa missão e receber mais de Deus a cada passo. 🙏🏼
             </p>
-</div>
-</article>
-<article class="support-person reveal">
-<div>
-<span class="role-pill role-support">Leia atentamente!</span>
-<h3>Conheça os nossos Sub Grupos!</h3>
-<p>
-            Aqui você conhecerá os casais que coordenam cada Sub Grupo da Equipe do Trânsito. Cada Sub é responsável por uma parte do serviço, e todos trabalham juntos para que o encontro seja um sucesso.
-           </p>
-</div>
-<img alt="Semáforo representativo dos Sub Grupos" src="images/semaforo.png">
-</article>
-<div class="team-grid">
-<article class="team-card team-green reveal">
-<div class="team-image"><img alt="Abraão e Sara" src="images/sub-verde.png"></div>
-<div class="team-card-body">
-<span class="team-label">Sub Verde 💚</span>
-<h3>Abraão e Sara</h3>
-<p>
-                Irmãos de sangue, e braço direito, esquerdo, cabeça, quase o corpo todo da nossa coordenação, experiência e muito amor pela obra os definem.
+          </div>
+        </article>
+        <article class="support-person reveal">
+          <div>
+            <span class="role-pill role-support">Leia atentamente!</span>
+            <h3>Conheça os nossos Sub Grupos!</h3>
+            <p>
+              Aqui você conhecerá os casais que coordenam cada Sub Grupo da Equipe do Trânsito. Cada Sub é responsável
+              por uma parte do serviço, e todos trabalham juntos para que o encontro seja um sucesso.
+            </p>
+          </div>
+          <img alt="Semáforo representativo dos Sub Grupos" src="images/semaforo.png">
+        </article>
+        <div class="team-grid">
+          <article class="team-card team-green reveal">
+            <div class="team-image"><img alt="Abraão e Sara" src="images/sub-verde.png"></div>
+            <div class="team-card-body">
+              <span class="team-label">Sub Verde 💚</span>
+              <h3>Abraão e Sara</h3>
+              <p>
+                Irmãos de sangue, e braço direito, esquerdo, cabeça, quase o corpo todo da nossa coordenação,
+                experiência e muito amor pela obra os definem.
               </p>
-</div>
-</article>
-<article class="team-card team-red reveal">
-<div class="team-image"><img alt="Kadmiel e Bia" src="images/sub-vermelho.PNG"></div>
-<div class="team-card-body">
-<span class="team-label">Sub Vermelho ❤️</span>
-<h3>Kadmiel e Bia</h3>
-<p>
+            </div>
+          </article>
+          <article class="team-card team-red reveal">
+            <div class="team-image"><img alt="Kadmiel e Bia" src="images/sub-vermelho.PNG"></div>
+            <div class="team-card-body">
+              <span class="team-label">Sub Vermelho ❤️</span>
+              <h3>Kadmiel e Bia</h3>
+              <p>
                 Recém casados, e sedentos por fazerem a obra, disposição e amor por essa equipe os trouxeram aqui!
               </p>
-</div>
-</article>
-<article class="team-card team-yellow reveal">
-<div class="team-image"><img alt="Mateus e Gabriely" src="images/sub-amarelo.PNG"></div>
-<div class="team-card-body">
-<span class="team-label">Sub Amarelo 💛</span>
-<h3>Mateus e Gabriely</h3>
-<p>
+            </div>
+          </article>
+          <article class="team-card team-yellow reveal">
+            <div class="team-image"><img alt="Mateus e Gabriely" src="images/sub-amarelo.PNG"></div>
+            <div class="team-card-body">
+              <span class="team-label">Sub Amarelo 💛</span>
+              <h3>Mateus e Gabriely</h3>
+              <p>
                 Casal mais que servidor, disponível para a obra com muito amor e coração aberto para o reino!
               </p>
-</div>
-</article>
-<article class="team-card team-orange reveal">
-<div class="team-image"><img alt="Alan e Kallyne" src="images/sub-laranja.PNG"></div>
-<div class="team-card-body">
-<span class="team-label">Sub Laranja 🧡</span>
-<h3>Alan e Kallyne</h3>
-<p>
+            </div>
+          </article>
+          <article class="team-card team-orange reveal">
+            <div class="team-image"><img alt="Alan e Kallyne" src="images/sub-laranja.PNG"></div>
+            <div class="team-card-body">
+              <span class="team-label">Sub Laranja 🧡</span>
+              <h3>Alan e Kallyne</h3>
+              <p>
                 Noivos, servos e apaixonados pela obra de Deus com jovens, responsabilidade e compromisso com o servir!
               </p>
-</div>
-</article>
-</div>
-</div>
-</section>
-<section class="section signup-section" id="inscricoes">
-<div class="container">
-<div class="section-heading reveal">
-<span class="eyebrow">Chegou a hora de se decidir!</span>
-<h2>Escolha seu Sub</h2>
-<p>Veja as vagas disponíveis, escolha seu Sub e faça sua inscrição de forma simples e organizada.</p>
-</div>
-
-<div aria-label="Subs disponíveis" class="sub-choice-grid">
-<button class="sub-choice sub-green reveal" data-capacity="50" data-sub="Verde" type="button">
-<span class="sub-badge">Sub Verde</span>
-<strong>Abraão e Sara</strong>
-<span class="sub-counter"><b data-count-for="Verde">0</b>/50 inscritos</span>
-<span class="progress"><i data-progress-for="Verde"></i></span>
-<span class="sub-button-text">Quero este Sub</span>
-</button>
-<button class="sub-choice sub-red reveal" data-capacity="50" data-sub="Vermelho" type="button">
-<span class="sub-badge">Sub Vermelho</span>
-<strong>Kadmiel e Bia</strong>
-<span class="sub-counter"><b data-count-for="Vermelho">0</b>/50 inscritos</span>
-<span class="progress"><i data-progress-for="Vermelho"></i></span>
-<span class="sub-button-text">Quero este Sub</span>
-</button>
-<button class="sub-choice sub-yellow reveal" data-capacity="50" data-sub="Amarelo" type="button">
-<span class="sub-badge">Sub Amarelo</span>
-<strong>Mateus e Gabriely</strong>
-<span class="sub-counter"><b data-count-for="Amarelo">0</b>/50 inscritos</span>
-<span class="progress"><i data-progress-for="Amarelo"></i></span>
-<span class="sub-button-text">Quero este Sub</span>
-</button>
-<button class="sub-choice sub-orange reveal" data-capacity="50" data-sub="Laranja" type="button">
-<span class="sub-badge">Sub Laranja</span>
-<strong>Alan e Kallyne</strong>
-<span class="sub-counter"><b data-count-for="Laranja">0</b>/50 inscritos</span>
-<span class="progress"><i data-progress-for="Laranja"></i></span>
-<span class="sub-button-text">Quero este Sub</span>
-</button>
-</div>
-<div class="signup-workspace reveal">
-<form class="signup-form" id="signup-form">
-        <div class="form-heading">
-          <span class="role-pill role-main"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Formulário Oficial</span>
-          <h3 id="selected-sub-title">Selecione um Sub acima</h3>
-          <p class="form-heading-desc">Preencha os dados abaixo com atenção. Os campos com asterisco (<span class="req-star">*</span>) são obrigatórios.</p>
+            </div>
+          </article>
         </div>
-        <input id="selected-sub" name="sub" type="hidden">
-
-        <!-- SEÇÃO 1: DADOS PESSOAIS & CONTATO -->
-        <div class="form-section">
-          <div class="form-section-header">
-            <div class="form-section-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div>
-            <div class="form-section-copy">
-              <h4 class="form-section-title">Dados Pessoais & Contato</h4>
-              <p class="form-section-subtitle">Identificação do participante e canais oficiais de comunicação</p>
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field field-wide">
-              <label for="full-name" class="field-label">Nome completo <span class="req-star" aria-hidden="true">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
-                <input autocomplete="name" id="full-name" name="nome_completo" placeholder="Digite seu nome completo" required="" type="text">
-              </div>
-            </div>
-            <div class="field">
-              <label for="whatsapp" class="field-label">WhatsApp <span class="req-star" aria-hidden="true">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="fa-brands fa-whatsapp input-icon" aria-hidden="true"></i>
-                <input autocomplete="tel" id="whatsapp" name="whatsapp" placeholder="(83) 99999-9999" required="" type="tel">
-              </div>
-              <span class="field-hint">Número com DDD para contato da coordenação</span>
-            </div>
-            <div class="field">
-              <label for="email" class="field-label">E-mail para comprovante <span class="req-star" aria-hidden="true">*</span></label>
-              <div class="input-icon-wrap">
-                <i class="fa-regular fa-envelope input-icon" aria-hidden="true"></i>
-                <input autocomplete="email" id="email" name="email" placeholder="seuemail@exemplo.com" required="" type="email">
-              </div>
-              <span class="field-hint">Envio automático do comprovante oficial</span>
-            </div>
-          </div>
+      </div>
+    </section>
+    <section class="section signup-section" id="inscricoes">
+      <div class="container">
+        <div class="section-heading reveal">
+          <span class="eyebrow">Chegou a hora de se decidir!</span>
+          <h2>Escolha seu Sub</h2>
+          <p>Veja as vagas disponíveis, escolha seu Sub e faça sua inscrição de forma simples e organizada.</p>
         </div>
 
-        <!-- SEÇÃO 2: CAMISA OFICIAL & PERFIL -->
-        <div class="form-section">
-          <div class="form-section-header">
-            <div class="form-section-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></div>
-            <div class="form-section-copy">
-              <h4 class="form-section-title">Camisa Oficial & Perfil</h4>
-              <p class="form-section-subtitle">Escolha o seu tamanho e nos conte um pouco sobre você</p>
+        <div aria-label="Subs disponíveis" class="sub-choice-grid">
+          <button class="sub-choice sub-green reveal" data-capacity="50" data-sub="Verde" type="button">
+            <span class="sub-badge">Sub Verde</span>
+            <strong>Abraão e Sara</strong>
+            <span class="sub-counter"><b data-count-for="Verde">0</b>/50 inscritos</span>
+            <span class="progress"><i data-progress-for="Verde"></i></span>
+            <span class="sub-button-text">Quero este Sub</span>
+          </button>
+          <button class="sub-choice sub-red reveal" data-capacity="50" data-sub="Vermelho" type="button">
+            <span class="sub-badge">Sub Vermelho</span>
+            <strong>Kadmiel e Bia</strong>
+            <span class="sub-counter"><b data-count-for="Vermelho">0</b>/50 inscritos</span>
+            <span class="progress"><i data-progress-for="Vermelho"></i></span>
+            <span class="sub-button-text">Quero este Sub</span>
+          </button>
+          <button class="sub-choice sub-yellow reveal" data-capacity="50" data-sub="Amarelo" type="button">
+            <span class="sub-badge">Sub Amarelo</span>
+            <strong>Mateus e Gabriely</strong>
+            <span class="sub-counter"><b data-count-for="Amarelo">0</b>/50 inscritos</span>
+            <span class="progress"><i data-progress-for="Amarelo"></i></span>
+            <span class="sub-button-text">Quero este Sub</span>
+          </button>
+          <button class="sub-choice sub-orange reveal" data-capacity="50" data-sub="Laranja" type="button">
+            <span class="sub-badge">Sub Laranja</span>
+            <strong>Alan e Kallyne</strong>
+            <span class="sub-counter"><b data-count-for="Laranja">0</b>/50 inscritos</span>
+            <span class="progress"><i data-progress-for="Laranja"></i></span>
+            <span class="sub-button-text">Quero este Sub</span>
+          </button>
+        </div>
+        <div class="signup-workspace reveal">
+          <form class="signup-form" id="signup-form">
+            <div class="form-heading">
+              <span class="role-pill role-main"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Formulário
+                Oficial</span>
+              <h3 id="selected-sub-title">Selecione um Sub acima</h3>
+              <p class="form-heading-desc">Preencha os dados abaixo com atenção. Os campos com asterisco (<span
+                  class="req-star">*</span>) são obrigatórios.</p>
             </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label for="shirt-size" class="field-label">Tamanho da camisa <span class="req-star" aria-hidden="true">*</span></label>
-              <div class="select-wrap">
-                <select id="shirt-size" name="tamanho_camisa" required="">
-                  <option value="">Selecione o tamanho</option>
-                  <option value="P|Tradicional">P — Tradicional</option>
-                  <option value="P|Baby Look">P — Baby Look</option>
-                  <option value="M|Tradicional">M — Tradicional</option>
-                  <option value="M|Baby Look">M — Baby Look</option>
-                  <option value="G|Tradicional">G — Tradicional</option>
-                  <option value="G|Baby Look">G — Baby Look</option>
-                  <option value="GG|Tradicional">GG — Tradicional</option>
-                  <option value="GG|Baby Look">GG — Baby Look</option>
-                  <option value="XG|Tradicional">XG — Tradicional</option>
-                  <option value="XG|Baby Look">XG — Baby Look</option>
-                  <option value="XXG|Tradicional">XXG — Tradicional</option>
-                  <option value="XXG|Baby Look">XXG — Baby Look</option>
-                  <option value="Sob medida">Sob medida</option>
-                </select>
-              </div>
-            </div>
+            <input id="selected-sub" name="sub" type="hidden">
 
-            <fieldset class="field choice-field">
-              <legend class="field-label">Vai querer mais de uma camisa? <span class="req-star" aria-hidden="true">*</span></legend>
-              <div class="segmented-choice-group" role="radiogroup" aria-label="Vai querer mais de uma camisa?">
-                <label class="segmented-choice-label">
-                  <input name="quer_camisa_adicional" required="" type="radio" value="true">
-                  <span class="segmented-choice-btn"><i class="fa-solid fa-check" aria-hidden="true"></i> Sim</span>
-                </label>
-                <label class="segmented-choice-label">
-                  <input name="quer_camisa_adicional" required="" type="radio" value="false">
-                  <span class="segmented-choice-btn"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Não</span>
-                </label>
+            <!-- SEÇÃO 1: DADOS PESSOAIS & CONTATO -->
+            <div class="form-section">
+              <div class="form-section-header">
+                <div class="form-section-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div>
+                <div class="form-section-copy">
+                  <h4 class="form-section-title">Dados Pessoais & Contato</h4>
+                  <p class="form-section-subtitle">Identificação do participante e canais oficiais de comunicação</p>
+                </div>
               </div>
-            </fieldset>
-
-            <div class="extra-shirt-fields field-wide" hidden="" id="extra-shirt-fields">
-              <div class="extra-shirt-badge">
-                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                <span><strong>Camisa adicional:</strong> O valor unitário da camisa extra será informado pela coordenação.</span>
-              </div>
-              <div class="form-grid nested-grid">
-                <div class="field">
-                  <label for="extra-shirt-quantity" class="field-label">Quantidade adicional</label>
-                  <input id="extra-shirt-quantity" inputmode="numeric" max="10" min="1" name="quantidade_camisas_adicionais" placeholder="Ex.: 1" type="number">
+              <div class="form-grid">
+                <div class="field field-wide">
+                  <label for="full-name" class="field-label">Nome completo <span class="req-star"
+                      aria-hidden="true">*</span></label>
+                  <div class="input-icon-wrap">
+                    <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
+                    <input autocomplete="name" id="full-name" name="nome_completo"
+                      placeholder="Digite seu nome completo" required="" type="text">
+                  </div>
                 </div>
                 <div class="field">
-                  <label for="extra-shirt-size" class="field-label">Tamanho da camisa adicional</label>
+                  <label for="whatsapp" class="field-label">WhatsApp <span class="req-star"
+                      aria-hidden="true">*</span></label>
+                  <div class="input-icon-wrap">
+                    <i class="fa-brands fa-whatsapp input-icon" aria-hidden="true"></i>
+                    <input autocomplete="tel" id="whatsapp" name="whatsapp" placeholder="(83) 99999-9999" required=""
+                      type="tel">
+                  </div>
+                  <span class="field-hint">Número com DDD para contato da coordenação</span>
+                </div>
+                <div class="field">
+                  <label for="email" class="field-label">E-mail para comprovante <span class="req-star"
+                      aria-hidden="true">*</span></label>
+                  <div class="input-icon-wrap">
+                    <i class="fa-regular fa-envelope input-icon" aria-hidden="true"></i>
+                    <input autocomplete="email" id="email" name="email" placeholder="seuemail@exemplo.com" required=""
+                      type="email">
+                  </div>
+                  <span class="field-hint">Envio automático do comprovante oficial</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SEÇÃO 2: CAMISA OFICIAL & PERFIL -->
+            <div class="form-section">
+              <div class="form-section-header">
+                <div class="form-section-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></div>
+                <div class="form-section-copy">
+                  <h4 class="form-section-title">Camisa Oficial & Perfil</h4>
+                  <p class="form-section-subtitle">Escolha o seu tamanho e nos conte um pouco sobre você</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="shirt-size" class="field-label">Tamanho da camisa <span class="req-star"
+                      aria-hidden="true">*</span></label>
                   <div class="select-wrap">
-                    <select id="extra-shirt-size" name="tamanho_camisa_adicional">
+                    <select id="shirt-size" name="tamanho_camisa" required="">
                       <option value="">Selecione o tamanho</option>
                       <option value="P|Tradicional">P — Tradicional</option>
                       <option value="P|Baby Look">P — Baby Look</option>
@@ -318,369 +294,487 @@
                     </select>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div class="field field-wide">
-              <label for="talent" class="field-label">Possui algum talento ou habilidade? <span class="opt-label">(opcional)</span></label>
-              <textarea id="talent" name="talento" placeholder="Ex.: dança, música, instrumentos, teatro, fotografia, artes visuais, organização..." rows="3"></textarea>
-            </div>
-
-            <div class="field field-wide">
-              <label class="field-label" for="photo">Foto para identificação e crachá <span class="req-star" aria-hidden="true">*</span></label>
-              <div class="custom-upload-zone" id="photoUploadZone">
-                <input accept="image/jpeg,image/png,image/webp" id="photo" name="foto" required="" type="file" class="sr-file-input">
-                <div class="upload-zone-content">
-                  <div class="upload-icon-circle"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i></div>
-                  <div class="upload-zone-text">
-                    <strong class="upload-zone-title" id="photoUploadTitle">Clique ou arraste para anexar sua foto</strong>
-                    <p class="upload-zone-sub" id="photoUploadSub">Formatos aceitos: JPG, PNG ou WebP (máx. 5 MB)</p>
+                <fieldset class="field choice-field">
+                  <legend class="field-label">Vai querer mais de uma camisa? <span class="req-star"
+                      aria-hidden="true">*</span></legend>
+                  <div class="segmented-choice-group" role="radiogroup" aria-label="Vai querer mais de uma camisa?">
+                    <label class="segmented-choice-label">
+                      <input name="quer_camisa_adicional" required="" type="radio" value="true">
+                      <span class="segmented-choice-btn"><i class="fa-solid fa-check" aria-hidden="true"></i> Sim</span>
+                    </label>
+                    <label class="segmented-choice-label">
+                      <input name="quer_camisa_adicional" required="" type="radio" value="false">
+                      <span class="segmented-choice-btn"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Não</span>
+                    </label>
                   </div>
-                  <span class="upload-browse-btn"><i class="fa-regular fa-image" aria-hidden="true"></i> Escolher foto</span>
+                </fieldset>
+
+                <div class="extra-shirt-fields field-wide" hidden="" id="extra-shirt-fields">
+                  <div class="extra-shirt-badge">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <span><strong>Camisa adicional:</strong> O valor unitário da camisa extra será informado pela
+                      coordenação.</span>
+                  </div>
+                  <div class="form-grid nested-grid">
+                    <div class="field">
+                      <label for="extra-shirt-quantity" class="field-label">Quantidade adicional</label>
+                      <input id="extra-shirt-quantity" inputmode="numeric" max="10" min="1"
+                        name="quantidade_camisas_adicionais" placeholder="Ex.: 1" type="number">
+                    </div>
+                    <div class="field">
+                      <label for="extra-shirt-size" class="field-label">Tamanho da camisa adicional</label>
+                      <div class="select-wrap">
+                        <select id="extra-shirt-size" name="tamanho_camisa_adicional">
+                          <option value="">Selecione o tamanho</option>
+                          <option value="P|Tradicional">P — Tradicional</option>
+                          <option value="P|Baby Look">P — Baby Look</option>
+                          <option value="M|Tradicional">M — Tradicional</option>
+                          <option value="M|Baby Look">M — Baby Look</option>
+                          <option value="G|Tradicional">G — Tradicional</option>
+                          <option value="G|Baby Look">G — Baby Look</option>
+                          <option value="GG|Tradicional">GG — Tradicional</option>
+                          <option value="GG|Baby Look">GG — Baby Look</option>
+                          <option value="XG|Tradicional">XG — Tradicional</option>
+                          <option value="XG|Baby Look">XG — Baby Look</option>
+                          <option value="XXG|Tradicional">XXG — Tradicional</option>
+                          <option value="XXG|Baby Look">XXG — Baby Look</option>
+                          <option value="Sob medida">Sob medida</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field field-wide">
+                  <label for="talent" class="field-label">Possui algum talento ou habilidade? <span
+                      class="opt-label">(opcional)</span></label>
+                  <textarea id="talent" name="talento"
+                    placeholder="Ex.: dança, música, instrumentos, teatro, fotografia, artes visuais, organização..."
+                    rows="3"></textarea>
+                </div>
+
+                <div class="field field-wide">
+                  <label class="field-label" for="photo">Foto para identificação e crachá <span class="req-star"
+                      aria-hidden="true">*</span></label>
+                  <div class="custom-upload-zone" id="photoUploadZone">
+                    <input accept="image/jpeg,image/png,image/webp" id="photo" name="foto" required="" type="file"
+                      class="sr-file-input">
+                    <div class="upload-zone-content">
+                      <div class="upload-icon-circle"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                      </div>
+                      <div class="upload-zone-text">
+                        <strong class="upload-zone-title" id="photoUploadTitle">Clique ou arraste para anexar sua
+                          foto</strong>
+                        <p class="upload-zone-sub" id="photoUploadSub">Formatos aceitos: JPG, PNG ou WebP (máx. 5 MB)
+                        </p>
+                      </div>
+                      <span class="upload-browse-btn"><i class="fa-regular fa-image" aria-hidden="true"></i> Escolher
+                        foto</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- SEÇÃO 3: PAGAMENTO DA TAXA DE INSCRIÇÃO -->
-        <div class="form-section">
-          <div class="form-section-header">
-            <div class="form-section-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></div>
-            <div class="form-section-copy">
-              <h4 class="form-section-title">Pagamento da Inscrição</h4>
-              <p class="form-section-subtitle">Escolha como deseja efetuar o pagamento da taxa da equipe</p>
-            </div>
-          </div>
-
-          <fieldset class="field field-wide choice-field payment-choice">
-            <legend class="field-label" id="paymentLegendTitle">Como você deseja pagar a taxa de inscrição (R$ 50,00)?</legend>
-            <div class="payment-cards-group">
-              <!-- Opção 1: Checkout Oficial -->
-              <label class="payment-card-option selected">
-                <span class="payment-card-radio">
-                  <input name="pagamento_informado" required="" type="radio" value="checkout" checked>
-                  <span class="custom-radio-mark" aria-hidden="true"></span>
-                </span>
-                <span class="payment-card-body">
-                  <span class="payment-card-topline">
-                    <strong class="payment-card-title">Pagar agora no Checkout Oficial</strong>
-                    <span class="payment-badge-rec"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Instantâneo</span>
-                  </span>
-                  <span class="payment-card-desc">Pix imediato com confirmação em segundos ou Cartão em até 12x.</span>
-                </span>
-              </label>
-
-              <!-- Opção 2: Já realizei o pagamento -->
-              <label class="payment-card-option">
-                <span class="payment-card-radio">
-                  <input name="pagamento_informado" required="" type="radio" value="true">
-                  <span class="custom-radio-mark" aria-hidden="true"></span>
-                </span>
-                <span class="payment-card-body">
-                  <span class="payment-card-topline">
-                    <strong class="payment-card-title">Já realizei o pagamento à coordenação</strong>
-                  </span>
-                  <span class="payment-card-desc">Informe como pagou e anexe o comprovante para conferência financeira.</span>
-                </span>
-              </label>
-
-              <!-- Opção 3: Pagar depois -->
-              <label class="payment-card-option">
-                <span class="payment-card-radio">
-                  <input name="pagamento_informado" required="" type="radio" value="false">
-                  <span class="custom-radio-mark" aria-hidden="true"></span>
-                </span>
-                <span class="payment-card-body">
-                  <span class="payment-card-topline">
-                    <strong class="payment-card-title">Vou pagar depois (Salvar inscrição pendente)</strong>
-                  </span>
-                  <span class="payment-card-desc">Sua vaga é reservada provisoriamente até o prazo limite da coordenação.</span>
-                </span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Bloco condicional para 'Já realizei' -->
-          <div class="field-wide payment-conditional-box" hidden="" id="paid-fields">
-            <fieldset class="field field-wide choice-field payment-method-choice">
-              <legend class="field-label">Como foi realizado o pagamento? <span class="req-star" aria-hidden="true">*</span></legend>
-              <div class="segmented-choice-group" role="radiogroup">
-                <label class="segmented-choice-label">
-                  <input name="forma_pagamento" type="radio" value="pix">
-                  <span class="segmented-choice-btn"><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix</span>
-                </label>
-                <label class="segmented-choice-label">
-                  <input name="forma_pagamento" type="radio" value="especie">
-                  <span class="segmented-choice-btn"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Em espécie</span>
-                </label>
+            <!-- SEÇÃO 3: PAGAMENTO DA TAXA DE INSCRIÇÃO -->
+            <div class="form-section">
+              <div class="form-section-header">
+                <div class="form-section-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></div>
+                <div class="form-section-copy">
+                  <h4 class="form-section-title">Pagamento da Inscrição</h4>
+                  <p class="form-section-subtitle">Escolha como deseja efetuar o pagamento da taxa da equipe</p>
+                </div>
               </div>
-            </fieldset>
 
-            <div hidden="" id="payment-proof-field" class="field field-wide" style="margin-top: 16px;">
-              <label class="field-label" for="payment-proof">Comprovante de pagamento <span class="req-star" aria-hidden="true">*</span> <span class="field-hint-inline">(obrigatório para Pix)</span></label>
-              <div class="custom-upload-zone custom-upload-compact" id="proofUploadZone">
-                <input accept="image/jpeg,image/png,image/webp,application/pdf" id="payment-proof" name="comprovante" type="file" class="sr-file-input">
-                <div class="upload-zone-content">
-                  <div class="upload-icon-circle"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
-                  <div class="upload-zone-text">
-                    <strong class="upload-zone-title" id="proofUploadTitle">Clique para anexar o comprovante</strong>
-                    <p class="upload-zone-sub" id="proofUploadSub">Formatos aceitos: JPG, PNG, WebP ou PDF (até 5 MB)</p>
+              <fieldset class="field field-wide choice-field payment-choice">
+                <legend class="field-label" id="paymentLegendTitle">Como você deseja pagar a taxa de inscrição (R$
+                  50,00)?</legend>
+                <div class="payment-cards-group">
+                  <!-- Opção 1: Checkout Oficial -->
+                  <label class="payment-card-option selected">
+                    <span class="payment-card-radio">
+                      <input name="pagamento_informado" required="" type="radio" value="checkout" checked>
+                      <span class="custom-radio-mark" aria-hidden="true"></span>
+                    </span>
+                    <span class="payment-card-body">
+                      <span class="payment-card-topline">
+                        <strong class="payment-card-title">Pagar agora no Checkout Oficial</strong>
+                        <span class="payment-badge-rec"><i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                          Instantâneo</span>
+                      </span>
+                      <span class="payment-card-desc">Pix imediato com confirmação em segundos ou Cartão em até
+                        12x.</span>
+                    </span>
+                  </label>
+
+                  <!-- Opção 2: Já realizei o pagamento -->
+                  <label class="payment-card-option">
+                    <span class="payment-card-radio">
+                      <input name="pagamento_informado" required="" type="radio" value="true">
+                      <span class="custom-radio-mark" aria-hidden="true"></span>
+                    </span>
+                    <span class="payment-card-body">
+                      <span class="payment-card-topline">
+                        <strong class="payment-card-title">Já realizei o pagamento à coordenação</strong>
+                      </span>
+                      <span class="payment-card-desc">Informe como pagou e anexe o comprovante para conferência
+                        financeira.</span>
+                    </span>
+                  </label>
+
+                  <!-- Opção 3: Pagar depois -->
+                  <label class="payment-card-option">
+                    <span class="payment-card-radio">
+                      <input name="pagamento_informado" required="" type="radio" value="false">
+                      <span class="custom-radio-mark" aria-hidden="true"></span>
+                    </span>
+                    <span class="payment-card-body">
+                      <span class="payment-card-topline">
+                        <strong class="payment-card-title">Vou pagar depois (Salvar inscrição pendente)</strong>
+                      </span>
+                      <span class="payment-card-desc">Sua vaga é reservada provisoriamente até o prazo limite da
+                        coordenação.</span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Bloco condicional para 'Já realizei' -->
+              <div class="field-wide payment-conditional-box" hidden="" id="paid-fields">
+                <fieldset class="field field-wide choice-field payment-method-choice">
+                  <legend class="field-label">Como foi realizado o pagamento? <span class="req-star"
+                      aria-hidden="true">*</span></legend>
+                  <div class="segmented-choice-group" role="radiogroup">
+                    <label class="segmented-choice-label">
+                      <input name="forma_pagamento" type="radio" value="pix">
+                      <span class="segmented-choice-btn"><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix</span>
+                    </label>
+                    <label class="segmented-choice-label">
+                      <input name="forma_pagamento" type="radio" value="especie">
+                      <span class="segmented-choice-btn"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+                        Em espécie</span>
+                    </label>
                   </div>
-                  <span class="upload-browse-btn"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> Anexar</span>
+                </fieldset>
+
+                <div hidden="" id="payment-proof-field" class="field field-wide" style="margin-top: 16px;">
+                  <label class="field-label" for="payment-proof">Comprovante de pagamento <span class="req-star"
+                      aria-hidden="true">*</span> <span class="field-hint-inline">(obrigatório para Pix)</span></label>
+                  <div class="custom-upload-zone custom-upload-compact" id="proofUploadZone">
+                    <input accept="image/jpeg,image/png,image/webp,application/pdf" id="payment-proof"
+                      name="comprovante" type="file" class="sr-file-input">
+                    <div class="upload-zone-content">
+                      <div class="upload-icon-circle"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
+                      <div class="upload-zone-text">
+                        <strong class="upload-zone-title" id="proofUploadTitle">Clique para anexar o
+                          comprovante</strong>
+                        <p class="upload-zone-sub" id="proofUploadSub">Formatos aceitos: JPG, PNG, WebP ou PDF (até 5
+                          MB)</p>
+                      </div>
+                      <span class="upload-browse-btn"><i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                        Anexar</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloco condicional para 'Vou pagar depois' -->
+              <div class="field field-wide payment-conditional-box" hidden="" id="payment-reason-field">
+                <label for="payment-reason" class="field-label">Justificativa ou observação <span
+                    class="opt-label">(opcional)</span></label>
+                <textarea id="payment-reason" name="justificativa_pagamento"
+                  placeholder="Conte-nos caso precise de mais prazo ou tenha alguma observação especial para a coordenação."
+                  rows="3"></textarea>
+              </div>
+
+              <!-- Aviso de inscrição pendente -->
+              <div class="pending-message-card" hidden="" id="pending-message">
+                <div class="pending-message-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
+                <div class="pending-message-body">
+                  <strong>Inscrição com Pagamento Pendente</strong>
+                  <p>Sua inscrição poderá ser concluída normalmente. Ela ficará registrada como <strong>Pagamento
+                      pendente</strong> e deverá ser quitada até a data limite estipulada pela coordenação.</p>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Bloco condicional para 'Vou pagar depois' -->
-          <div class="field field-wide payment-conditional-box" hidden="" id="payment-reason-field">
-            <label for="payment-reason" class="field-label">Justificativa ou observação <span class="opt-label">(opcional)</span></label>
-            <textarea id="payment-reason" name="justificativa_pagamento" placeholder="Conte-nos caso precise de mais prazo ou tenha alguma observação especial para a coordenação." rows="3"></textarea>
-          </div>
+            <!-- SEÇÃO 4: CONFIRMAÇÃO & ENVIO -->
+            <div class="form-section form-section-final">
+              <div class="consent-card">
+                <label class="consent-label" for="consent">
+                  <input id="consent" required="" type="checkbox" class="custom-checkbox">
+                  <span class="consent-text">
+                    Declaro estar ciente de que, ao efetuar esta inscrição, assumo o compromisso integral com o
+                    pagamento da taxa da equipe. Em caso de desistência, por qualquer motivo, não será possível a
+                    restituição do valor já investido.
+                  </span>
+                </label>
+              </div>
 
-          <!-- Aviso de inscrição pendente -->
-          <div class="pending-message-card" hidden="" id="pending-message">
-            <div class="pending-message-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
-            <div class="pending-message-body">
-              <strong>Inscrição com Pagamento Pendente</strong>
-              <p>Sua inscrição poderá ser concluída normalmente. Ela ficará registrada como <strong>Pagamento pendente</strong> e deverá ser quitada até a data limite estipulada pela coordenação.</p>
+              <div class="form-action-wrap">
+                <button class="button button-primary submit-signup" disabled="" type="submit" id="btnSubmitSignup">
+                  <span>Finalizar inscrição</span>
+                  <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
+                <p class="form-sub-reminder" id="subSelectionReminder">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> Selecione um dos 4 Subs acima para
+                  liberar o formulário.
+                </p>
+              </div>
+
+              <p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
+
+              <div class="whatsapp-success" hidden="" id="whatsapp-success">
+                <div class="success-top-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Inscrição
+                  Concluída com Sucesso!</div>
+                <p class="success-intro">Sua inscrição foi realizada com sucesso! Clique no botão abaixo para entrar no
+                  grupo geral do EJC e receber as orientações iniciais.</p>
+                <a class="button button-whatsapp" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+                  id="whatsapp-group-button" rel="noopener" target="_blank">
+                  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp
+                </a>
+                <a class="button button-primary" href="#" id="btnPayAfterSignup"
+                  style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                  <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Pagar Taxa de Inscrição no Checkout Oficial
+                </a>
+                <small class="success-disclaimer">Este é o canal geral de comunicação do evento. O acesso ao grupo
+                  específico do seu Sub será liberado após a confirmação do pagamento.</small>
+              </div>
             </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="payment-notice reveal" role="note" style="margin-top: 32px;">
+        <div class="payment-copy">
+          <span class="eyebrow">Checkout Oficial da Equipe</span>
+          <h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
+          <p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação
+            instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu
+            Sub.</p>
+          <div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+            <div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa
+                única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div>
+          </div>
+          <div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/checkout?tipo=inscricao" class="button button-primary btn-open-checkout"
+              id="btnGoToCheckoutHeader"
+              style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
+              <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
+            </a>
           </div>
         </div>
-
-        <!-- SEÇÃO 4: CONFIRMAÇÃO & ENVIO -->
-        <div class="form-section form-section-final">
-          <div class="consent-card">
-            <label class="consent-label" for="consent">
-              <input id="consent" required="" type="checkbox" class="custom-checkbox">
-              <span class="consent-text">
-                Declaro estar ciente de que, ao efetuar esta inscrição, assumo o compromisso integral com o pagamento da taxa da equipe. Em caso de desistência, por qualquer motivo, não será possível a restituição do valor já investido.
-              </span>
-            </label>
+        <figure class="pix-figure"
+          style="background: rgba(2, 50, 132, 0.06); border: 2px dashed rgba(2, 50, 132, 0.2); border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="font-size: 2.4rem; color: var(--blue); margin-bottom: 10px;">
+            <i class="fa-brands fa-pix" style="color: #32bcad; margin-right: 8px;"></i>
+            <i class="fa-solid fa-credit-card" style="color: var(--blue);"></i>
           </div>
-
-          <div class="form-action-wrap">
-            <button class="button button-primary submit-signup" disabled="" type="submit" id="btnSubmitSignup">
-              <span>Finalizar inscrição</span>
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </button>
-            <p class="form-sub-reminder" id="subSelectionReminder">
-              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> Selecione um dos 4 Subs acima para liberar o formulário.
-            </p>
-          </div>
-
-          <p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
-
-          <div class="whatsapp-success" hidden="" id="whatsapp-success">
-            <div class="success-top-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Inscrição Concluída com Sucesso!</div>
-            <p class="success-intro">Sua inscrição foi realizada com sucesso! Clique no botão abaixo para entrar no grupo geral do EJC e receber as orientações iniciais.</p>
-            <a class="button button-whatsapp" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" id="whatsapp-group-button" rel="noopener" target="_blank">
-              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp
-            </a>
-            <a class="button button-primary" href="#" id="btnPayAfterSignup" style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-              <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Pagar Taxa de Inscrição no Checkout Oficial
-            </a>
-            <small class="success-disclaimer">Este é o canal geral de comunicação do evento. O acesso ao grupo específico do seu Sub será liberado após a confirmação do pagamento.</small>
-          </div>
+          <strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout
+            Transparente</strong>
+          <p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com
+            aprovação em segundos e todas as principais bandeiras de cartão.</p>
+          <a href="/checkout?tipo=inscricao" class="btn-open-checkout" id="linkGoToCheckoutSub"
+            style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o
+            checkout &rarr;</a>
+        </figure>
+      </div>
+      </div>
+    </section>
+    <section class="section responsibilities" id="responsabilidades">
+      <div class="container">
+        <div class="section-heading section-heading-light reveal">
+          <span class="eyebrow">Nossa missão na prática</span>
+          <h2>Responsabilidades e serviços</h2>
+          <p>Cuidamos do caminho para que cada pessoa seja recebida com segurança, atenção e carinho.</p>
         </div>
-      </form>
-    </div>
-</div>
-
-<div class="payment-notice reveal" role="note" style="margin-top: 32px;">
-<div class="payment-copy">
-<span class="eyebrow">Checkout Oficial da Equipe</span>
-<h3>Pagamento Rápido e Seguro: Pix ou Cartão de Crédito</h3>
-<p>Utilize nosso <strong>Checkout Centralizado Oficial</strong> para pagar sua taxa com confirmação instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu Sub.</p>
-<div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i><div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div></div>
-<div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
-<a href="/checkout?tipo=inscricao" class="button button-primary btn-open-checkout" id="btnGoToCheckoutHeader" style="flex: 1; min-height: 48px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: .95rem;">
-  <i class="fa-solid fa-lock" aria-hidden="true"></i> Pagar Taxa no Checkout Oficial
-</a>
-</div>
-</div>
-<figure class="pix-figure" style="background: rgba(2, 50, 132, 0.06); border: 2px dashed rgba(2, 50, 132, 0.2); border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-<div style="font-size: 2.4rem; color: var(--blue); margin-bottom: 10px;">
-  <i class="fa-brands fa-pix" style="color: #32bcad; margin-right: 8px;"></i>
-  <i class="fa-solid fa-credit-card" style="color: var(--blue);"></i>
-</div>
-<strong style="font-size: 1.05rem; color: var(--blue-dark); margin-bottom: 6px;">Checkout Transparente</strong>
-<p style="font-size: .84rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4;">Aceitamos Pix com aprovação em segundos e todas as principais bandeiras de cartão.</p>
-<a href="/checkout?tipo=inscricao" class="btn-open-checkout" id="linkGoToCheckoutSub" style="color: var(--blue); font-weight: 700; font-size: .85rem; text-decoration: underline;">Ir para o checkout &rarr;</a>
-</figure>
-</div>
-</div>
-</section>
-<section class="section responsibilities" id="responsabilidades">
-<div class="container">
-<div class="section-heading section-heading-light reveal">
-<span class="eyebrow">Nossa missão na prática</span>
-<h2>Responsabilidades e serviços</h2>
-<p>Cuidamos do caminho para que cada pessoa seja recebida com segurança, atenção e carinho.</p>
-</div>
-<div class="responsibility-grid">
-<article class="responsibility-card reveal">
-<span class="responsibility-number">01</span>
-<div class="responsibility-icon">↔</div>
-<h3>Controle de acesso</h3>
-<p>Identificar e controlar o fluxo de pessoas que acessam o local do encontro, tanto na entrada quanto na saída.</p>
-</article>
-<article class="responsibility-card reveal">
-<span class="responsibility-number">02</span>
-<div class="responsibility-icon">P</div>
-<h3>Estacionamento</h3>
-<p>Organizar e vigiar o estacionamento, garantindo segurança e um bom fluxo dos veículos.</p>
-</article>
-<article class="responsibility-card reveal">
-<span class="responsibility-number">03</span>
-<div class="responsibility-icon">♥</div>
-<h3>Recepção</h3>
-<p>Recepcionar encontristas e encontreiros com atenção, organização e acolhimento.</p>
-</article>
-<article class="responsibility-card reveal">
-<span class="responsibility-number">04</span>
-<div class="responsibility-icon">⌚</div>
-<h3>Orientação às famílias</h3>
-<p>Direcionar os pais adotivos quanto aos horários de chegada e saída dos filhos.</p>
-</article>
-<article class="responsibility-card responsibility-wide reveal">
-<span class="responsibility-number">05</span>
-<div class="responsibility-icon">ID</div>
-<h3>Entrega de crachás</h3>
-<p>
+        <div class="responsibility-grid">
+          <article class="responsibility-card reveal">
+            <span class="responsibility-number">01</span>
+            <div class="responsibility-icon">↔</div>
+            <h3>Controle de acesso</h3>
+            <p>Identificar e controlar o fluxo de pessoas que acessam o local do encontro, tanto na entrada quanto na
+              saída.</p>
+          </article>
+          <article class="responsibility-card reveal">
+            <span class="responsibility-number">02</span>
+            <div class="responsibility-icon">P</div>
+            <h3>Estacionamento</h3>
+            <p>Organizar e vigiar o estacionamento, garantindo segurança e um bom fluxo dos veículos.</p>
+          </article>
+          <article class="responsibility-card reveal">
+            <span class="responsibility-number">03</span>
+            <div class="responsibility-icon">♥</div>
+            <h3>Recepção</h3>
+            <p>Recepcionar encontristas e encontreiros com atenção, organização e acolhimento.</p>
+          </article>
+          <article class="responsibility-card reveal">
+            <span class="responsibility-number">04</span>
+            <div class="responsibility-icon">⌚</div>
+            <h3>Orientação às famílias</h3>
+            <p>Direcionar os pais adotivos quanto aos horários de chegada e saída dos filhos.</p>
+          </article>
+          <article class="responsibility-card responsibility-wide reveal">
+            <span class="responsibility-number">05</span>
+            <div class="responsibility-icon">ID</div>
+            <h3>Entrega de crachás</h3>
+            <p>
               Conduzir os encontristas até a equipe de recepção para a entrega dos crachás,
               garantindo que todos recebam sua identificação.
             </p>
-</article>
-</div>
-</div>
-</section>
-<section class="section contribution" id="contribuicao">
-<div class="container contribution-grid">
-<div class="contribution-copy reveal">
-<span class="eyebrow">Organização financeira</span>
-<h2>Contribuição da equipe</h2>
-<p>
+          </article>
+        </div>
+      </div>
+    </section>
+    <section class="section contribution" id="contribuicao">
+      <div class="container contribution-grid">
+        <div class="contribution-copy reveal">
+          <span class="eyebrow">Organização financeira</span>
+          <h2>Contribuição da equipe</h2>
+          <p>
             Cada contribuição nos ajuda a preparar o encontro com cuidado, antecedência e excelência.
           </p>
-<div class="notice">
-<strong>Importante</strong>
-<p>
+          <div class="notice">
+            <strong>Importante</strong>
+            <p>
               Pedimos que a contribuição seja realizada assim que possível. Quanto antes recebermos os valores,
               mais cedo poderemos encomendar, comprar e organizar todos os detalhes.
             </p>
-</div>
-</div>
-<div class="fee-area reveal">
-<div class="fee-card fee-primary">
-<span id="feeLotBadge">Taxa da equipe</span>
-<strong id="mainFeePriceDisplay">R$ 50,00</strong>
-<small>Materiais e organização da Equipe do Trânsito</small>
-<div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até 15 dias antes do encontro</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela coordenação.</small></div>
-<a href="/checkout?tipo=inscricao" class="button button-light" id="btnPayFeeSection" style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar Taxa no Checkout Oficial</a>
-</div>
-<div class="expense-card contribution-interactive-card">
-<div class="contribution-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-  <div class="form-section-icon" style="width: 40px; height: 40px; font-size: 1.05rem; flex: 0 0 40px; border-radius: 12px;"><i class="fa-solid fa-heart-circle-plus" aria-hidden="true"></i></div>
-  <div>
-    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-main);">Fazer uma contribuição avulsa</h3>
-    <p style="color: var(--text-muted); margin: 2px 0 0; font-size: .84rem;">Apoie a Equipe do Trânsito com qualquer valor no Checkout Oficial</p>
-  </div>
-</div>
-<div class="preset-values">
-<button type="button" class="preset-val-btn active" data-val="25">R$ 25</button>
-<button type="button" class="preset-val-btn" data-val="50">R$ 50</button>
-<button type="button" class="preset-val-btn" data-val="100">R$ 100</button>
-</div>
-<div class="field" style="margin: 14px 0;">
-<label for="customContributeValue" class="field-label">Ou digite outro valor (R$):</label>
-<div class="input-icon-wrap" style="position: relative;">
-  <span aria-hidden="true" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-muted); font-size: .86rem; pointer-events: none;">R$</span>
-  <input type="number" id="customContributeValue" min="1" step="any" placeholder="35,00" style="padding-left: 42px;">
-</div>
-</div>
-<div class="field" style="margin-bottom: 16px;">
-<label for="contributorName" class="field-label">Seu nome <span class="opt-label">(opcional)</span>:</label>
-<div class="input-icon-wrap">
-  <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
-  <input type="text" id="contributorName" placeholder="Ex.: Maria Silva">
-</div>
-</div>
-<button type="button" class="button button-primary" id="btnSubmitContributionCheckout" style="width: 100%; min-height: 50px;">
-  <span>Ir para o Checkout Seguro</span>
-  <i class="fa-solid fa-shield-halved" style="margin-left: 8px;"></i>
-</button>
-</div>
-<div class="expense-card">
-<h3>Para que será utilizado?</h3>
-<ul>
-<li>Camisas da equipe</li>
-<li>Doces, balas e lembrancinhas</li>
-<li>Lanche da equipe</li>
-<li>Decoração, quando possível</li>
-<li>Cartões de boas-vindas</li>
-<li>Pilhas e materiais de apoio</li>
-</ul>
-</div>
-</div></div></section>
-<section class="section calendar-section" id="calendario">
-<div class="container calendar-grid">
-<div class="calendar-copy reveal">
-<span class="eyebrow">Datas importantes</span>
-<h2>Calendário do EJC</h2>
-<p>
+          </div>
+        </div>
+        <div class="fee-area reveal">
+          <div class="fee-card fee-primary">
+            <span id="feeLotBadge">Taxa da equipe</span>
+            <strong id="mainFeePriceDisplay">R$ 50,00</strong>
+            <small>Materiais e organização da Equipe do Trânsito</small>
+            <div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até 15 dias antes do
+                encontro</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela
+                coordenação.</small></div>
+            <a href="/checkout?tipo=inscricao" class="button button-light" id="btnPayFeeSection"
+              style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar
+              Taxa no Checkout Oficial</a>
+          </div>
+          <div class="expense-card contribution-interactive-card">
+            <div class="contribution-card-header"
+              style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+              <div class="form-section-icon"
+                style="width: 40px; height: 40px; font-size: 1.05rem; flex: 0 0 40px; border-radius: 12px;"><i
+                  class="fa-solid fa-heart-circle-plus" aria-hidden="true"></i></div>
+              <div>
+                <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-main);">Fazer uma contribuição avulsa</h3>
+                <p style="color: var(--text-muted); margin: 2px 0 0; font-size: .84rem;">Apoie a Equipe do Trânsito com
+                  qualquer valor no Checkout Oficial</p>
+              </div>
+            </div>
+            <div class="preset-values">
+              <button type="button" class="preset-val-btn active" data-val="25">R$ 25</button>
+              <button type="button" class="preset-val-btn" data-val="50">R$ 50</button>
+              <button type="button" class="preset-val-btn" data-val="100">R$ 100</button>
+            </div>
+            <div class="field" style="margin: 14px 0;">
+              <label for="customContributeValue" class="field-label">Ou digite outro valor (R$):</label>
+              <div class="input-icon-wrap" style="position: relative;">
+                <span aria-hidden="true"
+                  style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-muted); font-size: .86rem; pointer-events: none;">R$</span>
+                <input type="number" id="customContributeValue" min="1" step="any" placeholder="35,00"
+                  style="padding-left: 42px;">
+              </div>
+            </div>
+            <div class="field" style="margin-bottom: 16px;">
+              <label for="contributorName" class="field-label">Seu nome <span
+                  class="opt-label">(opcional)</span>:</label>
+              <div class="input-icon-wrap">
+                <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
+                <input type="text" id="contributorName" placeholder="Ex.: Maria Silva">
+              </div>
+            </div>
+            <button type="button" class="button button-primary" id="btnSubmitContributionCheckout"
+              style="width: 100%; min-height: 50px;">
+              <span>Ir para o Checkout Seguro</span>
+              <i class="fa-solid fa-shield-halved" style="margin-left: 8px;"></i>
+            </button>
+          </div>
+          <div class="expense-card">
+            <h3>Para que será utilizado?</h3>
+            <ul>
+              <li>Camisas da equipe</li>
+              <li>Doces, balas e lembrancinhas</li>
+              <li>Lanche da equipe</li>
+              <li>Decoração, quando possível</li>
+              <li>Cartões de boas-vindas</li>
+              <li>Pilhas e materiais de apoio</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section calendar-section" id="calendario">
+      <div class="container calendar-grid">
+        <div class="calendar-copy reveal">
+          <span class="eyebrow">Datas importantes</span>
+          <h2>Calendário do EJC</h2>
+          <p>
             Acompanhe as reuniões, o culto de entrega e os dias do encontro.
             Toque na imagem para ampliar.
           </p>
-</div>
-<button aria-label="Ampliar o calendário exibido" class="calendar-card reveal" type="button">
-<div aria-live="polite" class="calendar-slides">
-<img alt="Calendário do EJC com datas das reuniões, culto de entrega e encontro" class="calendar-slide active" src="images/calendario-reunioes.png">
-</div>
-<span>Toque para ampliar</span>
-</button>
-</div>
-</section>
-<section class="section social-section">
-<div class="container social-card reveal">
-<div>
-<span class="eyebrow">Fique por dentro</span>
-<h2>Estamos juntos nessa missão.</h2>
-<p>Entre no grupo da equipe e acompanhe também a igreja no Instagram.</p>
-</div>
-<div class="social-actions">
-<a class="button button-light" href="#inscricoes">Inscreva-se para receber o acesso</a>
-<a class="button button-outline-light" href="https://www.instagram.com/montesiaosede/" rel="noopener" target="_blank">@montesiaosede</a>
-</div>
-</div>
-</section>
-</main>
-<footer class="site-footer">
-<div class="container footer-grid">
-<img alt="Logo EJC Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
-<div>
-<strong>EJC — Equipe do Trânsito</strong>
-<p>IEAD Monte Sião</p>
-</div>
-<div class="footer-access">
-<p class="footer-signature">Feito com amor para servir ao Reino. ❤️</p>
-<a aria-label="Acessar a área administrativa" class="admin-access-link" href="/admin/">🔒 Área administrativa</a>
-</div>
-</div>
-</footer>
-<a aria-label="Entrar no grupo geral do WhatsApp" class="whatsapp-float" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener" target="_blank"><i aria-hidden="true" class="fa-brands fa-whatsapp"></i></a>
-<button aria-label="Voltar ao topo" class="back-to-top" type="button">↑</button>
-<dialog class="image-modal">
-<button aria-label="Fechar imagem" class="modal-close" type="button">×</button>
-<img alt="Calendário do EJC com datas das reuniões, culto de entrega e encontro" src="images/calendario-reunioes.png">
-</dialog>
+        </div>
+        <button aria-label="Ampliar o calendário exibido" class="calendar-card reveal" type="button">
+          <div aria-live="polite" class="calendar-slides">
+            <img alt="Calendário do EJC com datas das reuniões, culto de entrega e encontro"
+              class="calendar-slide active" src="images/calendario-reunioes.png">
+          </div>
+          <span>Toque para ampliar</span>
+        </button>
+      </div>
+    </section>
+    <section class="section social-section">
+      <div class="container social-card reveal">
+        <div>
+          <span class="eyebrow">Fique por dentro</span>
+          <h2>Estamos juntos nessa missão.</h2>
+          <p>Entre no grupo da equipe e acompanhe também a igreja no Instagram.</p>
+        </div>
+        <div class="social-actions">
+          <a class="button button-light" href="#inscricoes">Inscreva-se para receber o acesso</a>
+          <a class="button button-outline-light" href="https://www.instagram.com/montesiaosede/" rel="noopener"
+            target="_blank">@montesiaosede</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <img alt="Logo EJC Equipe do Trânsito" src="images/10 EJC MONTE SIÃO2.png?v=2"
+        data-logo-light="images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="images/10 EJC MONTE SIÃO.png?v=2">
+      <div>
+        <strong>EJC — Equipe do Trânsito</strong>
+        <p>IEAD Monte Sião</p>
+      </div>
+      <div class="footer-access">
+        <p class="footer-signature">Feito com amor para servir ao Reino. ❤️</p>
+        <a aria-label="Acessar a área administrativa" class="admin-access-link" href="/admin/">🔒 Área
+          administrativa</a>
+      </div>
+    </div>
+  </footer>
+  <a aria-label="Entrar no grupo geral do WhatsApp" class="whatsapp-float"
+    href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener" target="_blank"><i
+      aria-hidden="true" class="fa-brands fa-whatsapp"></i></a>
+  <button aria-label="Voltar ao topo" class="back-to-top" type="button">↑</button>
+  <dialog class="image-modal">
+    <button aria-label="Fechar imagem" class="modal-close" type="button">×</button>
+    <img alt="Calendário do EJC com datas das reuniões, culto de entrega e encontro"
+      src="images/calendario-reunioes.png">
+  </dialog>
 
-<script src="js/theme.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/env-config.js"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/script.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env-config.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/script.js"></script>
 
 
-</body></html>
+</body>
+
+</html>
