@@ -8,7 +8,7 @@
       var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       var t = s || (d ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", t);
-      var iconHref = t === "dark" ? "../images/10 EJC MONTE SIÃO.png?v=2" : "../images/10 EJC MONTE SIÃO2.png?v=2";
+      var iconHref = t === "dark" ? "../images/favicon-dark.png?v=2" : "../images/favicon.png?v=2";
       var l = document.querySelector('link[rel="icon"]');
       if (l) { l.href = iconHref; }
     } catch(e) {}
@@ -18,8 +18,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#023284">
   <title>EJC | Painel Administrativo & Gestão de Pagamentos</title>
-  <link rel="icon" type="image/png" href="../images/10 EJC MONTE SIÃO2.png?v=2" id="favicon-link">
-  <link rel="apple-touch-icon" href="../images/10 EJC MONTE SIÃO2.png?v=2">
+  <link rel="icon" type="image/png" href="../images/favicon.png?v=2" id="favicon-link">
+  <link rel="apple-touch-icon" href="../images/favicon.png?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -90,6 +90,10 @@
           <span>Sub Amarelo</span>
           <strong id="statSubAmarelo">0 / 50</strong>
         </div>
+        <div class="stat-box" style="border-left-color: #f97316;">
+          <span>Sub Laranja</span>
+          <strong id="statSubLaranja">0 / 50</strong>
+        </div>
         <div class="stat-box blue">
           <span>Sub Azul</span>
           <strong id="statSubAzul">0 / 50</strong>
@@ -132,6 +136,7 @@
               <option value="Verde">Sub Verde</option>
               <option value="Vermelho">Sub Vermelho</option>
               <option value="Amarelo">Sub Amarelo</option>
+              <option value="Laranja">Sub Laranja</option>
               <option value="Azul">Sub Azul</option>
             </select>
             <select id="statusFilter">
@@ -643,8 +648,9 @@
       "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
       "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
       "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+      "Laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
       "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
-      "Geral": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0"
+      "Geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
     };
 
     let activeModalTxid = null;
@@ -838,7 +844,7 @@
     }
 
     function renderizarEstatisticas() {
-      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Azul: 0 };
+      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, Azul: 0 };
       inscricoesData.forEach(item => {
         if (subs[item.sub] !== undefined) subs[item.sub]++;
       });
@@ -847,6 +853,7 @@
       document.getElementById("statSubVerde").textContent = `${subs.Verde} / 50`;
       document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 50`;
       document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 50`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 50`;
       document.getElementById("statSubAzul").textContent = `${subs.Azul} / 50`;
 
       // Cálculos financeiros
@@ -996,7 +1003,7 @@
 
     function renderizarPainelWhatsApp() {
       const grid = document.getElementById("wppSettingsGrid");
-      const subs = ["Verde", "Vermelho", "Amarelo", "Azul", "Geral"];
+      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul", "Geral"];
 
       grid.innerHTML = subs.map(sub => `
         <div class="wpp-setting-card">
@@ -1012,7 +1019,7 @@
 
     // Salvar links de WhatsApp com persistência real no servidor
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
-      const subs = ["Verde", "Vermelho", "Amarelo", "Azul", "Geral"];
+      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul", "Geral"];
       subs.forEach(sub => {
         const input = document.getElementById(`wppLink_${sub}`);
         if (input && input.value) {

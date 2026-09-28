@@ -20,6 +20,7 @@ const SUB_COLORS = {
   "Verde": { bg: "#ecfdf5", border: "#10b981", text: "#065f46", badge: "#10b981" },
   "Vermelho": { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#ef4444" },
   "Amarelo": { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#f59e0b" },
+  "Laranja": { bg: "#fff7ed", border: "#f97316", text: "#9a3412", badge: "#f97316" },
   "Azul": { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af", badge: "#3b82f6" },
   "Geral": { bg: "#f8fafc", border: "#64748b", text: "#334155", badge: "#64748b" }
 };

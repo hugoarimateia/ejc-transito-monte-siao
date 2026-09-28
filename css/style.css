@@ -380,10 +380,13 @@ button { font: inherit; }
 .team-red { border-top: 6px solid #e8333e; }
 .team-yellow { border-top: 6px solid #e9dd3c; }
 .team-blue { border-top: 6px solid #2778d4; }
+.team-orange { border-top: 6px solid #f97316; }
 .team-green .team-label { color: #137442; background: #e5f8ee; }
 .team-red .team-label { color: #a61f29; background: #ffeaec; }
 .team-yellow .team-label { color: #ebd93d; background: #ffffda; }
 .team-blue .team-label { color: #1755a0; background: #e6f0ff; }
+.team-orange .team-label { color: #c2410c; background: #fff7ed; }
+[data-theme="dark"] .team-orange .team-label { color: #fdba74; background: rgba(249, 115, 22, 0.2); }
 
 .responsibilities {
   position: relative;
@@ -839,7 +842,7 @@ button { font: inherit; }
 .sub-choice::before { content:""; position:absolute; inset:0 auto 0 0; width:6px; background:var(--sub-color); }
 .sub-choice:hover,.sub-choice.selected { transform:translateY(-4px); border-color:var(--sub-color); box-shadow:0 20px 40px rgba(20,34,86,.13); }
 .sub-choice.selected { outline:3px solid color-mix(in srgb, var(--sub-color) 22%, transparent); }
-.sub-green { --sub-color:#25a55f; } .sub-red { --sub-color:#e83441; } .sub-yellow { --sub-color:#e9dd3c; } .sub-blue { --sub-color:#2675d8; }
+.sub-green { --sub-color:#25a55f; } .sub-red { --sub-color:#e83441; } .sub-yellow { --sub-color:#e9dd3c; } .sub-blue { --sub-color:#2675d8; } .sub-orange { --sub-color:#f97316; }
 .sub-badge { display:inline-flex; margin-bottom:15px; padding:7px 11px; border-radius:999px; background:color-mix(in srgb, var(--sub-color) 12%, white); color:var(--sub-color); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
 .sub-choice strong,.sub-counter,.sub-button-text { display:block; }
 .sub-choice strong { min-height:48px; font-size:1.05rem; }
@@ -2786,6 +2789,7 @@ button { font: inherit; }
 .sub-tag.Vermelho { background: rgba(232, 52, 65, 0.18); color: #f87171; }
 .sub-tag.Amarelo { background: rgba(252, 192, 2, 0.18); color: #eab308; }
 .sub-tag.Azul { background: rgba(8, 125, 249, 0.18); color: #60a5fa; }
+.sub-tag.Laranja { background: rgba(249, 115, 22, 0.18); color: #fb923c; }
 .action-btn {
   padding: 6px 11px;
   border: none;

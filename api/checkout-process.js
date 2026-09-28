@@ -863,7 +863,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
 
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
     let subFinal = null;
 
     if (tipo === "inscricao") {

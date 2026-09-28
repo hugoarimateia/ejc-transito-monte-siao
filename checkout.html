@@ -8,7 +8,7 @@
       var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       var t = s || (d ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", t);
-      var iconHref = t === "dark" ? "images/10 EJC MONTE SIÃO.png?v=2" : "images/10 EJC MONTE SIÃO2.png?v=2";
+      var iconHref = t === "dark" ? "images/favicon-dark.png?v=2" : "images/favicon.png?v=2";
       var l = document.querySelector('link[rel="icon"]');
       if (l) { l.href = iconHref; }
     } catch(e) {}
@@ -19,8 +19,8 @@
   <meta name="theme-color" content="#023284">
   <meta name="description" content="Checkout Oficial do EJC - Equipe do Trânsito. Pagamento seguro de inscrição e contribuição via Pix e Cartão de Crédito.">
   <title>Checkout Seguro | EJC Equipe do Trânsito</title>
-  <link rel="icon" type="image/png" href="images/10 EJC MONTE SIÃO2.png?v=2" id="favicon-link">
-  <link rel="apple-touch-icon" href="images/10 EJC MONTE SIÃO2.png?v=2">
+  <link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
+  <link rel="apple-touch-icon" href="images/favicon.png?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -222,6 +222,11 @@
       color: #2563eb !important;
       border: 1px solid rgba(38, 117, 216, 0.3) !important;
     }
+    .event-tag.sub-laranja, .sub-badge-laranja {
+      background: rgba(249, 115, 22, 0.15) !important;
+      color: #ea580c !important;
+      border: 1px solid rgba(249, 115, 22, 0.3) !important;
+    }
 
     .sub-selection-flow-box {
       margin-bottom: 22px;
@@ -353,6 +358,11 @@
       border-color: #2675d8;
       background: rgba(38, 117, 216, 0.08);
       color: #2563eb;
+    }
+    .checkout-sub-btn.sub-btn-laranja:hover, .checkout-sub-btn.sub-btn-laranja.active {
+      border-color: #f97316;
+      background: rgba(249, 115, 22, 0.08);
+      color: #ea580c;
     }
     .sub-radio-indicator {
       width: 14px;
@@ -602,9 +612,9 @@
                     <span class="sub-radio-indicator"></span>
                     <span class="sub-btn-title">Sub Amarelo</span>
                   </button>
-                  <button type="button" class="checkout-sub-btn sub-btn-azul" data-sub="Azul">
+                  <button type="button" class="checkout-sub-btn sub-btn-laranja" data-sub="Laranja">
                     <span class="sub-radio-indicator"></span>
-                    <span class="sub-btn-title">Sub Azul</span>
+                    <span class="sub-btn-title">Sub Laranja</span>
                   </button>
                 </div>
                 <div style="margin-top: 10px; font-size: .84rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
@@ -907,7 +917,7 @@
     // ==============================================================================
     const urlParams = new URLSearchParams(window.location.search);
     const tipoCheckout = urlParams.get("tipo") || "inscricao";
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
 
     // Determinação inicial do Sub (Sem fallback automático para Verde!)
     let rawSub = (urlParams.get("sub") || "").trim();

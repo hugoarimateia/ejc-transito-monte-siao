@@ -78,8 +78,8 @@
     const isDark = theme === "dark";
     const isSubdir = window.location.pathname.includes("/admin");
     const prefix = isSubdir ? "../images/" : "images/";
-    const lightFavicon = prefix + "10 EJC MONTE SIÃO2.png?v=2";
-    const darkFavicon = prefix + "10 EJC MONTE SIÃO.png?v=2";
+    const lightFavicon = prefix + "favicon.png?v=2";
+    const darkFavicon = prefix + "favicon-dark.png?v=2";
     const targetFavicon = isDark ? darkFavicon : lightFavicon;
 
     // 1. Atualiza ou cria favicon padrão <link rel="icon">

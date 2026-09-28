@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
 
     const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id, sub } = req.body || {};
 
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
     let subFinal = null;
 
     let valorNumerico;

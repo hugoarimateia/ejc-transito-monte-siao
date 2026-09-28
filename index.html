@@ -6,7 +6,7 @@
     var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
     var t = s || (d ? "dark" : "light");
     document.documentElement.setAttribute("data-theme", t);
-    var iconHref = t === "dark" ? "images/10 EJC MONTE SIÃO.png?v=2" : "images/10 EJC MONTE SIÃO2.png?v=2";
+    var iconHref = t === "dark" ? "images/favicon-dark.png?v=2" : "images/favicon.png?v=2";
     var l = document.querySelector('link[rel="icon"]');
     if (l) { l.href = iconHref; }
   } catch(e) {}
@@ -17,8 +17,8 @@
 <meta content="#282b30" name="theme-color">
 <meta content="Site oficial da Equipe do Trânsito do EJC da II Igreja Evangélica Congregacional." name="description">
 <title>EJC | Equipe do Trânsito</title>
-<link rel="icon" type="image/png" href="images/10 EJC MONTE SIÃO2.png?v=2" id="favicon-link">
-<link rel="apple-touch-icon" href="images/10 EJC MONTE SIÃO2.png?v=2">
+<link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
+<link rel="apple-touch-icon" href="images/favicon.png?v=2">
 <link href="https://fonts.googleapis.com" rel="preconnect">
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -91,7 +91,7 @@
 </div>
 <article class="featured-person reveal">
 <div class="featured-photo">
-<img alt="Clébinho e Priscila, coordenadores da Equipe do Trânsito" src="images/clebinho-priscila.jpg">
+<img alt="Clébinho e Priscila, coordenadores da Equipe do Trânsito" src="images/clebinho-priscila.jpeg">
 </div>
 <div class="featured-copy">
 <span class="role-pill role-main">Coordenação</span>
@@ -116,42 +116,42 @@
 </article>
 <div class="team-grid">
 <article class="team-card team-green reveal">
-<div class="team-image"><img alt="Miquéias e Geisila" src="images/sub-verde.jpg"></div>
+<div class="team-image"><img alt="Abraão e Sara" src="images/sub-verde.png"></div>
 <div class="team-card-body">
 <span class="team-label">Sub Verde 💚</span>
-<h3>Miquéias e Geisila</h3>
+<h3>Abraão e Sara</h3>
 <p>
-                Comunicação clara, dinamismo e acolhimento vibrante para orientar e conduzir com segurança e amor em cada momento do encontro.
+                Irmãos de sangue, e braço direito, esquerdo, cabeça, quase o corpo todo da nossa coordenação, experiência e muito amor pela obra os definem.
               </p>
 </div>
 </article>
 <article class="team-card team-red reveal">
-<div class="team-image"><img alt="Kadmiel e Bia" src="images/sub-vermelho.jpg"></div>
+<div class="team-image"><img alt="Kadmiel e Bia" src="images/sub-vermelho.PNG"></div>
 <div class="team-card-body">
 <span class="team-label">Sub Vermelho ❤️</span>
 <h3>Kadmiel e Bia</h3>
 <p>
-                Atenção redobrada, prontidão constante e cuidado com o fluxo de veículos e recepção afetuosa dos encontristas e famílias.
+                Recém casados, e sedentos por fazerem a obra, disposição e amor por essa equipe os trouxeram aqui!
               </p>
 </div>
 </article>
 <article class="team-card team-yellow reveal">
-<div class="team-image"><img alt="Abraão e Sara" src="images/sub-amarelo.jpg"></div>
+<div class="team-image"><img alt="Mateus e Gabriely" src="images/sub-amarelo.PNG"></div>
 <div class="team-card-body">
 <span class="team-label">Sub Amarelo 💛</span>
-<h3>Abraão e Sara</h3>
+<h3>Mateus e Gabriely</h3>
 <p>
-                Organização exemplar, pontualidade e dedicação nos pontos estratégicos de tráfego, estacionamento e suporte às equipes.
+                Casal mais que servidor, disponível para a obra com muito amor e coração aberto para o reino!
               </p>
 </div>
 </article>
-<article class="team-card team-blue reveal">
-<div class="team-image"><img alt="Déborah e Gabriel" src="images/sub-azul.jpg"></div>
+<article class="team-card team-orange reveal">
+<div class="team-image"><img alt="Alan e Kallyne" src="images/sub-laranja.PNG"></div>
 <div class="team-card-body">
-<span class="team-label">Sub Azul 💙</span>
-<h3>Déborah e Gabriel</h3>
+<span class="team-label">Sub Laranja 🧡</span>
+<h3>Alan e Kallyne</h3>
 <p>
-                Firmeza, organização e alegria contagiante no apoio ao trânsito para que cada jovem sinta o carinho de Deus desde a chegada.
+                Noivos, servos e apaixonados pela obra de Deus com jovens, responsabilidade e compromisso com o servir!
               </p>
 </div>
 </article>
@@ -169,7 +169,7 @@
 <div aria-label="Subs disponíveis" class="sub-choice-grid">
 <button class="sub-choice sub-green reveal" data-capacity="50" data-sub="Verde" type="button">
 <span class="sub-badge">Sub Verde</span>
-<strong>Miquéias e Geisila</strong>
+<strong>Abraão e Sara</strong>
 <span class="sub-counter"><b data-count-for="Verde">0</b>/50 inscritos</span>
 <span class="progress"><i data-progress-for="Verde"></i></span>
 <span class="sub-button-text">Quero este Sub</span>
@@ -183,16 +183,16 @@
 </button>
 <button class="sub-choice sub-yellow reveal" data-capacity="50" data-sub="Amarelo" type="button">
 <span class="sub-badge">Sub Amarelo</span>
-<strong>Abraão e Sara</strong>
+<strong>Mateus e Gabriely</strong>
 <span class="sub-counter"><b data-count-for="Amarelo">0</b>/50 inscritos</span>
 <span class="progress"><i data-progress-for="Amarelo"></i></span>
 <span class="sub-button-text">Quero este Sub</span>
 </button>
-<button class="sub-choice sub-blue reveal" data-capacity="50" data-sub="Azul" type="button">
-<span class="sub-badge">Sub Azul</span>
-<strong>Déborah e Gabriel</strong>
-<span class="sub-counter"><b data-count-for="Azul">0</b>/50 inscritos</span>
-<span class="progress"><i data-progress-for="Azul"></i></span>
+<button class="sub-choice sub-orange reveal" data-capacity="50" data-sub="Laranja" type="button">
+<span class="sub-badge">Sub Laranja</span>
+<strong>Alan e Kallyne</strong>
+<span class="sub-counter"><b data-count-for="Laranja">0</b>/50 inscritos</span>
+<span class="progress"><i data-progress-for="Laranja"></i></span>
 <span class="sub-button-text">Quero este Sub</span>
 </button>
 </div>

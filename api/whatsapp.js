@@ -7,6 +7,7 @@ const SUB_GROUPS = {
   "Verde": process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
   "Vermelho": process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
   "Amarelo": process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+  "Laranja": process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
   "Azul": process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
   "Geral": process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
 };

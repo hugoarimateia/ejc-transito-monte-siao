@@ -25,6 +25,7 @@ window.EJC_WHATSAPP_SUBS = {
   "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
   "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
   "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+  "Laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
   "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
   "Geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
 };

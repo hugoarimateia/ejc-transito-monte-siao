@@ -39,4 +39,5 @@ desktop.ini
 
 # Scratch & Temporary test scripts
 scratch/
-
+*token*.txt
+*.secret

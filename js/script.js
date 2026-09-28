@@ -235,7 +235,7 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
 
 // Contagem resiliente de vagas por Sub
 async function updateSubCounts() {
-  let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Azul: 0 };
+  let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, Azul: 0 };
   let remoteLoaded = false;
 
   if (supabaseClient) {
