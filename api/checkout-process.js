@@ -863,12 +863,13 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "E-mail válido e obrigatório para envio do comprovante." });
     }
 
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja"];
     let subFinal = null;
 
     if (tipo === "inscricao") {
       // 1. Validação obrigatória de Sub: NÃO permitir null, vazio ou omitido, nem fallback automático para Verde!
-      const rawSub = sub ? String(sub).trim() : "";
+      let rawSub = sub ? String(sub).trim() : "";
+      if (rawSub.toLowerCase() === "azul") rawSub = "Laranja";
       const matchedSub = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
       if (!matchedSub) {
         return res.status(400).json({

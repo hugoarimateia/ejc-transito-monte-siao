@@ -90,13 +90,9 @@
           <span>Sub Amarelo</span>
           <strong id="statSubAmarelo">0 / 50</strong>
         </div>
-        <div class="stat-box" style="border-left-color: #f97316;">
+        <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
           <strong id="statSubLaranja">0 / 50</strong>
-        </div>
-        <div class="stat-box blue">
-          <span>Sub Azul</span>
-          <strong id="statSubAzul">0 / 50</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -137,7 +133,6 @@
               <option value="Vermelho">Sub Vermelho</option>
               <option value="Amarelo">Sub Amarelo</option>
               <option value="Laranja">Sub Laranja</option>
-              <option value="Azul">Sub Azul</option>
             </select>
             <select id="statusFilter">
               <option value="">Todos os Status</option>
@@ -649,7 +644,6 @@
       "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
       "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
       "Laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-      "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
       "Geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
     };
 
@@ -844,9 +838,10 @@
     }
 
     function renderizarEstatisticas() {
-      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, Azul: 0 };
+      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
       inscricoesData.forEach(item => {
-        if (subs[item.sub] !== undefined) subs[item.sub]++;
+        const s = (item.sub === "Azul") ? "Laranja" : item.sub;
+        if (subs[s] !== undefined) subs[s]++;
       });
 
       document.getElementById("statTotalInscritos").textContent = inscricoesData.length;
@@ -854,7 +849,6 @@
       document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 50`;
       document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 50`;
       if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 50`;
-      document.getElementById("statSubAzul").textContent = `${subs.Azul} / 50`;
 
       // Cálculos financeiros
       let totalGeral = 0;
@@ -888,7 +882,8 @@
         const matchSearch = (item.nome_completo || "").toLowerCase().includes(search) ||
           (item.whatsapp || "").includes(search) ||
           (item.email || "").toLowerCase().includes(search);
-        const matchSub = !subFilter || item.sub === subFilter;
+        const itemSubNorm = (item.sub === "Azul") ? "Laranja" : item.sub;
+        const matchSub = !subFilter || itemSubNorm === subFilter;
         const matchStatus = !statusFilter || item.pagamento_status === statusFilter;
         return matchSearch && matchSub && matchStatus;
       });
@@ -898,14 +893,16 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map(item => `
+      tbody.innerHTML = filtered.map(item => {
+        const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
+        return `
         <tr>
           <td>${new Date(item.criado_em || Date.now()).toLocaleDateString("pt-BR")}</td>
           <td>
             <strong>${item.nome_completo || "Sem nome"}</strong>
             ${item.email ? `<br><small style="color:var(--muted);">${item.email}</small>` : ''}
           </td>
-          <td><span class="sub-tag ${item.sub || ''}">${item.sub || '-'}</span></td>
+          <td><span class="sub-tag ${displaySub}">${displaySub}</span></td>
           <td>${item.whatsapp || '-'}</td>
           <td>${item.tamanho_camisa || '-'} (${item.modelo_camisa || 'Tradicional'})</td>
           <td><span class="status-badge status-${item.pagamento_status || 'pendente'}">${item.pagamento_status || 'pendente'}</span></td>
@@ -914,7 +911,8 @@
             ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')"><i class="fa-solid fa-check"></i> Aprovar</button>` : ''}
           </td>
         </tr>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function renderizarTabelaPagamentos() {
@@ -1003,7 +1001,7 @@
 
     function renderizarPainelWhatsApp() {
       const grid = document.getElementById("wppSettingsGrid");
-      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul", "Geral"];
+      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
 
       grid.innerHTML = subs.map(sub => `
         <div class="wpp-setting-card">
@@ -1019,7 +1017,7 @@
 
     // Salvar links de WhatsApp com persistência real no servidor
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
-      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul", "Geral"];
+      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
       subs.forEach(sub => {
         const input = document.getElementById(`wppLink_${sub}`);
         if (input && input.value) {
@@ -1068,9 +1066,10 @@
       const item = inscricoesData.find(i => i.whatsapp === whatsapp);
       if (!item) return;
 
+      const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
       document.getElementById("modalName").textContent = item.nome_completo;
       document.getElementById("modalContent").innerHTML = `
-        <p><strong>Sub Grupo:</strong> ${item.sub}</p>
+        <p><strong>Sub Grupo:</strong> Sub ${displaySub}</p>
         <p><strong>WhatsApp:</strong> ${item.whatsapp}</p>
         <p><strong>E-mail:</strong> ${item.email || 'Não informado'}</p>
         <p><strong>Tamanho da Camisa:</strong> ${item.tamanho_camisa} (${item.modelo_camisa || 'Tradicional'})</p>
@@ -1382,7 +1381,7 @@
       const rows = inscricoesData.map(i => [
         `"${new Date(i.criado_em || Date.now()).toLocaleDateString("pt-BR")}"`,
         `"${(i.nome_completo || "").replace(/"/g, '""')}"`,
-        `"${i.sub || ''}"`,
+        `"${(i.sub === 'Azul' ? 'Laranja' : i.sub) || ''}"`,
         `"${i.whatsapp || ''}"`,
         `"${i.email || ''}"`,
         `"${i.tamanho_camisa || ''} ${i.modelo_camisa || ''}"`,

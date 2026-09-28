@@ -50,7 +50,7 @@ const config = {
   WHATSAPP_VERMELHO: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
   WHATSAPP_AMARELO: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
   WHATSAPP_LARANJA: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  WHATSAPP_AZUL: process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+  WHATSAPP_AZUL: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
   WHATSAPP_GERAL: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
 };
 
@@ -77,7 +77,7 @@ window.EJC_WHATSAPP_SUBS = {
   "Vermelho": window.EJC_ENV.WHATSAPP_VERMELHO,
   "Amarelo": window.EJC_ENV.WHATSAPP_AMARELO,
   "Laranja": window.EJC_ENV.WHATSAPP_LARANJA,
-  "Azul": window.EJC_ENV.WHATSAPP_AZUL,
+  "Azul": window.EJC_ENV.WHATSAPP_LARANJA,
   "Geral": window.EJC_ENV.WHATSAPP_GERAL
 };
 `;

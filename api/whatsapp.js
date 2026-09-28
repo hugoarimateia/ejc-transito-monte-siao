@@ -8,7 +8,7 @@ const SUB_GROUPS = {
   "Vermelho": process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
   "Amarelo": process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
   "Laranja": process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  "Azul": process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+  "Azul": process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
   "Geral": process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
 };
 
@@ -34,7 +34,8 @@ module.exports = async (req, res) => {
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0 && data[0].sub) {
-          const subName = data[0].sub;
+          let subName = data[0].sub;
+          if (subName === "Azul") subName = "Laranja";
           // Tenta obter o link administrável do Sub
           try {
             const confRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=eq.${encodeURIComponent(subName)}&select=link_grupo,ativo`, {

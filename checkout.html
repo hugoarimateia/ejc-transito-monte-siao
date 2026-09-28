@@ -217,12 +217,8 @@
       color: #d97706 !important;
       border: 1px solid rgba(217, 119, 6, 0.3) !important;
     }
+    .event-tag.sub-laranja, .sub-badge-laranja,
     .event-tag.sub-azul, .sub-badge-azul {
-      background: rgba(38, 117, 216, 0.15) !important;
-      color: #2563eb !important;
-      border: 1px solid rgba(38, 117, 216, 0.3) !important;
-    }
-    .event-tag.sub-laranja, .sub-badge-laranja {
       background: rgba(249, 115, 22, 0.15) !important;
       color: #ea580c !important;
       border: 1px solid rgba(249, 115, 22, 0.3) !important;
@@ -354,12 +350,8 @@
       background: rgba(217, 119, 6, 0.08);
       color: #d97706;
     }
+    .checkout-sub-btn.sub-btn-laranja:hover, .checkout-sub-btn.sub-btn-laranja.active,
     .checkout-sub-btn.sub-btn-azul:hover, .checkout-sub-btn.sub-btn-azul.active {
-      border-color: #2675d8;
-      background: rgba(38, 117, 216, 0.08);
-      color: #2563eb;
-    }
-    .checkout-sub-btn.sub-btn-laranja:hover, .checkout-sub-btn.sub-btn-laranja.active {
       border-color: #f97316;
       background: rgba(249, 115, 22, 0.08);
       color: #ea580c;
@@ -917,7 +909,7 @@
     // ==============================================================================
     const urlParams = new URLSearchParams(window.location.search);
     const tipoCheckout = urlParams.get("tipo") || "inscricao";
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja"];
 
     // Determinação inicial do Sub (Sem fallback automático para Verde!)
     let rawSub = (urlParams.get("sub") || "").trim();
@@ -926,6 +918,10 @@
         const storedSub = sessionStorage.getItem("ejc_checkout_sub");
         if (storedSub) rawSub = storedSub;
       } catch (e) {}
+    }
+    // Compatibilidade resiliente: antigo Sub Azul migrado para Sub Laranja
+    if (rawSub && rawSub.toLowerCase() === "azul") {
+      rawSub = "Laranja";
     }
 
     let subSelecionado = null;

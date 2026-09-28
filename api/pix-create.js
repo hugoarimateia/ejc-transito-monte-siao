@@ -40,12 +40,13 @@ module.exports = async (req, res) => {
 
     const { valor, nome_pagador, whatsapp_pagador, tipo, inscricao_id, sub } = req.body || {};
 
-    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Azul"];
+    const VALID_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja"];
     let subFinal = null;
 
     let valorNumerico;
     if (tipo === "inscricao") {
-      const rawSub = sub ? String(sub).trim() : "";
+      let rawSub = sub ? String(sub).trim() : "";
+      if (rawSub.toLowerCase() === "azul") rawSub = "Laranja";
       const matchedSub = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
       if (!matchedSub) {
         return res.status(400).json({ error: "Sub inválido ou não selecionado. A escolha do Sub é obrigatória para realizar a inscrição." });
@@ -53,7 +54,9 @@ module.exports = async (req, res) => {
       subFinal = matchedSub;
       valorNumerico = settingsStore.getEffectivePrice(activeSettings);
     } else {
-      subFinal = sub ? String(sub).trim() : null;
+      let rawSub = sub ? String(sub).trim() : null;
+      if (rawSub && rawSub.toLowerCase() === "azul") rawSub = "Laranja";
+      subFinal = rawSub;
       valorNumerico = Number(valor || settingsStore.getEffectivePrice(activeSettings));
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da cobrança inválido" });

@@ -235,7 +235,7 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
 
 // Contagem unificada de vagas por Sub (Fonte Única Centralizada)
 async function updateSubCounts() {
-  let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, Azul: 0 };
+  let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
   let remoteLoaded = false;
 
   // 1. Consulta o endpoint central oficial com anti-cache estrito
@@ -260,7 +260,12 @@ async function updateSubCounts() {
     try {
       const { data, error } = await supabaseClient.rpc("contagem_inscricoes_por_sub");
       if (!error && data && Array.isArray(data)) {
-        counts = { ...counts, ...Object.fromEntries(data.map(item => [item.sub, Number(item.total)])) };
+        data.forEach(item => {
+          const s = (item.sub === "Azul") ? "Laranja" : item.sub;
+          if (counts[s] !== undefined) {
+            counts[s] = (counts[s] || 0) + Number(item.total || 0);
+          }
+        });
         remoteLoaded = true;
       }
     } catch (e) {
@@ -272,7 +277,8 @@ async function updateSubCounts() {
   if (!remoteLoaded) {
     const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
     local.forEach(i => {
-      if (counts[i.sub] !== undefined) counts[i.sub]++;
+      const subNorm = (i.sub === "Azul") ? "Laranja" : i.sub;
+      if (counts[subNorm] !== undefined) counts[subNorm]++;
     });
   }
 

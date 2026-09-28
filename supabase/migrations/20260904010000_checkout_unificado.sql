@@ -90,7 +90,7 @@ VALUES
     ('Verde', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde', true),
     ('Vermelho', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho', true),
     ('Amarelo', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo', true),
-    ('Azul', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul', true),
+    ('Laranja', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja', true),
     ('Geral', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0', true)
 ON CONFLICT (sub) DO NOTHING;
 

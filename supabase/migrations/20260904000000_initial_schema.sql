@@ -20,10 +20,10 @@ CREATE TABLE IF NOT EXISTS public.subs (
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
 VALUES
-    ('Verde', '#24a764', 'Miquéias e Geisila', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde'),
+    ('Verde', '#24a764', 'Abraão e Sara', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde'),
     ('Vermelho', '#e8333e', 'Kadmiel e Bia', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho'),
-    ('Amarelo', '#e9dd3c', 'Abraão e Sara', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo'),
-    ('Azul', '#2778d4', 'Déborah e Gabriel', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul')
+    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo'),
+    ('Laranja', '#f97316', 'Alan e Kallyne', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja')
 ON CONFLICT (nome) DO UPDATE 
 SET casal_coordenador = EXCLUDED.casal_coordenador,
     capacidade = EXCLUDED.capacidade;

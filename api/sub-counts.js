@@ -18,14 +18,13 @@ function normalizarTelefone(tel) {
   return String(tel || "").replace(/\D/g, "");
 }
 
-// Helper para normalizar subgrupo
+// Helper para normalizar subgrupo (Verde, Vermelho, Amarelo, Laranja)
 function normalizarSub(sub) {
   const s = String(sub || "").trim().toLowerCase();
   if (s.includes("verd")) return "Verde";
   if (s.includes("verm")) return "Vermelho";
   if (s.includes("amar")) return "Amarelo";
-  if (s.includes("laran")) return "Laranja";
-  if (s.includes("azul")) return "Azul";
+  if (s.includes("laran") || s.includes("azul")) return "Laranja";
   return null;
 }
 

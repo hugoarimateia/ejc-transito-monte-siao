@@ -21,7 +21,7 @@ const SUB_COLORS = {
   "Vermelho": { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#ef4444" },
   "Amarelo": { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#f59e0b" },
   "Laranja": { bg: "#fff7ed", border: "#f97316", text: "#9a3412", badge: "#f97316" },
-  "Azul": { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af", badge: "#3b82f6" },
+  "Azul": { bg: "#fff7ed", border: "#f97316", text: "#9a3412", badge: "#f97316" }, // Legado Azul migrado para identidade Laranja
   "Geral": { bg: "#f8fafc", border: "#64748b", text: "#334155", badge: "#64748b" }
 };
 
@@ -29,7 +29,8 @@ const SUB_COLORS = {
  * Consulta o link do grupo de WhatsApp para o Sub selecionado
  */
 async function getSubWhatsAppLink(subName) {
-  const subNorm = String(subName || "Geral").trim();
+  let subNorm = String(subName || "Geral").trim();
+  if (subNorm.toLowerCase() === "azul") subNorm = "Laranja";
   const defaultLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
 
   const { url, key } = getSupabaseCredentials();

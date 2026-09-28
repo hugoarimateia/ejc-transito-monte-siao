@@ -9,7 +9,8 @@ const SUB_GROUPS: Record<string, string> = {
   "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
   "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
   "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-  "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul",
+  "Laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
+  "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
 };
 
 serve(async (req) => {
@@ -35,7 +36,8 @@ serve(async (req) => {
     return new Response("Inscrição não encontrada ou token inválido.", { status: 404 });
   }
 
-  const targetGroup = SUB_GROUPS[inscricao.sub] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+  const subNormalized = (inscricao.sub === "Azul") ? "Laranja" : inscricao.sub;
+  const targetGroup = SUB_GROUPS[subNormalized] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
 
   // Redirecionamento HTTP 302 direto para o WhatsApp
   return Response.redirect(targetGroup, 302);
