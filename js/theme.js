@@ -22,6 +22,7 @@
       localStorage.setItem(STORAGE_KEY, theme);
     }
     updateToggleButtons(theme);
+    updateThemeLogos(theme);
 
     // Dispara evento customizado para componentes reativos
     window.dispatchEvent(new CustomEvent("ejc:themechange", { detail: { theme: theme } }));
@@ -52,9 +53,32 @@
     });
   }
 
-  // Execução imediata no carregamento para evitar FOUC
+  function updateThemeLogos(theme) {
+    const isDark = theme === "dark";
+    const logos = document.querySelectorAll("[data-logo-light][data-logo-dark], .brand img, .logo-card img, .footer-grid > img, .checkout-brand img, .admin-auth-card > img");
+    logos.forEach(function(img) {
+      let lightSrc = img.getAttribute("data-logo-light");
+      let darkSrc = img.getAttribute("data-logo-dark");
+      if (!lightSrc || !darkSrc) {
+        const cur = img.getAttribute("src") || "";
+        const isSubdir = cur.startsWith("../") || window.location.pathname.includes("/admin");
+        const prefix = isSubdir ? "../images/" : "images/";
+        lightSrc = prefix + "10 EJC MONTE SIÃO2.png";
+        darkSrc = prefix + "10 EJC MONTE SIÃO.png";
+      }
+      const targetSrc = isDark ? darkSrc : lightSrc;
+      if (img.getAttribute("src") !== targetSrc) {
+        img.setAttribute("src", targetSrc);
+      }
+    });
+  }
+
+  // Execução imediata no carregamento para sincronizar tema e logos
   const initialTheme = getPreferredTheme();
   document.documentElement.setAttribute("data-theme", initialTheme);
+  try {
+    updateThemeLogos(initialTheme);
+  } catch (e) {}
 
   // Inicialização pós-DOM
   if (document.readyState === "loading") {
@@ -64,7 +88,9 @@
   }
 
   function init() {
-    updateToggleButtons(document.documentElement.getAttribute("data-theme") || initialTheme);
+    const currentTheme = document.documentElement.getAttribute("data-theme") || initialTheme;
+    updateToggleButtons(currentTheme);
+    updateThemeLogos(currentTheme);
 
     // Event delegation para botões de alternância
     document.addEventListener("click", function(e) {
@@ -96,6 +122,7 @@
   window.EJC_THEME = {
     getTheme: function() { return document.documentElement.getAttribute("data-theme") || initialTheme; },
     setTheme: function(theme) { applyTheme(theme, true); },
-    toggleTheme: toggleTheme
+    toggleTheme: toggleTheme,
+    updateLogos: updateThemeLogos
   };
 })();
