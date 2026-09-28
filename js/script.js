@@ -514,18 +514,11 @@ if (signupForm) {
         );
       }
 
-      // Redirecionamento individual e seguro para o grupo do WhatsApp do Sub
-      const subWhatsAppUrls = window.EJC_WHATSAPP_SUBS || {
-        "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-        "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-        "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-        "Azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=azul"
-      };
-
-      const groupUrl = subWhatsAppUrls[chosenSub] || subWhatsAppUrls["Geral"] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+      // Acesso exclusivo ao Grupo Geral do WhatsApp após a inscrição
+      const generalGroupUrl = "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t";
 
       if (whatsappGroupButton) {
-        whatsappGroupButton.href = groupUrl;
+        whatsappGroupButton.href = generalGroupUrl;
       }
       if (whatsappSuccess) {
         whatsappSuccess.hidden = false;

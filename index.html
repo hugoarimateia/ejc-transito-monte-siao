@@ -4,7 +4,11 @@
   try {
     var s = localStorage.getItem("ejc_theme");
     var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.setAttribute("data-theme", s || (d ? "dark" : "light"));
+    var t = s || (d ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", t);
+    var iconHref = t === "dark" ? "images/10 EJC MONTE SIÃO.png?v=2" : "images/10 EJC MONTE SIÃO2.png?v=2";
+    var l = document.querySelector('link[rel="icon"]');
+    if (l) { l.href = iconHref; }
   } catch(e) {}
 })();
 </script>
@@ -13,6 +17,8 @@
 <meta content="#282b30" name="theme-color">
 <meta content="Site oficial da Equipe do Trânsito do EJC da II Igreja Evangélica Congregacional." name="description">
 <title>EJC | Equipe do Trânsito</title>
+<link rel="icon" type="image/png" href="images/10 EJC MONTE SIÃO2.png?v=2" id="favicon-link">
+<link rel="apple-touch-icon" href="images/10 EJC MONTE SIÃO2.png?v=2">
 <link href="https://fonts.googleapis.com" rel="preconnect">
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -32,7 +38,7 @@
 <a href="#responsabilidades">Responsabilidades</a>
 <a href="#contribuicao">Contribuição</a>
 <a href="#calendario">Calendário</a>
-<a class="nav-cta" href="https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0" rel="noopener" target="_blank">WhatsApp</a>
+<a class="nav-cta" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener" target="_blank">WhatsApp</a>
 </nav>
 <div class="nav-actions">
 <button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
@@ -468,14 +474,14 @@
 
           <div class="whatsapp-success" hidden="" id="whatsapp-success">
             <div class="success-top-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Inscrição Concluída com Sucesso!</div>
-            <p class="success-intro">Seja muito bem-vindo(a) à nossa equipe! Clique no botão abaixo para ingressar no grupo exclusivo do seu Sub no WhatsApp:</p>
-            <a class="button button-whatsapp" href="#" id="whatsapp-group-button" rel="noopener" target="_blank">
-              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do WhatsApp
+            <p class="success-intro">Sua inscrição foi realizada com sucesso! Clique no botão abaixo para entrar no grupo geral do EJC e receber as orientações iniciais.</p>
+            <a class="button button-whatsapp" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" id="whatsapp-group-button" rel="noopener" target="_blank">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp
             </a>
             <a class="button button-primary" href="#" id="btnPayAfterSignup" style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
               <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Pagar Taxa de Inscrição no Checkout Oficial
             </a>
-            <small class="success-disclaimer">Este link de acesso é individual, seguro e de uso único do inscrito.</small>
+            <small class="success-disclaimer">Este é o canal geral de comunicação do evento. O acesso ao grupo específico do seu Sub será liberado após a confirmação do pagamento.</small>
           </div>
         </div>
       </form>
@@ -663,7 +669,7 @@
 </div>
 </div>
 </footer>
-<a aria-label="Entrar no grupo geral do WhatsApp" class="whatsapp-float" href="https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0" rel="noopener" target="_blank"><i aria-hidden="true" class="fa-brands fa-whatsapp"></i></a>
+<a aria-label="Entrar no grupo geral do WhatsApp" class="whatsapp-float" href="https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t" rel="noopener" target="_blank"><i aria-hidden="true" class="fa-brands fa-whatsapp"></i></a>
 <button aria-label="Voltar ao topo" class="back-to-top" type="button">↑</button>
 <dialog class="image-modal">
 <button aria-label="Fechar imagem" class="modal-close" type="button">×</button>

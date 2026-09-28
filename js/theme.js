@@ -23,6 +23,7 @@
     }
     updateToggleButtons(theme);
     updateThemeLogos(theme);
+    updateFavicon(theme);
 
     // Dispara evento customizado para componentes reativos
     window.dispatchEvent(new CustomEvent("ejc:themechange", { detail: { theme: theme } }));
@@ -73,11 +74,46 @@
     });
   }
 
-  // Execução imediata no carregamento para sincronizar tema e logos
+  function updateFavicon(theme) {
+    const isDark = theme === "dark";
+    const isSubdir = window.location.pathname.includes("/admin");
+    const prefix = isSubdir ? "../images/" : "images/";
+    const lightFavicon = prefix + "10 EJC MONTE SIÃO2.png?v=2";
+    const darkFavicon = prefix + "10 EJC MONTE SIÃO.png?v=2";
+    const targetFavicon = isDark ? darkFavicon : lightFavicon;
+
+    // 1. Atualiza ou cria favicon padrão <link rel="icon">
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      favicon.type = "image/png";
+      document.head.appendChild(favicon);
+    }
+    favicon.href = targetFavicon;
+
+    // 2. Atualiza ou cria shortcut icon <link rel="shortcut icon">
+    let shortcutIcon = document.querySelector('link[rel="shortcut icon"]');
+    if (shortcutIcon) {
+      shortcutIcon.href = targetFavicon;
+    }
+
+    // 3. Atualiza ou cria apple touch icon <link rel="apple-touch-icon">
+    let appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!appleTouchIcon) {
+      appleTouchIcon = document.createElement("link");
+      appleTouchIcon.rel = "apple-touch-icon";
+      document.head.appendChild(appleTouchIcon);
+    }
+    appleTouchIcon.href = targetFavicon;
+  }
+
+  // Execução imediata no carregamento para sincronizar tema, logos e favicon
   const initialTheme = getPreferredTheme();
   document.documentElement.setAttribute("data-theme", initialTheme);
   try {
     updateThemeLogos(initialTheme);
+    updateFavicon(initialTheme);
   } catch (e) {}
 
   // Inicialização pós-DOM
@@ -91,6 +127,7 @@
     const currentTheme = document.documentElement.getAttribute("data-theme") || initialTheme;
     updateToggleButtons(currentTheme);
     updateThemeLogos(currentTheme);
+    updateFavicon(currentTheme);
 
     // Event delegation para botões de alternância
     document.addEventListener("click", function(e) {
@@ -123,6 +160,7 @@
     getTheme: function() { return document.documentElement.getAttribute("data-theme") || initialTheme; },
     setTheme: function(theme) { applyTheme(theme, true); },
     toggleTheme: toggleTheme,
-    updateLogos: updateThemeLogos
+    updateLogos: updateThemeLogos,
+    updateFavicon: updateFavicon
   };
 })();
