@@ -192,130 +192,294 @@
 </div>
 <div class="signup-workspace reveal">
 <form class="signup-form" id="signup-form">
-<div class="form-heading">
-<span class="role-pill role-main">Inscrição</span>
-<h3 id="selected-sub-title">Selecione um Sub acima</h3>
-<p>Preencha os dados abaixo. Os campos marcados são obrigatórios.</p>
-</div>
-<input id="selected-sub" name="sub" type="hidden">
-<div class="form-grid">
-<label class="field field-wide">Nome completo
-                <input autocomplete="name" id="full-name" name="nome_completo" placeholder="Digite seu nome completo" required="" type="text">
-</label>
-<label class="field">WhatsApp
-                <input autocomplete="tel" id="whatsapp" name="whatsapp" placeholder="(83) 99999-9999" required="" type="tel">
-</label>
-<label class="field">E-mail para comprovante
-                <input autocomplete="email" id="email" name="email" placeholder="seuemail@exemplo.com" required="" type="email">
-</label>
-<label class="field">Tamanho da camisa
-                <select id="shirt-size" name="tamanho_camisa" required="">
-<option value="">Selecione</option>
-<option value="P|Tradicional">P</option>
-<option value="P|Baby Look">P Baby Look</option>
-<option value="M|Tradicional">M</option>
-<option value="M|Baby Look">M Baby Look</option>
-<option value="G|Tradicional">G</option>
-<option value="G|Baby Look">G Baby Look</option>
-<option value="GG|Tradicional">GG</option>
-<option value="GG|Baby Look">GG Baby Look</option>
-<option value="XG|Tradicional">XG</option>
-<option value="XG|Baby Look">XG Baby Look</option>
-<option value="XXG|Tradicional">XXG</option>
-<option value="XXG|Baby Look">XXG Baby Look</option>
-<option value="Sob medida">Sob medida</option></select>
-</label>
-<fieldset class="field choice-field">
-<legend>Vai querer mais de uma camisa?</legend>
-<div class="inline-options">
-<label><input name="quer_camisa_adicional" required="" type="radio" value="true"> Sim</label>
-<label><input name="quer_camisa_adicional" required="" type="radio" value="false"> Não</label>
-</div>
-</fieldset>
-<div class="extra-shirt-fields field-wide" hidden="" id="extra-shirt-fields">
-<p class="field-note"><strong>Valor da camisa adicional a definir.</strong></p>
-<div class="form-grid nested-grid">
-<label class="field">Quantidade adicional
-                    <input id="extra-shirt-quantity" inputmode="numeric" max="10" min="1" name="quantidade_camisas_adicionais" placeholder="Ex.: 1" type="number">
-</label>
+        <div class="form-heading">
+          <span class="role-pill role-main"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Formulário Oficial</span>
+          <h3 id="selected-sub-title">Selecione um Sub acima</h3>
+          <p class="form-heading-desc">Preencha os dados abaixo com atenção. Os campos com asterisco (<span class="req-star">*</span>) são obrigatórios.</p>
+        </div>
+        <input id="selected-sub" name="sub" type="hidden">
 
-<label class="field">Tamanho da camisa adicional
-                    <select id="extra-shirt-size" name="tamanho_camisa_adicional">
-<option value="">Selecione</option>
-<option value="P|Tradicional">P</option>
-<option value="P|Baby Look">P Baby Look</option>
-<option value="M|Tradicional">M</option>
-<option value="M|Baby Look">M Baby Look</option>
-<option value="G|Tradicional">G</option>
-<option value="G|Baby Look">G Baby Look</option>
-<option value="GG|Tradicional">GG</option>
-<option value="GG|Baby Look">GG Baby Look</option>
-<option value="XG|Tradicional">XG</option>
-<option value="XG|Baby Look">XG Baby Look</option>
-<option value="XXG|Tradicional">XXG</option>
-<option value="XXG|Baby Look">XXG Baby Look</option>
-<option value="Sob medida">Sob medida</option></select>
-</label>
-</div>
-</div>
-<label class="field field-wide">Possui algum talento?
-                <textarea id="talent" name="talento" placeholder="Ex.: dança, música, teatro, fotografia, organização..." rows="3"></textarea>
-</label>
-<label class="field field-wide">Precisamos de uma foto sua 😬
-                <input accept="image/jpeg,image/png,image/webp" id="photo" name="foto" required="" type="file">
-<small>Envie JPG, PNG ou WebP, com até 5 MB.</small>
-</label>
-<div class="form-step-title field-wide">
-<span>3</span>
-<div><strong>Pagamento da Inscrição</strong><small>Você pode pagar agora pelo Checkout Oficial ou registrar pendência.</small></div>
-</div>
-<fieldset class="field field-wide choice-field payment-choice">
-<legend id="paymentLegendTitle">Como você deseja pagar a taxa de inscrição (R$ 50,00)?</legend>
-<div class="inline-options" style="flex-direction: column; gap: 8px; align-items: flex-start;">
-<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="checkout" checked> <span>⚡ <strong>Pagar no Checkout Oficial</strong> (Pix instantâneo ou Cartão em até 12x)</span></label>
-<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="true"> <span>✓ Já realizei o pagamento anteriormente à coordenação</span></label>
-<label style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input name="pagamento_informado" required="" type="radio" value="false"> <span>⏳ Vou pagar depois (Salvar inscrição com pagamento pendente)</span></label>
-</div>
-</fieldset>
-<div class="field-wide" hidden="" id="paid-fields">
-<fieldset class="field field-wide choice-field payment-method-choice">
-<legend>Como foi realizado o pagamento?</legend>
-<div class="inline-options">
-<label><input name="forma_pagamento" type="radio" value="pix"> Pix</label>
-<label><input name="forma_pagamento" type="radio" value="especie"> Em espécie</label>
-</div>
-</fieldset>
-<div hidden="" id="payment-proof-field">
-<label class="field field-wide">Comprovante de pagamento <small>(obrigatório para Pix)</small>
-<input accept="image/jpeg,image/png,image/webp,application/pdf" id="payment-proof" name="comprovante" type="file">
-<small>JPG, PNG, WebP ou PDF, com até 5 MB.</small>
-</label>
-</div>
-</div>
-<label class="field field-wide" hidden="" id="payment-reason-field">Justificativa ou observação
-                <textarea id="payment-reason" name="justificativa_pagamento" placeholder="Opcional. Conte-nos caso precise de mais prazo ou tenha alguma observação." rows="3"></textarea>
-</label>
-</div>
-<div class="pending-message" hidden="" id="pending-message">
-              Sua inscrição poderá ser concluída normalmente. Ela ficará registrada como <strong>Pagamento pendente</strong> até a confirmação pela coordenação.
+        <!-- SEÇÃO 1: DADOS PESSOAIS & CONTATO -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <div class="form-section-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></div>
+            <div class="form-section-copy">
+              <h4 class="form-section-title">Dados Pessoais & Contato</h4>
+              <p class="form-section-subtitle">Identificação do participante e canais oficiais de comunicação</p>
             </div>
-<label class="consent-field">
-<input id="consent" required="" type="checkbox">
-<span>Declaro estar ciente de que, ao efetuar esta inscrição, assumo o compromisso integral com o pagamento da taxa da equipe. Em caso de desistência, por qualquer motivo, não será possível a restituição do valor já investido.</span>
-</label>
+          </div>
+          <div class="form-grid">
+            <div class="field field-wide">
+              <label for="full-name" class="field-label">Nome completo <span class="req-star" aria-hidden="true">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
+                <input autocomplete="name" id="full-name" name="nome_completo" placeholder="Digite seu nome completo" required="" type="text">
+              </div>
+            </div>
+            <div class="field">
+              <label for="whatsapp" class="field-label">WhatsApp <span class="req-star" aria-hidden="true">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fa-brands fa-whatsapp input-icon" aria-hidden="true"></i>
+                <input autocomplete="tel" id="whatsapp" name="whatsapp" placeholder="(83) 99999-9999" required="" type="tel">
+              </div>
+              <span class="field-hint">Número com DDD para contato da coordenação</span>
+            </div>
+            <div class="field">
+              <label for="email" class="field-label">E-mail para comprovante <span class="req-star" aria-hidden="true">*</span></label>
+              <div class="input-icon-wrap">
+                <i class="fa-regular fa-envelope input-icon" aria-hidden="true"></i>
+                <input autocomplete="email" id="email" name="email" placeholder="seuemail@exemplo.com" required="" type="email">
+              </div>
+              <span class="field-hint">Envio automático do comprovante oficial</span>
+            </div>
+          </div>
+        </div>
 
-<button class="button button-primary submit-signup" disabled="" type="submit">Finalizar inscrição</button>
-<p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
-<div class="whatsapp-success" hidden="" id="whatsapp-success">
-<strong>Inscrição concluída com sucesso!</strong>
-<span>Entre agora no grupo do WhatsApp da sua Sub:</span>
-<a class="button button-whatsapp" href="#" id="whatsapp-group-button" rel="noopener" target="_blank">Entrar no grupo do WhatsApp</a>
-<a class="button button-primary" href="#" id="btnPayAfterSignup" style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-  <i class="fa-solid fa-credit-card"></i> Pagar Taxa de Inscrição no Checkout Oficial
-</a>
-<small>Este acesso é individual e de uso único.</small>
-</div>
-</form>
+        <!-- SEÇÃO 2: CAMISA OFICIAL & PERFIL -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <div class="form-section-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></div>
+            <div class="form-section-copy">
+              <h4 class="form-section-title">Camisa Oficial & Perfil</h4>
+              <p class="form-section-subtitle">Escolha o seu tamanho e nos conte um pouco sobre você</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="shirt-size" class="field-label">Tamanho da camisa <span class="req-star" aria-hidden="true">*</span></label>
+              <div class="select-wrap">
+                <select id="shirt-size" name="tamanho_camisa" required="">
+                  <option value="">Selecione o tamanho</option>
+                  <option value="P|Tradicional">P — Tradicional</option>
+                  <option value="P|Baby Look">P — Baby Look</option>
+                  <option value="M|Tradicional">M — Tradicional</option>
+                  <option value="M|Baby Look">M — Baby Look</option>
+                  <option value="G|Tradicional">G — Tradicional</option>
+                  <option value="G|Baby Look">G — Baby Look</option>
+                  <option value="GG|Tradicional">GG — Tradicional</option>
+                  <option value="GG|Baby Look">GG — Baby Look</option>
+                  <option value="XG|Tradicional">XG — Tradicional</option>
+                  <option value="XG|Baby Look">XG — Baby Look</option>
+                  <option value="XXG|Tradicional">XXG — Tradicional</option>
+                  <option value="XXG|Baby Look">XXG — Baby Look</option>
+                  <option value="Sob medida">Sob medida</option>
+                </select>
+              </div>
+            </div>
+
+            <fieldset class="field choice-field">
+              <legend class="field-label">Vai querer mais de uma camisa? <span class="req-star" aria-hidden="true">*</span></legend>
+              <div class="segmented-choice-group" role="radiogroup" aria-label="Vai querer mais de uma camisa?">
+                <label class="segmented-choice-label">
+                  <input name="quer_camisa_adicional" required="" type="radio" value="true">
+                  <span class="segmented-choice-btn"><i class="fa-solid fa-check" aria-hidden="true"></i> Sim</span>
+                </label>
+                <label class="segmented-choice-label">
+                  <input name="quer_camisa_adicional" required="" type="radio" value="false">
+                  <span class="segmented-choice-btn"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Não</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="extra-shirt-fields field-wide" hidden="" id="extra-shirt-fields">
+              <div class="extra-shirt-badge">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <span><strong>Camisa adicional:</strong> O valor unitário da camisa extra será informado pela coordenação.</span>
+              </div>
+              <div class="form-grid nested-grid">
+                <div class="field">
+                  <label for="extra-shirt-quantity" class="field-label">Quantidade adicional</label>
+                  <input id="extra-shirt-quantity" inputmode="numeric" max="10" min="1" name="quantidade_camisas_adicionais" placeholder="Ex.: 1" type="number">
+                </div>
+                <div class="field">
+                  <label for="extra-shirt-size" class="field-label">Tamanho da camisa adicional</label>
+                  <div class="select-wrap">
+                    <select id="extra-shirt-size" name="tamanho_camisa_adicional">
+                      <option value="">Selecione o tamanho</option>
+                      <option value="P|Tradicional">P — Tradicional</option>
+                      <option value="P|Baby Look">P — Baby Look</option>
+                      <option value="M|Tradicional">M — Tradicional</option>
+                      <option value="M|Baby Look">M — Baby Look</option>
+                      <option value="G|Tradicional">G — Tradicional</option>
+                      <option value="G|Baby Look">G — Baby Look</option>
+                      <option value="GG|Tradicional">GG — Tradicional</option>
+                      <option value="GG|Baby Look">GG — Baby Look</option>
+                      <option value="XG|Tradicional">XG — Tradicional</option>
+                      <option value="XG|Baby Look">XG — Baby Look</option>
+                      <option value="XXG|Tradicional">XXG — Tradicional</option>
+                      <option value="XXG|Baby Look">XXG — Baby Look</option>
+                      <option value="Sob medida">Sob medida</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field field-wide">
+              <label for="talent" class="field-label">Possui algum talento ou habilidade? <span class="opt-label">(opcional)</span></label>
+              <textarea id="talent" name="talento" placeholder="Ex.: dança, música, instrumentos, teatro, fotografia, artes visuais, organização..." rows="3"></textarea>
+            </div>
+
+            <div class="field field-wide">
+              <label class="field-label" for="photo">Foto para identificação e crachá <span class="req-star" aria-hidden="true">*</span></label>
+              <div class="custom-upload-zone" id="photoUploadZone">
+                <input accept="image/jpeg,image/png,image/webp" id="photo" name="foto" required="" type="file" class="sr-file-input">
+                <div class="upload-zone-content">
+                  <div class="upload-icon-circle"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i></div>
+                  <div class="upload-zone-text">
+                    <strong class="upload-zone-title" id="photoUploadTitle">Clique ou arraste para anexar sua foto</strong>
+                    <p class="upload-zone-sub" id="photoUploadSub">Formatos aceitos: JPG, PNG ou WebP (máx. 5 MB)</p>
+                  </div>
+                  <span class="upload-browse-btn"><i class="fa-regular fa-image" aria-hidden="true"></i> Escolher foto</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 3: PAGAMENTO DA TAXA DE INSCRIÇÃO -->
+        <div class="form-section">
+          <div class="form-section-header">
+            <div class="form-section-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></div>
+            <div class="form-section-copy">
+              <h4 class="form-section-title">Pagamento da Inscrição</h4>
+              <p class="form-section-subtitle">Escolha como deseja efetuar o pagamento da taxa da equipe</p>
+            </div>
+          </div>
+
+          <fieldset class="field field-wide choice-field payment-choice">
+            <legend class="field-label" id="paymentLegendTitle">Como você deseja pagar a taxa de inscrição (R$ 50,00)?</legend>
+            <div class="payment-cards-group">
+              <!-- Opção 1: Checkout Oficial -->
+              <label class="payment-card-option selected">
+                <span class="payment-card-radio">
+                  <input name="pagamento_informado" required="" type="radio" value="checkout" checked>
+                  <span class="custom-radio-mark" aria-hidden="true"></span>
+                </span>
+                <span class="payment-card-body">
+                  <span class="payment-card-topline">
+                    <strong class="payment-card-title">Pagar agora no Checkout Oficial</strong>
+                    <span class="payment-badge-rec"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Instantâneo</span>
+                  </span>
+                  <span class="payment-card-desc">Pix imediato com confirmação em segundos ou Cartão em até 12x.</span>
+                </span>
+              </label>
+
+              <!-- Opção 2: Já realizei o pagamento -->
+              <label class="payment-card-option">
+                <span class="payment-card-radio">
+                  <input name="pagamento_informado" required="" type="radio" value="true">
+                  <span class="custom-radio-mark" aria-hidden="true"></span>
+                </span>
+                <span class="payment-card-body">
+                  <span class="payment-card-topline">
+                    <strong class="payment-card-title">Já realizei o pagamento à coordenação</strong>
+                  </span>
+                  <span class="payment-card-desc">Informe como pagou e anexe o comprovante para conferência financeira.</span>
+                </span>
+              </label>
+
+              <!-- Opção 3: Pagar depois -->
+              <label class="payment-card-option">
+                <span class="payment-card-radio">
+                  <input name="pagamento_informado" required="" type="radio" value="false">
+                  <span class="custom-radio-mark" aria-hidden="true"></span>
+                </span>
+                <span class="payment-card-body">
+                  <span class="payment-card-topline">
+                    <strong class="payment-card-title">Vou pagar depois (Salvar inscrição pendente)</strong>
+                  </span>
+                  <span class="payment-card-desc">Sua vaga é reservada provisoriamente até o prazo limite da coordenação.</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Bloco condicional para 'Já realizei' -->
+          <div class="field-wide payment-conditional-box" hidden="" id="paid-fields">
+            <fieldset class="field field-wide choice-field payment-method-choice">
+              <legend class="field-label">Como foi realizado o pagamento? <span class="req-star" aria-hidden="true">*</span></legend>
+              <div class="segmented-choice-group" role="radiogroup">
+                <label class="segmented-choice-label">
+                  <input name="forma_pagamento" type="radio" value="pix">
+                  <span class="segmented-choice-btn"><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix</span>
+                </label>
+                <label class="segmented-choice-label">
+                  <input name="forma_pagamento" type="radio" value="especie">
+                  <span class="segmented-choice-btn"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Em espécie</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div hidden="" id="payment-proof-field" class="field field-wide" style="margin-top: 16px;">
+              <label class="field-label" for="payment-proof">Comprovante de pagamento <span class="req-star" aria-hidden="true">*</span> <span class="field-hint-inline">(obrigatório para Pix)</span></label>
+              <div class="custom-upload-zone custom-upload-compact" id="proofUploadZone">
+                <input accept="image/jpeg,image/png,image/webp,application/pdf" id="payment-proof" name="comprovante" type="file" class="sr-file-input">
+                <div class="upload-zone-content">
+                  <div class="upload-icon-circle"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
+                  <div class="upload-zone-text">
+                    <strong class="upload-zone-title" id="proofUploadTitle">Clique para anexar o comprovante</strong>
+                    <p class="upload-zone-sub" id="proofUploadSub">Formatos aceitos: JPG, PNG, WebP ou PDF (até 5 MB)</p>
+                  </div>
+                  <span class="upload-browse-btn"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> Anexar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloco condicional para 'Vou pagar depois' -->
+          <div class="field field-wide payment-conditional-box" hidden="" id="payment-reason-field">
+            <label for="payment-reason" class="field-label">Justificativa ou observação <span class="opt-label">(opcional)</span></label>
+            <textarea id="payment-reason" name="justificativa_pagamento" placeholder="Conte-nos caso precise de mais prazo ou tenha alguma observação especial para a coordenação." rows="3"></textarea>
+          </div>
+
+          <!-- Aviso de inscrição pendente -->
+          <div class="pending-message-card" hidden="" id="pending-message">
+            <div class="pending-message-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
+            <div class="pending-message-body">
+              <strong>Inscrição com Pagamento Pendente</strong>
+              <p>Sua inscrição poderá ser concluída normalmente. Ela ficará registrada como <strong>Pagamento pendente</strong> e deverá ser quitada até a data limite estipulada pela coordenação.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 4: CONFIRMAÇÃO & ENVIO -->
+        <div class="form-section form-section-final">
+          <div class="consent-card">
+            <label class="consent-label" for="consent">
+              <input id="consent" required="" type="checkbox" class="custom-checkbox">
+              <span class="consent-text">
+                Declaro estar ciente de que, ao efetuar esta inscrição, assumo o compromisso integral com o pagamento da taxa da equipe. Em caso de desistência, por qualquer motivo, não será possível a restituição do valor já investido.
+              </span>
+            </label>
+          </div>
+
+          <div class="form-action-wrap">
+            <button class="button button-primary submit-signup" disabled="" type="submit" id="btnSubmitSignup">
+              <span>Finalizar inscrição</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
+            <p class="form-sub-reminder" id="subSelectionReminder">
+              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> Selecione um dos 4 Subs acima para liberar o formulário.
+            </p>
+          </div>
+
+          <p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
+
+          <div class="whatsapp-success" hidden="" id="whatsapp-success">
+            <div class="success-top-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Inscrição Concluída com Sucesso!</div>
+            <p class="success-intro">Seja muito bem-vindo(a) à nossa equipe! Clique no botão abaixo para ingressar no grupo exclusivo do seu Sub no WhatsApp:</p>
+            <a class="button button-whatsapp" href="#" id="whatsapp-group-button" rel="noopener" target="_blank">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do WhatsApp
+            </a>
+            <a class="button button-primary" href="#" id="btnPayAfterSignup" style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Pagar Taxa de Inscrição no Checkout Oficial
+            </a>
+            <small class="success-disclaimer">Este link de acesso é individual, seguro e de uso único do inscrito.</small>
+          </div>
+        </div>
+      </form>
+    </div>
 </div>
 
 <div class="payment-notice reveal" role="note" style="margin-top: 32px;">
@@ -411,22 +575,36 @@
 <a href="/checkout?tipo=inscricao" class="button button-light" id="btnPayFeeSection" style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar Taxa no Checkout Oficial</a>
 </div>
 <div class="expense-card contribution-interactive-card">
-<h3>Fazer uma contribuição avulsa</h3>
-<p style="color: var(--muted); margin: 0 0 14px; font-size: .92rem;">Apoie a Equipe do Trânsito com qualquer valor no Checkout Oficial com confirmação instantânea:</p>
+<div class="contribution-card-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+  <div class="form-section-icon" style="width: 40px; height: 40px; font-size: 1.05rem; flex: 0 0 40px; border-radius: 12px;"><i class="fa-solid fa-heart-circle-plus" aria-hidden="true"></i></div>
+  <div>
+    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-main);">Fazer uma contribuição avulsa</h3>
+    <p style="color: var(--text-muted); margin: 2px 0 0; font-size: .84rem;">Apoie a Equipe do Trânsito com qualquer valor no Checkout Oficial</p>
+  </div>
+</div>
 <div class="preset-values">
 <button type="button" class="preset-val-btn active" data-val="25">R$ 25</button>
 <button type="button" class="preset-val-btn" data-val="50">R$ 50</button>
 <button type="button" class="preset-val-btn" data-val="100">R$ 100</button>
 </div>
 <div class="field" style="margin: 14px 0;">
-<label for="customContributeValue" style="font-size: .85rem; color: var(--ink);">Ou digite outro valor (R$):</label>
-<input type="number" id="customContributeValue" min="1" step="any" placeholder="Ex.: 35,00" style="padding: 10px 12px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; width: 100%;">
+<label for="customContributeValue" class="field-label">Ou digite outro valor (R$):</label>
+<div class="input-icon-wrap" style="position: relative;">
+  <span aria-hidden="true" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-muted); font-size: .86rem; pointer-events: none;">R$</span>
+  <input type="number" id="customContributeValue" min="1" step="any" placeholder="35,00" style="padding-left: 42px;">
 </div>
-<div class="field" style="margin-bottom: 14px;">
-<label for="contributorName" style="font-size: .85rem; color: var(--ink);">Seu nome (opcional):</label>
-<input type="text" id="contributorName" placeholder="Ex.: Maria Silva" style="padding: 10px 12px; border: 1px solid #dce1ed; border-radius: 12px; font: inherit; width: 100%;">
 </div>
-<button type="button" class="button button-primary" id="btnSubmitContributionCheckout" style="width: 100%; min-height: 48px;">Ir para o Checkout Seguro (Pix ou Cartão)</button>
+<div class="field" style="margin-bottom: 16px;">
+<label for="contributorName" class="field-label">Seu nome <span class="opt-label">(opcional)</span>:</label>
+<div class="input-icon-wrap">
+  <i class="fa-regular fa-user input-icon" aria-hidden="true"></i>
+  <input type="text" id="contributorName" placeholder="Ex.: Maria Silva">
+</div>
+</div>
+<button type="button" class="button button-primary" id="btnSubmitContributionCheckout" style="width: 100%; min-height: 50px;">
+  <span>Ir para o Checkout Seguro</span>
+  <i class="fa-solid fa-shield-halved" style="margin-left: 8px;"></i>
+</button>
 </div>
 <div class="expense-card">
 <h3>Para que será utilizado?</h3>

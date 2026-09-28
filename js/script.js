@@ -142,6 +142,13 @@ function selectSub(sub) {
   selectedSubTitle.textContent = `Inscrição — Sub ${sub}`;
   if (submitSignup) submitSignup.disabled = false;
   subButtons.forEach(button => button.classList.toggle("selected", button.dataset.sub === sub));
+  
+  const subReminder = document.getElementById("subSelectionReminder");
+  if (subReminder) {
+    subReminder.innerHTML = `<i class="fa-solid fa-circle-check" aria-hidden="true"></i> Sub <strong>${sub}</strong> selecionado com sucesso!`;
+    subReminder.classList.add("sub-selected");
+  }
+  
   scrollToElementWithHeader(signupForm, 16);
 }
 subButtons.forEach(button => button.addEventListener("click", () => selectSub(button.dataset.sub)));
@@ -164,6 +171,12 @@ function updatePaymentFields() {
   const isPaid = paidChoice?.value === "true";
   const method = document.querySelector('input[name="forma_pagamento"]:checked')?.value || "";
 
+  // Atualiza classe .selected nos cards de opções de pagamento
+  document.querySelectorAll(".payment-card-option").forEach(card => {
+    const radio = card.querySelector('input[name="pagamento_informado"]');
+    card.classList.toggle("selected", Boolean(radio && radio.checked));
+  });
+
   if (paidFields) paidFields.hidden = !isPaid;
   if (paymentReasonField) paymentReasonField.hidden = isPaid;
   if (pendingMessage) pendingMessage.hidden = isPaid;
@@ -184,6 +197,41 @@ function updatePaymentFields() {
 document.querySelectorAll('input[name="pagamento_informado"], input[name="forma_pagamento"]').forEach(input => {
   input.addEventListener("change", updatePaymentFields);
 });
+
+// Upload dinâmico: exibição de arquivo selecionado e feedback visual
+const photoInput = document.getElementById("photo");
+const photoUploadZone = document.getElementById("photoUploadZone");
+const photoUploadTitle = document.getElementById("photoUploadTitle");
+
+if (photoInput && photoUploadZone && photoUploadTitle) {
+  photoInput.addEventListener("change", () => {
+    if (photoInput.files && photoInput.files[0]) {
+      const fileName = photoInput.files[0].name;
+      photoUploadTitle.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981; margin-right: 6px;"></i> Foto: <strong>${fileName}</strong>`;
+      photoUploadZone.classList.add("has-file");
+    } else {
+      photoUploadTitle.textContent = "Clique ou arraste para anexar sua foto";
+      photoUploadZone.classList.remove("has-file");
+    }
+  });
+}
+
+const proofInput = document.getElementById("payment-proof");
+const proofUploadZone = document.getElementById("proofUploadZone");
+const proofUploadTitle = document.getElementById("proofUploadTitle");
+
+if (proofInput && proofUploadZone && proofUploadTitle) {
+  proofInput.addEventListener("change", () => {
+    if (proofInput.files && proofInput.files[0]) {
+      const fileName = proofInput.files[0].name;
+      proofUploadTitle.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981; margin-right: 6px;"></i> Comprovante: <strong>${fileName}</strong>`;
+      proofUploadZone.classList.add("has-file");
+    } else {
+      proofUploadTitle.textContent = "Clique para anexar o comprovante";
+      proofUploadZone.classList.remove("has-file");
+    }
+  });
+}
 
 // Contagem resiliente de vagas por Sub
 async function updateSubCounts() {
@@ -490,6 +538,11 @@ if (signupForm) {
       if (paidFields) paidFields.hidden = true;
       if (paymentReasonField) paymentReasonField.hidden = true;
       if (pendingMessage) pendingMessage.hidden = true;
+      if (photoUploadTitle) photoUploadTitle.textContent = "Clique ou arraste para anexar sua foto";
+      if (photoUploadZone) photoUploadZone.classList.remove("has-file");
+      if (proofUploadTitle) proofUploadTitle.textContent = "Clique para anexar o comprovante";
+      if (proofUploadZone) proofUploadZone.classList.remove("has-file");
+      updatePaymentFields();
       await updateSubCounts();
     } else {
       setFeedback("Não foi possível concluir a inscrição. Tente novamente em instantes.", "error");
