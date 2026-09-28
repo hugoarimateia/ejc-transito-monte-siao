@@ -824,6 +824,25 @@
           console.warn("Supabase remoto indisponível, usando persistência resiliente.", e);
         }
       }
+
+      // 3. Sincronização central via API /api/payment-settings (carrega links de WhatsApp oficiais e sincronizados)
+      fetch(`/api/payment-settings?_t=${Date.now()}`, {
+        headers: {
+          "Authorization": `Bearer ${currentAdminPass}`,
+          "x-admin-token": currentAdminPass
+        }
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.whatsapp) {
+          Object.assign(wppLinksData, data.whatsapp);
+          try {
+            localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+          } catch(e) {}
+          renderizarPainelWhatsApp();
+        }
+      })
+      .catch(() => {});
     }
 
     function renderizarTudo() {
@@ -1047,10 +1066,17 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+          if (data.whatsapp) {
+            Object.assign(wppLinksData, data.whatsapp);
+          }
+          try {
+            localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+          } catch (eStore) {}
+          renderizarPainelWhatsApp();
           feedback.textContent = "✓ Links do WhatsApp atualizados e persistidos no servidor!";
           feedback.style.color = "#16a34a";
           setTimeout(() => { feedback.style.display = "none"; }, 4000);
+          await carregarConfiguracoesFinanceiras();
         } else {
           feedback.textContent = `Erro: ${data.error || 'Falha ao salvar no servidor'}`;
           feedback.style.color = "#dc2626";
@@ -1447,45 +1473,27 @@
         if (res.ok) {
           const data = await res.json();
           if (data && data.settings && data.settings.valor_inscricao !== undefined) {
-            const serverVersion = Number(data.settings.versao || 0);
-            const localCachedRaw = localStorage.getItem("ejc_config_financeira");
-            let localCached = null;
-            try { localCached = localCachedRaw ? JSON.parse(localCachedRaw) : null; } catch(e){}
-            const localVersion = Number(localCached?.versao || 0);
-
-            // ANTI-DOWNGRADE MULTI-CONTAINER:
-            // Se o storage local do admin possui versão estritamente mais recente que a réplica do servidor
-            // (ocorre quando a réplica serverless sobe com /tmp vazio e Supabase offline),
-            // NÃO sobrepomos com os defaults antigos e re-hidratamos a réplica do backend!
-            if (localCached && localVersion > serverVersion && localCached.valor_inscricao) {
-              console.warn(`[Admin Financeiro] Preservando versão local v${localVersion} mais recente que o servidor v${serverVersion}. Re-hidratando réplica integralmente...`);
-              configFinanceiraAtiva = { ...localCached };
-              fetch("/api/payment-settings", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${currentAdminPass}`,
-                  "x-admin-token": currentAdminPass
-                },
-                body: JSON.stringify({
-                  action: "sync_full_settings",
-                  usuario: "anti_downgrade_sync",
-                  settings: configFinanceiraAtiva,
-                  motivo: "Re-hidratação automática integral anti-downgrade"
-                })
-              }).catch(() => {});
-            } else {
-              configFinanceiraAtiva = {
-                ...configFinanceiraAtiva,
-                ...data.settings,
-                valor_inscricao: Number(data.settings.valor_inscricao)
-              };
+            configFinanceiraAtiva = {
+              ...configFinanceiraAtiva,
+              ...data.settings,
+              valor_inscricao: Number(data.settings.valor_inscricao)
+            };
+            try {
               localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
-            }
+            } catch (e) {}
+          }
+          if (data && data.whatsapp) {
+            Object.assign(wppLinksData, data.whatsapp);
+            try {
+              localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+            } catch (e) {}
+            renderizarPainelWhatsApp();
           }
           if (data && data.historico && Array.isArray(data.historico)) {
             historicoFinanceiroData = data.historico;
-            localStorage.setItem("ejc_historico_financeiro", JSON.stringify(data.historico));
+            try {
+              localStorage.setItem("ejc_historico_financeiro", JSON.stringify(data.historico));
+            } catch (e) {}
           }
           if (data && data.permissions) {
             canUserEditFinance = Boolean(data.permissions.canEdit);
@@ -1999,6 +2007,19 @@
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX`;
       }
     });
+
+    // Sincronização multi-dispositivo automática contínua (Multi-Device Auto-Sync)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        carregarConfiguracoesFinanceiras();
+        carregarDados();
+      }
+    });
+    setInterval(() => {
+      if (document.visibilityState === "visible") {
+        carregarConfiguracoesFinanceiras();
+      }
+    }, 25000);
   </script>
 </body>
 </html>

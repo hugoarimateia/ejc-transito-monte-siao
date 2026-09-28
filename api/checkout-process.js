@@ -8,6 +8,18 @@ const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
 const mercadoPago = require("./_mercadopago");
 
+function getPublicBaseUrl() {
+  const custom = process.env.SITE_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (custom) return custom.replace(/\/$/, "");
+  if (process.env.VERCEL_ENV === "production" || !process.env.VERCEL_ENV) {
+    return "https://transitoejc.site";
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  }
+  return "https://transitoejc.site";
+}
+
 function calcularCRC16(payload) {
   const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), "utf8");
   let crc = 0xFFFF;
@@ -477,6 +489,68 @@ module.exports = async (req, res) => {
         }
       }
 
+      // 2.5 Reconciliação direta com Mercado Pago se não localizado no container local
+      if (!transactionFound && queryTxid && mercadoPago.isConfigured()) {
+        try {
+          let mpItem = null;
+          const cleanId = String(queryTxid).replace(/^PAY/i, "");
+          if (/^\d+$/.test(cleanId)) {
+            mpItem = await mercadoPago.consultarPagamentoPorId(cleanId);
+          }
+          if (!mpItem) {
+            mpItem = await mercadoPago.consultarPagamentoPorExternalReference(queryTxid);
+          }
+
+          if (mpItem) {
+            const isApproved = mpItem.status === "approved";
+            const extRef = mpItem.external_reference || queryTxid;
+
+            if (isApproved) {
+              const reconcileResult = await confirmarPagamentoResiliente({
+                txid: extRef,
+                gateway: "mercadopago_reconcile_recovery",
+                payload: mpItem,
+                executado_por: "recovery_reconciler"
+              });
+              transactionFound = reconcileResult.paymentRecord || {
+                txid: extRef,
+                payment_id: String(mpItem.id),
+                status: "approved",
+                valor: Number(mpItem.transaction_amount),
+                email: mpItem.payer?.email,
+                nome_pagador: `${mpItem.payer?.first_name || ''} ${mpItem.payer?.last_name || ''}`.trim() || "Participante EJC",
+                pago_em: mpItem.date_approved || new Date().toISOString()
+              };
+            } else {
+              transactionFound = {
+                txid: extRef,
+                payment_id: String(mpItem.id),
+                status: mpItem.status || "pending",
+                valor: Number(mpItem.transaction_amount),
+                email: mpItem.payer?.email,
+                nome_pagador: `${mpItem.payer?.first_name || ''} ${mpItem.payer?.last_name || ''}`.trim() || "Participante EJC",
+                criado_em: mpItem.date_created || new Date().toISOString()
+              };
+            }
+
+            // Persiste no store local deste container
+            try {
+              const localStore = settingsStore.loadLocalStore();
+              if (!Array.isArray(localStore.pagamentos)) localStore.pagamentos = [];
+              const existIdx = localStore.pagamentos.findIndex(p => p.txid === transactionFound.txid);
+              if (existIdx >= 0) {
+                localStore.pagamentos[existIdx] = { ...localStore.pagamentos[existIdx], ...transactionFound };
+              } else {
+                localStore.pagamentos.unshift(transactionFound);
+              }
+              settingsStore.saveLocalStore(localStore);
+            } catch (eSave) {}
+          }
+        } catch (eMpRecovery) {
+          console.warn("[Checkout GET MP Recovery Error]", eMpRecovery.message);
+        }
+      }
+
       if (!transactionFound) {
         return res.status(404).json({
           success: false,
@@ -487,23 +561,39 @@ module.exports = async (req, res) => {
 
       const isManual = transactionFound.modalidade_pix === "manual" || transactionFound.metadata?.modalidade_pix === "manual";
 
-      // 2.5. Reconciliação Server-Side no Polling (APENAS para modalidade api_webhook se transação estiver 'pending')
-      if (!isManual && transactionFound && (transactionFound.status === "pending" || !transactionFound.status) && queryTxid) {
+      // 2.6 Reconciliação Server-Side no Polling (para modalidade api_webhook se transação estiver 'pending')
+      if (!isManual && transactionFound && (transactionFound.status === "pending" || !transactionFound.status)) {
         if (mercadoPago.isConfigured()) {
           try {
-            const approvedItem = await mercadoPago.consultarPagamentoPorExternalReference(queryTxid);
-            if (approvedItem && approvedItem.status === "approved") {
-              const reconcileResult = await confirmarPagamentoResiliente({
-                txid: queryTxid,
-                gateway: "mercadopago_polling_reconciler",
-                payload: approvedItem,
-                executado_por: "polling_server_reconciler"
-              });
-              if (reconcileResult.paymentRecord) {
-                transactionFound = reconcileResult.paymentRecord;
-              } else {
-                transactionFound.status = "approved";
-                transactionFound.pago_em = new Date().toISOString();
+            let approvedItem = null;
+            const targetTxid = transactionFound.txid || queryTxid;
+            if (targetTxid) {
+              approvedItem = await mercadoPago.consultarPagamentoPorExternalReference(targetTxid);
+            }
+            if (!approvedItem) {
+              const targetPaymentId = transactionFound.payment_id || transactionFound.metadata?.payment_id || queryTxid;
+              const cleanId = String(targetPaymentId || "").replace(/^PAY/i, "");
+              if (/^\d+$/.test(cleanId)) {
+                approvedItem = await mercadoPago.consultarPagamentoPorId(cleanId);
+              }
+            }
+
+            if (approvedItem) {
+              if (approvedItem.status === "approved") {
+                const reconcileResult = await confirmarPagamentoResiliente({
+                  txid: approvedItem.external_reference || transactionFound.txid || queryTxid,
+                  gateway: "mercadopago_polling_reconciler",
+                  payload: approvedItem,
+                  executado_por: "polling_server_reconciler"
+                });
+                if (reconcileResult.paymentRecord) {
+                  transactionFound = reconcileResult.paymentRecord;
+                } else {
+                  transactionFound.status = "approved";
+                  transactionFound.pago_em = approvedItem.date_approved || new Date().toISOString();
+                }
+              } else if (approvedItem.status && approvedItem.status !== transactionFound.status) {
+                transactionFound.status = approvedItem.status;
               }
             }
           } catch (eGw) {
@@ -825,11 +915,12 @@ module.exports = async (req, res) => {
       // 3. Notificações por e-mail: confirmação de recebimento para o participante e alerta para a coordenação
       try {
         const emailService = require("./_email-service");
-        const clientEmail = email || (localStore.pagamentos?.find(p => p.txid === targetTxid)?.email);
-        const clientNome = nome || (localStore.pagamentos?.find(p => p.txid === targetTxid)?.nome_pagador) || "Participante";
-        const clientValor = localStore.pagamentos?.find(p => p.txid === targetTxid)?.valor;
-        const clientSub = localStore.pagamentos?.find(p => p.txid === targetTxid)?.sub;
-        const clientWpp = localStore.pagamentos?.find(p => p.txid === targetTxid)?.whatsapp_pagador;
+        const currentStore = settingsStore.loadLocalStore();
+        const clientEmail = email || (currentStore.pagamentos?.find(p => p.txid === targetTxid)?.email);
+        const clientNome = nome || (currentStore.pagamentos?.find(p => p.txid === targetTxid)?.nome_pagador) || "Participante";
+        const clientValor = currentStore.pagamentos?.find(p => p.txid === targetTxid)?.valor;
+        const clientSub = currentStore.pagamentos?.find(p => p.txid === targetTxid)?.sub;
+        const clientWpp = currentStore.pagamentos?.find(p => p.txid === targetTxid)?.whatsapp_pagador;
 
         const manualRecord = {
           txid: targetTxid,
@@ -1006,8 +1097,7 @@ module.exports = async (req, res) => {
         if (mercadoPago.isConfigured()) {
           try {
             const descricaoCob = tipo === "inscricao" ? `Inscrição EJC Trânsito ${loteAtual}` : "Contribuição EJC Trânsito";
-            const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-            const notificationUrl = host ? `https://${host}/api/pix-webhook` : undefined;
+            const notificationUrl = `${getPublicBaseUrl()}/api/pix-webhook`;
 
             const mpResult = await mercadoPago.criarPagamentoPix({
               valor: valorNumerico,

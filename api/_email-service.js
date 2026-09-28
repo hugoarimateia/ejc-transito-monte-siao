@@ -52,8 +52,14 @@ async function getSubWhatsAppLink(subName) {
   // Fallback do store local
   try {
     const store = settingsStore.loadLocalStore();
-    if (store.whatsapp && store.whatsapp[subNorm] && store.whatsapp[subNorm].link) {
-      return store.whatsapp[subNorm].link;
+    if (store && store.whatsapp) {
+      const link = store.whatsapp[subNorm] || store.whatsapp[subNorm.toLowerCase()];
+      if (typeof link === "string" && link.startsWith("http")) {
+        return link;
+      }
+      if (link && link.link) {
+        return link.link;
+      }
     }
   } catch (e) {}
 

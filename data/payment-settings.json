@@ -1,6 +1,6 @@
 {
   "settings": {
-    "versao": 241,
+    "versao": 247,
     "ativo": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
@@ -11,7 +11,7 @@
     "pix_tipo_chave": "TELEFONE",
     "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_cidade": "CAMPINA GRANDE",
-    "atualizado_em": "2026-09-28T22:06:29.393Z",
+    "atualizado_em": "2026-09-28T23:51:28.002Z",
     "pix_documento": "",
     "motivo_alteracao": "Atualização de dados PIX via painel",
     "atualizado_por": "superadmin",
@@ -205,6 +205,202 @@
     }
   ],
   "historico": [
+    {
+      "id": "audit-1790639488002-a2vb",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: manual)",
+      "valor_novo": "83996431326 (TELEFONE, mod: api_webhook)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:28.002Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "api_webhook",
+        "versao": 247
+      }
+    },
+    {
+      "id": "audit-1790639487981-3873",
+      "acao": "PAYMENT_MANUALLY_REJECTED",
+      "usuario": "superadmin",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "aguardando_analise",
+      "valor_novo": "rejeitado",
+      "motivo": "Rejeição de pagamento para: PIXMULWINKNCT3H - Motivo: Comprovante com valor divergente",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:27.969Z",
+      "detalhes": {
+        "identificador": "PIXMULWINKNCT3H",
+        "txid": "PIXMULWINKNCT3H",
+        "motivo": "Comprovante com valor divergente"
+      }
+    },
+    {
+      "id": "audit-1790639487946-0ro2",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "superadmin",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: PIXMULWINIJXD3O",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:27.930Z",
+      "detalhes": {
+        "identificador": "PIXMULWINIJXD3O",
+        "txid": "PIXMULWINIJXD3O",
+        "email": "mariana.costa@test.com",
+        "email_enviado": true
+      }
+    },
+    {
+      "id": "audit-1790639487897-gp90",
+      "acao": "MANUAL_PROOF_UPLOADED",
+      "usuario": "Mariana Costa Albuquerque",
+      "campo_afetado": "comprovante_caminho",
+      "valor_anterior": null,
+      "valor_novo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0D",
+      "motivo": "Comprovante enviado para análise do Pix manual: PIXMULWINIJXD3O",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:27.893Z",
+      "detalhes": {
+        "txid": "PIXMULWINIJXD3O"
+      }
+    },
+    {
+      "id": "audit-1790639487868-k5h9",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: api_webhook)",
+      "valor_novo": "83996431326 (TELEFONE, mod: manual)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:27.868Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "manual",
+        "versao": 246
+      }
+    },
+    {
+      "id": "audit-1790639487629-plor",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: api_webhook)",
+      "valor_novo": "83996431326 (TELEFONE, mod: api_webhook)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:27.629Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "api_webhook",
+        "versao": 245
+      }
+    },
+    {
+      "id": "audit-1790639465721-p5wr",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: manual)",
+      "valor_novo": "83996431326 (TELEFONE, mod: api_webhook)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.721Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "api_webhook",
+        "versao": 244
+      }
+    },
+    {
+      "id": "audit-1790639465699-wu4k",
+      "acao": "PAYMENT_MANUALLY_REJECTED",
+      "usuario": "superadmin",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "aguardando_analise",
+      "valor_novo": "rejeitado",
+      "motivo": "Rejeição de pagamento para: PIXMULWI6DQDB8Q - Motivo: Comprovante com valor divergente",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.689Z",
+      "detalhes": {
+        "identificador": "PIXMULWI6DQDB8Q",
+        "txid": "PIXMULWI6DQDB8Q",
+        "motivo": "Comprovante com valor divergente"
+      }
+    },
+    {
+      "id": "audit-1790639465663-8941",
+      "acao": "PAYMENT_MANUALLY_APPROVED",
+      "usuario": "superadmin",
+      "campo_afetado": "pagamento_status",
+      "valor_anterior": "pendente",
+      "valor_novo": "confirmado",
+      "motivo": "Aprovação manual de pagamento para: PIXMULWI6C52THY",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.648Z",
+      "detalhes": {
+        "identificador": "PIXMULWI6C52THY",
+        "txid": "PIXMULWI6C52THY",
+        "email": "mariana.costa@test.com",
+        "email_enviado": true
+      }
+    },
+    {
+      "id": "audit-1790639465635-fbsc",
+      "acao": "MANUAL_PROOF_UPLOADED",
+      "usuario": "Mariana Costa Albuquerque",
+      "campo_afetado": "comprovante_caminho",
+      "valor_anterior": null,
+      "valor_novo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0D",
+      "motivo": "Comprovante enviado para análise do Pix manual: PIXMULWI6C52THY",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.631Z",
+      "detalhes": {
+        "txid": "PIXMULWI6C52THY"
+      }
+    },
+    {
+      "id": "audit-1790639465605-jkd1",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: api_webhook)",
+      "valor_novo": "83996431326 (TELEFONE, mod: manual)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.605Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "manual",
+        "versao": 243
+      }
+    },
+    {
+      "id": "audit-1790639465396-cn54",
+      "acao": "PIX_KEY_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "pix_chave",
+      "valor_anterior": "83996431326 (TELEFONE, mod: api_webhook)",
+      "valor_novo": "83996431326 (TELEFONE, mod: api_webhook)",
+      "motivo": "Atualização da chave/modalidade PIX",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-28T23:51:05.396Z",
+      "detalhes": {
+        "beneficiario": "EJC TRANSITO MONTE SIAO",
+        "cidade": "CAMPINA GRANDE",
+        "modalidade_pix": "api_webhook",
+        "versao": 242
+      }
+    },
     {
       "id": "audit-1790633189393-3wan",
       "acao": "PIX_KEY_UPDATED",
@@ -2029,104 +2225,407 @@
         "lote": "Último Lote 17",
         "valor_promocional": 80
       }
-    },
-    {
-      "id": "audit-1788585466088-7mbp",
-      "acao": "PIX_KEY_UPDATED",
-      "usuario": "test_suite_20",
-      "campo_afetado": "pix_chave",
-      "valor_anterior": "99887766554 (CPF)",
-      "valor_novo": "83944445555 (TELEFONE)",
-      "motivo": "Ciclo 16 Pix",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:46.088Z",
-      "detalhes": {
-        "beneficiario": "EJC 16",
-        "cidade": "CAMPINA GRANDE",
-        "versao": 145
-      }
-    },
-    {
-      "id": "audit-1788585466073-ezex",
-      "acao": "PRICE_UPDATED",
-      "usuario": "test_suite_20",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (Lote Amigos 15)",
-      "valor_novo": "R$ 64.00 (2º Lote Bronze)",
-      "motivo": "Ciclo 16 Preço",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:46.073Z",
-      "detalhes": {
-        "versao": 144,
-        "lote": "2º Lote Bronze",
-        "valor_promocional": null
-      }
-    },
-    {
-      "id": "audit-1788585466048-c7j1",
-      "acao": "FULL_SETTINGS_SYNCED",
-      "usuario": "superadmin",
-      "campo_afetado": "configuracao_geral",
-      "valor_anterior": "v142",
-      "valor_novo": "v143 (R$ 50.00 - 99887766554)",
-      "motivo": "Ciclo 15 via sync_full_settings",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:46.048Z"
-    },
-    {
-      "id": "audit-1788585466018-q4fa",
-      "acao": "PIX_KEY_UPDATED",
-      "usuario": "test_suite_20",
-      "campo_afetado": "pix_chave",
-      "valor_anterior": "83955554444 (TELEFONE)",
-      "valor_novo": "chave14@ejc.com (EMAIL)",
-      "motivo": "Ciclo 14 Pix",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:46.018Z",
-      "detalhes": {
-        "beneficiario": "EJC 14",
-        "cidade": "CAMPINA GRANDE",
-        "versao": 142
-      }
-    },
-    {
-      "id": "audit-1788585466003-2wxo",
-      "acao": "PRICE_UPDATED",
-      "usuario": "test_suite_20",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 72.00 (2º Lote Ouro)",
-      "valor_novo": "R$ 85.00 (Lote Tardio)",
-      "motivo": "Ciclo 14 Preço",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:46.003Z",
-      "detalhes": {
-        "versao": 141,
-        "lote": "Lote Tardio",
-        "valor_promocional": null
-      }
-    },
-    {
-      "id": "audit-1788585465949-l226",
-      "acao": "PIX_KEY_UPDATED",
-      "usuario": "test_suite_20",
-      "campo_afetado": "pix_chave",
-      "valor_anterior": "leoeuler03@gmail.com (EMAIL)",
-      "valor_novo": "83955554444 (TELEFONE)",
-      "motivo": "Ciclo 13 Pix",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-05T05:17:45.949Z",
-      "detalhes": {
-        "beneficiario": "EJC 13",
-        "cidade": "CAMPINA GRANDE",
-        "versao": 140
-      }
     }
   ],
   "whatsapp": {
     "verde": "https://chat.whatsapp.com/TESTE_VERDE_NOVO",
-    "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO"
+    "vermelho": "https://chat.whatsapp.com/TESTE_VERMELHO_NOVO",
+    "amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
+    "laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
+    "azul": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
+    "geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
   },
   "pagamentos": [
+    {
+      "txid": "PIXFINMULWIY0Q",
+      "payment_id": "PIXFINMULWIY0Q",
+      "order_id": "PIXFINMULWIY0Q",
+      "status": "approved",
+      "pago_em": "2026-09-28T23:51:41.499Z",
+      "metodo": "pix",
+      "criado_em": "2026-09-28T23:51:41.499Z"
+    },
+    {
+      "txid": "PIXMULWIUR2PXDB",
+      "payment_id": "PAY123456789",
+      "order_id": "ORDMULWIUR2PXDB",
+      "external_reference": "PIXMULWIUR2PXDB",
+      "gateway_transaction_id": "PAY123456789",
+      "nome_pagador": "Lucas Gabriel E2E",
+      "email": "teste.conf.1790639497250@exemplo.com",
+      "whatsapp_pagador": "83999998888",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "api_webhook",
+      "status": "approved",
+      "status_analise_manual": null,
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126580014br.gov.bcb.pix0136mp-pix-oficial-fake-token-test-123456520400005303986540450.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62070503***6304ABCD",
+      "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "ticket_url": "https://www.mercadopago.com.br/payments/123456789/ticket",
+      "provedor": "mercadopago",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": "ORDMULWIUR2PXDB",
+        "payment_id": "PAY123456789",
+        "external_reference": "PIXMULWIUR2PXDB",
+        "modalidade_pix": "api_webhook",
+        "status_analise_manual": null,
+        "sub": "Verde",
+        "ticket_url": "https://www.mercadopago.com.br/payments/123456789/ticket",
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "order_created",
+            "destinatario": "teste.conf.1790639497250@exemplo.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639497325-eqcnmt",
+            "erro": null,
+            "data": "2026-09-28T23:51:37.326Z"
+          },
+          {
+            "evento": "payment_approved",
+            "destinatario": "teste.conf.1790639497250@exemplo.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639497374-bvkhhr",
+            "erro": null,
+            "data": "2026-09-28T23:51:37.374Z"
+          },
+          {
+            "evento": "payment_approved",
+            "destinatario": "teste.conf.1790639497250@exemplo.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639497411-3u01cn",
+            "erro": null,
+            "data": "2026-09-28T23:51:37.411Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:37.273Z",
+      "pago_em": "2026-09-28T23:51:37.391Z",
+      "comprovante_email_enviado": true,
+      "comprovante_email_em": "2026-09-28T23:51:37.423Z",
+      "comprovante_email_erro": null
+    },
+    {
+      "txid": "PIXMULWINKNCT3H",
+      "payment_id": "PAYMULWINKNCT3H",
+      "order_id": "ORDMULWINKNCT3H",
+      "external_reference": "PIXMULWINKNCT3H",
+      "gateway_transaction_id": "PAYMULWINKNCT3H",
+      "nome_pagador": "Rodrigo Farias Teste",
+      "email": "rodrigo.farias@test.com",
+      "whatsapp_pagador": "83995556677",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "manual",
+      "status": "rejected",
+      "status_analise_manual": "rejeitado",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "83996431326",
+      "qr_code_base64": null,
+      "ticket_url": null,
+      "provedor": "pix_manual",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "metadata": {
+        "order_id": "ORDMULWINKNCT3H",
+        "payment_id": "PAYMULWINKNCT3H",
+        "external_reference": "PIXMULWINKNCT3H",
+        "modalidade_pix": "manual",
+        "status_analise_manual": "pendente",
+        "sub": "Vermelho",
+        "ticket_url": null,
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "manual_proof_rejected",
+            "destinatario": "rodrigo.farias@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487973-wzqaa3",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.973Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:27.966Z",
+      "motivo_rejeicao": "Comprovante com valor divergente",
+      "rejeitado_por": "superadmin",
+      "rejeitado_em": "2026-09-28T23:51:27.969Z"
+    },
+    {
+      "txid": "PIXMULWINIJXD3O",
+      "payment_id": "PAYMULWINIJXD3O",
+      "order_id": "ORDMULWINIJXD3O",
+      "external_reference": "PIXMULWINIJXD3O",
+      "gateway_transaction_id": "PAYMULWINIJXD3O",
+      "nome_pagador": "Mariana Costa Albuquerque",
+      "email": "mariana.costa@test.com",
+      "whatsapp_pagador": "83998884455",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "manual",
+      "status": "approved",
+      "status_analise_manual": "pendente",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "83996431326",
+      "qr_code_base64": null,
+      "ticket_url": null,
+      "provedor": "pix_manual",
+      "inscricao_id": null,
+      "sub": "Laranja",
+      "metadata": {
+        "order_id": "ORDMULWINIJXD3O",
+        "payment_id": "PAYMULWINIJXD3O",
+        "external_reference": "PIXMULWINIJXD3O",
+        "modalidade_pix": "manual",
+        "status_analise_manual": "pendente",
+        "sub": "Laranja",
+        "ticket_url": null,
+        "lote": "1º Lote",
+        "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
+        "emails_enviados": [
+          {
+            "evento": "manual_proof_received",
+            "destinatario": "mariana.costa@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487904-awzv7y",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.904Z"
+          },
+          {
+            "evento": "admin_manual_proof_alert",
+            "destinatario": "leoeuler03@gmail.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487911-8u09uf",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.911Z"
+          },
+          {
+            "evento": "manual_proof_approved",
+            "destinatario": "mariana.costa@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487938-5wiei5",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.938Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:27.890Z",
+      "comprovante_caminho": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
+      "comprovante_enviado_em": "2026-09-28T23:51:27.893Z",
+      "pago_em": "2026-09-28T23:51:27.930Z",
+      "comprovante_email_enviado": true,
+      "comprovante_email_em": "2026-09-28T23:51:27.938Z",
+      "comprovante_email_erro": null
+    },
+    {
+      "txid": "PIXMULWINBZ2PBX",
+      "payment_id": "PAY987654321",
+      "order_id": "ORDMULWINBZ2PBX",
+      "external_reference": "PIXMULWINBZ2PBX",
+      "gateway_transaction_id": "PAY987654321",
+      "nome_pagador": "Lucas Pereira Santos",
+      "email": "lucas.pereira.1790639487640@test.com",
+      "whatsapp_pagador": "83991112233",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "api_webhook",
+      "status": "approved",
+      "status_analise_manual": null,
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126580014br.gov.bcb.pix0136mp-pix-oficial-fake-token-test-123456520400005303986540450.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62070503***6304ABCD",
+      "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "ticket_url": "https://www.mercadopago.com.br/payments/987654321/ticket",
+      "provedor": "mercadopago",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": "ORDMULWINBZ2PBX",
+        "payment_id": "PAY987654321",
+        "external_reference": "PIXMULWINBZ2PBX",
+        "modalidade_pix": "api_webhook",
+        "status_analise_manual": null,
+        "sub": "Verde",
+        "ticket_url": "https://www.mercadopago.com.br/payments/987654321/ticket",
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "order_created",
+            "destinatario": "lucas.pereira.1790639487640@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487687-lkgima",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.687Z"
+          },
+          {
+            "evento": "payment_approved",
+            "destinatario": "lucas.pereira.1790639487640@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639487724-qfcruz",
+            "erro": null,
+            "data": "2026-09-28T23:51:27.724Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:27.656Z",
+      "pago_em": "2026-09-28T23:51:27.705Z",
+      "comprovante_email_enviado": true,
+      "comprovante_email_em": "2026-09-28T23:51:27.724Z",
+      "comprovante_email_erro": null
+    },
+    {
+      "txid": "PIXMULWI6DQDB8Q",
+      "payment_id": "PAYMULWI6DQDB8Q",
+      "order_id": "ORDMULWI6DQDB8Q",
+      "external_reference": "PIXMULWI6DQDB8Q",
+      "gateway_transaction_id": "PAYMULWI6DQDB8Q",
+      "nome_pagador": "Rodrigo Farias Teste",
+      "email": "rodrigo.farias@test.com",
+      "whatsapp_pagador": "83995556677",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "manual",
+      "status": "rejected",
+      "status_analise_manual": "rejeitado",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "83996431326",
+      "qr_code_base64": null,
+      "ticket_url": null,
+      "provedor": "pix_manual",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "metadata": {
+        "order_id": "ORDMULWI6DQDB8Q",
+        "payment_id": "PAYMULWI6DQDB8Q",
+        "external_reference": "PIXMULWI6DQDB8Q",
+        "modalidade_pix": "manual",
+        "status_analise_manual": "pendente",
+        "sub": "Vermelho",
+        "ticket_url": null,
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "manual_proof_rejected",
+            "destinatario": "rodrigo.farias@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639465693-nolkfe",
+            "erro": null,
+            "data": "2026-09-28T23:51:05.693Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:05.686Z",
+      "motivo_rejeicao": "Comprovante com valor divergente",
+      "rejeitado_por": "superadmin",
+      "rejeitado_em": "2026-09-28T23:51:05.689Z"
+    },
+    {
+      "txid": "PIXMULWI6C52THY",
+      "payment_id": "PAYMULWI6C52THY",
+      "order_id": "ORDMULWI6C52THY",
+      "external_reference": "PIXMULWI6C52THY",
+      "gateway_transaction_id": "PAYMULWI6C52THY",
+      "nome_pagador": "Mariana Costa Albuquerque",
+      "email": "mariana.costa@test.com",
+      "whatsapp_pagador": "83998884455",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "manual",
+      "status": "approved",
+      "status_analise_manual": "pendente",
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "83996431326",
+      "qr_code_base64": null,
+      "ticket_url": null,
+      "provedor": "pix_manual",
+      "inscricao_id": null,
+      "sub": "Laranja",
+      "metadata": {
+        "order_id": "ORDMULWI6C52THY",
+        "payment_id": "PAYMULWI6C52THY",
+        "external_reference": "PIXMULWI6C52THY",
+        "modalidade_pix": "manual",
+        "status_analise_manual": "pendente",
+        "sub": "Laranja",
+        "ticket_url": null,
+        "lote": "1º Lote",
+        "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
+        "emails_enviados": [
+          {
+            "evento": "manual_proof_approved",
+            "destinatario": "mariana.costa@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639465657-8z742z",
+            "erro": null,
+            "data": "2026-09-28T23:51:05.657Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:05.628Z",
+      "comprovante_caminho": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
+      "comprovante_enviado_em": "2026-09-28T23:51:05.631Z",
+      "pago_em": "2026-09-28T23:51:05.648Z",
+      "comprovante_email_enviado": true,
+      "comprovante_email_em": "2026-09-28T23:51:05.657Z",
+      "comprovante_email_erro": null
+    },
+    {
+      "txid": "PIXMULWI66RJNNZ",
+      "payment_id": "PAY987654321",
+      "order_id": "ORDMULWI66RJNNZ",
+      "external_reference": "PIXMULWI66RJNNZ",
+      "gateway_transaction_id": "PAY987654321",
+      "nome_pagador": "Lucas Pereira Santos",
+      "email": "lucas.pereira.1790639465420@test.com",
+      "whatsapp_pagador": "83991112233",
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "api_webhook",
+      "status": "approved",
+      "status_analise_manual": null,
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126580014br.gov.bcb.pix0136mp-pix-oficial-fake-token-test-123456520400005303986540450.005802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62070503***6304ABCD",
+      "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "ticket_url": "https://www.mercadopago.com.br/payments/987654321/ticket",
+      "provedor": "mercadopago",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": "ORDMULWI66RJNNZ",
+        "payment_id": "PAY987654321",
+        "external_reference": "PIXMULWI66RJNNZ",
+        "modalidade_pix": "api_webhook",
+        "status_analise_manual": null,
+        "sub": "Verde",
+        "ticket_url": "https://www.mercadopago.com.br/payments/987654321/ticket",
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "order_created",
+            "destinatario": "lucas.pereira.1790639465420@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639465528-u23ije",
+            "erro": null,
+            "data": "2026-09-28T23:51:05.529Z"
+          },
+          {
+            "evento": "payment_approved",
+            "destinatario": "lucas.pereira.1790639465420@test.com",
+            "sucesso": true,
+            "messageId": "simulated-1790639465574-ebyj8l",
+            "erro": null,
+            "data": "2026-09-28T23:51:05.574Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-28T23:51:05.436Z",
+      "pago_em": "2026-09-28T23:51:05.546Z",
+      "comprovante_email_enviado": true,
+      "comprovante_email_em": "2026-09-28T23:51:05.574Z",
+      "comprovante_email_erro": null
+    },
     {
       "txid": "PIXMULSRNI40CZQ",
       "payment_id": "PAYMULSRNI40CZQ",
@@ -2442,14 +2941,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQT15EQ13P0",
         "payment_id": "PAYMTQT15EQ13P0",
         "external_reference": "PIXMTQT15EQ13P0",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -2714,14 +3213,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQSBEUEJ3P5",
         "payment_id": "PAYMTQSBEUEJ3P5",
         "external_reference": "PIXMTQSBEUEJ3P5",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -2920,14 +3419,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQS9PWJCQ5N",
         "payment_id": "PAYMTQS9PWJCQ5N",
         "external_reference": "PIXMTQS9PWJCQ5N",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -3027,14 +3526,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQS8F58V917",
         "payment_id": "PAYMTQS8F58V917",
         "external_reference": "PIXMTQS8F58V917",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -3134,14 +3633,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQS7RB71KYT",
         "payment_id": "PAYMTQS7RB71KYT",
         "external_reference": "PIXMTQS7RB71KYT",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -3205,14 +3704,14 @@
       "ticket_url": null,
       "provedor": "pix_manual",
       "inscricao_id": null,
-      "sub": "Laranja",
+      "sub": "Azul",
       "metadata": {
         "order_id": "ORDMTQS6SQ5J5O2",
         "payment_id": "PAYMTQS6SQ5J5O2",
         "external_reference": "PIXMTQS6SQ5J5O2",
         "modalidade_pix": "manual",
         "status_analise_manual": "pendente",
-        "sub": "Laranja",
+        "sub": "Azul",
         "ticket_url": null,
         "lote": "1º Lote",
         "comprovante_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
@@ -6480,104 +6979,6 @@
       "inscricao_id": null,
       "sub": "Verde",
       "criado_em": "2026-09-05T04:58:33.414Z"
-    },
-    {
-      "txid": "PIXMTNWX4NLLZFU",
-      "nome_pagador": "Participante Ciclo 3",
-      "email": "participante.c3@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 55,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126670014br.gov.bcb.pix0111839888811110230TAXA EJC TRANSITO 1º LOTE BETA520400005303986540555.005802BR5914EJC TRANSITO 36014CAMPINA GRANDE62190515PIXMTNWX4NLLZFU6304F085",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:33.299Z"
-    },
-    {
-      "txid": "PIXMTNWX4LVT3C7",
-      "nome_pagador": "Participante Ciclo 2",
-      "email": "participante.c2@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 48,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126730014br.gov.bcb.pix0111123456789010236TAXA EJC TRANSITO LOTE PROMOCIONAL A520400005303986540548.005802BR5911EJC PARAIBA6014CAMPINA GRANDE62190515PIXMTNWX4LVT3C76304FD23",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:33.238Z"
-    },
-    {
-      "txid": "PIXMTNWX4KCFDDV",
-      "nome_pagador": "Participante Ciclo 1",
-      "email": "participante.c1@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 52,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126710014br.gov.bcb.pix0115teste01@ejc.com0230TAXA EJC TRANSITO 1º LOTE ALFA520400005303986540552.005802BR5910EJC BRASIL6014CAMPINA GRANDE62190515PIXMTNWX4KCFDDV63046674",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:33.182Z"
-    },
-    {
-      "txid": "PIXMTNWWUP1XXYC",
-      "nome_pagador": "Cold Participant",
-      "email": "cold@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 59.9,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126800014br.gov.bcb.pix0120leoeuler03@gmail.com0234TAXA EJC TRANSITO 2º LOTE ESPECIAL520400005303986540559.905802BR5905EJC 46014CAMPINA GRANDE62190515PIXMTNWWUP1XXYC6304B9B9",
-      "inscricao_id": null,
-      "sub": null,
-      "criado_em": "2026-09-05T04:58:20.391Z"
-    },
-    {
-      "txid": "PIXMTNWWUMW5SEO",
-      "nome_pagador": "Participante Ciclo 4",
-      "email": "participante.c4@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 59.9,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126960014br.gov.bcb.pix013600000000-0000-0000-0000-0000000000040234TAXA EJC TRANSITO 2º LOTE ESPECIAL520400005303986540559.905802BR5905EJC 46014CAMPINA GRANDE62190515PIXMTNWWUMW5SEO6304FF72",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:20.314Z"
-    },
-    {
-      "txid": "PIXMTNWWUGR8KUN",
-      "nome_pagador": "Participante Ciclo 3",
-      "email": "participante.c3@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 55,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126670014br.gov.bcb.pix0111839888811110230TAXA EJC TRANSITO 1º LOTE BETA520400005303986540555.005802BR5914EJC TRANSITO 36014CAMPINA GRANDE62190515PIXMTNWWUGR8KUN6304DCBD",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:20.240Z"
-    },
-    {
-      "txid": "PIXMTNWWUF324SH",
-      "nome_pagador": "Participante Ciclo 2",
-      "email": "participante.c2@ejc.com",
-      "whatsapp_pagador": null,
-      "valor": 48,
-      "metodo": "pix",
-      "status": "pending",
-      "tipo": "inscricao",
-      "pix_copia_e_cola": "00020126730014br.gov.bcb.pix0111123456789010236TAXA EJC TRANSITO LOTE PROMOCIONAL A520400005303986540548.005802BR5911EJC PARAIBA6014CAMPINA GRANDE62190515PIXMTNWWUF324SH6304B5C2",
-      "inscricao_id": null,
-      "sub": "Verde",
-      "criado_em": "2026-09-05T04:58:20.032Z"
     }
   ],
   "inscricoes": []

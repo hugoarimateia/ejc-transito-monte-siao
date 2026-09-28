@@ -938,9 +938,9 @@
       } catch (e) {}
     }
 
-    const nomeParticipante = urlParams.get("nome") || "Participante EJC";
-    const emailParam = urlParams.get("email") || "";
-    const wppParam = urlParams.get("whatsapp") || "";
+    const nomeParticipante = urlParams.get("nome") || (function(){ try { return sessionStorage.getItem("ejc_checkout_nome") || ""; } catch(e){ return ""; } })() || "Participante EJC";
+    const emailParam = urlParams.get("email") || (function(){ try { return sessionStorage.getItem("ejc_checkout_email") || ""; } catch(e){ return ""; } })() || "";
+    const wppParam = urlParams.get("whatsapp") || (function(){ try { return sessionStorage.getItem("ejc_checkout_whatsapp") || ""; } catch(e){ return ""; } })() || "";
     const tokenParam = urlParams.get("token") || "";
     const extraShirtParam = urlParams.get("camisa_extra") === "true";
 

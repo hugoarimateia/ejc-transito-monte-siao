@@ -113,6 +113,10 @@ const paymentReason = document.querySelector("#payment-reason");
 const pendingMessage = document.querySelector("#pending-message");
 const whatsappSuccess = document.querySelector("#whatsapp-success");
 const whatsappGroupButton = document.querySelector("#whatsapp-group-button");
+if (whatsappSuccess) {
+  whatsappSuccess.hidden = true;
+  whatsappSuccess.style.display = "none";
+}
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -380,7 +384,10 @@ if (signupForm) {
     }
 
     if (submitSignup) submitSignup.disabled = true;
-    if (whatsappSuccess) whatsappSuccess.hidden = true;
+    if (whatsappSuccess) {
+      whatsappSuccess.hidden = true;
+      whatsappSuccess.style.display = "none";
+    }
     if (whatsappGroupButton) whatsappGroupButton.removeAttribute("href");
     setFeedback("Verificando cadastro e processando...", "loading");
 
@@ -521,10 +528,11 @@ if (signupForm) {
         console.warn("[Signup] Sync central indisponível no momento, mantendo gravação local:", errSync);
       }
 
-      // 2.2 Gravação local de segurança
-      localInscricoes.push(newRegistration);
-      localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
-      registrationSuccess = true;
+      // 2.2 Gravação local apenas com confirmação efetiva do backend
+      if (registrationSuccess) {
+        localInscricoes.push(newRegistration);
+        localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
+      }
     } catch (e) {
       console.error("Erro ao salvar inscrição:", e);
     }
@@ -535,12 +543,33 @@ if (signupForm) {
       const activeVersao = window.EJC_ACTIVE_VERSION || 0;
       const inscricaoIdParam = registeredId || "";
       const tokenAcessoParam = userToken || "";
+
+      // Preserva contexto completo da inscrição na sessionStorage para o Checkout
+      try {
+        sessionStorage.setItem("ejc_checkout_sub", chosenSub);
+        sessionStorage.setItem("ejc_checkout_inscricao_id", inscricaoIdParam);
+        sessionStorage.setItem("ejc_checkout_nome", normalizedName);
+        sessionStorage.setItem("ejc_checkout_email", emailValue);
+        sessionStorage.setItem("ejc_checkout_whatsapp", normalizedPhone);
+      } catch (eStore) {}
+
       const checkoutUrl = `/checkout?tipo=inscricao&valor=${activeValor}&lote=${encodeURIComponent(activeLote)}&v=${activeVersao}&nome=${encodeURIComponent(normalizedName)}&email=${encodeURIComponent(emailValue)}&whatsapp=${encodeURIComponent(normalizedPhone)}&sub=${encodeURIComponent(chosenSub)}&inscricao_id=${encodeURIComponent(inscricaoIdParam)}&token=${encodeURIComponent(tokenAcessoParam)}`;
 
       const btnPayAfterSignup = document.getElementById("btnPayAfterSignup");
       if (btnPayAfterSignup) {
         btnPayAfterSignup.href = checkoutUrl;
         btnPayAfterSignup.style.display = "flex";
+        btnPayAfterSignup.onclick = (e) => {
+          e.preventDefault();
+          try {
+            sessionStorage.setItem("ejc_checkout_sub", chosenSub);
+            sessionStorage.setItem("ejc_checkout_inscricao_id", inscricaoIdParam);
+            sessionStorage.setItem("ejc_checkout_nome", normalizedName);
+            sessionStorage.setItem("ejc_checkout_email", emailValue);
+            sessionStorage.setItem("ejc_checkout_whatsapp", normalizedPhone);
+          } catch(err) {}
+          window.location.href = checkoutUrl;
+        };
       }
 
       if (isCheckout) {
@@ -565,6 +594,7 @@ if (signupForm) {
       }
       if (whatsappSuccess) {
         whatsappSuccess.hidden = false;
+        whatsappSuccess.style.display = "flex";
         whatsappSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
@@ -581,7 +611,11 @@ if (signupForm) {
       updatePaymentFields();
       await updateSubCounts();
     } else {
-      setFeedback("Não foi possível concluir a inscrição. Tente novamente em instantes.", "error");
+      if (whatsappSuccess) {
+        whatsappSuccess.hidden = true;
+        whatsappSuccess.style.display = "none";
+      }
+      setFeedback("Não foi possível concluir a inscrição no servidor. Verifique sua conexão e tente novamente.", "error");
     }
 
     if (submitSignup) submitSignup.disabled = false;

@@ -1531,6 +1531,11 @@ button { font: inherit; }
 .form-feedback.loading { color: var(--blue); }
 
 /* Confirmação e acesso ao WhatsApp */
+[hidden],
+.whatsapp-success[hidden] {
+  display: none !important;
+}
+
 .whatsapp-success {
   margin-top: 22px;
   padding: 24px;

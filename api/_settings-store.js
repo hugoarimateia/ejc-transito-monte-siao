@@ -203,11 +203,19 @@ function loadLocalStore() {
     const memoryVersao = Number(memoryStore.settings.versao || 0);
     const chosenVersao = chosen ? Number(chosen.settings?.versao || 0) : 0;
     if (memoryVersao >= chosenVersao) {
+      memoryStore.whatsapp = {
+        ...getDefaultStore().whatsapp,
+        ...(memoryStore.whatsapp || {})
+      };
       return memoryStore;
     }
   }
 
   if (chosen) {
+    chosen.whatsapp = {
+      ...getDefaultStore().whatsapp,
+      ...(chosen.whatsapp || {})
+    };
     memoryStore = chosen;
     return chosen;
   }

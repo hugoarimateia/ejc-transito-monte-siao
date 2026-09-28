@@ -22,6 +22,7 @@
   <title>EJC | Equipe do Trânsito</title>
   <link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
   <link rel="apple-touch-icon" href="images/favicon.png?v=2">
+  <link rel="canonical" href="https://transitoejc.site">
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap"
@@ -35,8 +36,8 @@
   <header class="site-header" id="topo">
     <div class="container nav-wrap">
       <a aria-label="Página inicial" class="brand" href="#topo">
-        <img alt="Logo EJC Equipe do Trânsito" src="images/favicon.png?v=2"
-          data-logo-light="images/favicon.png?v=2" data-logo-dark="images/favicon-dark.png?v=2">
+        <img alt="Logo EJC Equipe do Trânsito" src="images/favicon.png?v=2" data-logo-light="images/favicon.png?v=2"
+          data-logo-dark="images/favicon-dark.png?v=2">
       </a>
       <nav aria-label="Navegação principal" class="nav" id="menu">
         <a href="#equipe">Equipe</a>
@@ -525,7 +526,7 @@
 
               <p aria-live="polite" class="form-feedback" id="form-feedback" role="status"></p>
 
-              <div class="whatsapp-success" hidden="" id="whatsapp-success">
+              <div class="whatsapp-success" hidden="" id="whatsapp-success" style="display: none;">
                 <div class="success-top-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Inscrição
                   Concluída com Sucesso!</div>
                 <p class="success-intro">Sua inscrição foi realizada com sucesso! Clique no botão abaixo para entrar no
@@ -534,7 +535,7 @@
                   id="whatsapp-group-button" rel="noopener" target="_blank">
                   <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp
                 </a>
-                <a class="button button-primary" href="#" id="btnPayAfterSignup"
+                <a class="button button-primary" href="/checkout?tipo=inscricao" id="btnPayAfterSignup"
                   style="margin-top: 10px; width: 100%; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
                   <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Pagar Taxa de Inscrição no Checkout Oficial
                 </a>
@@ -554,7 +555,7 @@
             instantânea, emissão automática de comprovante no seu e-mail e direcionamento direto para o grupo do seu
             Sub.</p>
           <div class="payment-deadline"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
-            <div><strong>Prazo para confirmação: Até 15 dias antes do encontro.</strong><span id="heroFeeText">Taxa
+            <div><strong>Prazo para confirmação: Até o dia 06 de novembro.</strong><span id="heroFeeText">Taxa
                 única de R$ 50,00. Cartão de crédito em até 12x ou Pix com baixa imediata.</span></div>
           </div>
           <div style="margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
@@ -648,8 +649,8 @@
             <span id="feeLotBadge">Taxa da equipe</span>
             <strong id="mainFeePriceDisplay">R$ 50,00</strong>
             <small>Materiais e organização da Equipe do Trânsito</small>
-            <div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até 15 dias antes do
-                encontro</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela
+            <div class="fee-deadline"><strong>Prazo para confirmação</strong><span>Até dia 06 de
+                novembro.</span><small>Após essa data, inscrições com pagamento pendente poderão ser canceladas pela
                 coordenação.</small></div>
             <a href="/checkout?tipo=inscricao" class="button button-light" id="btnPayFeeSection"
               style="margin-top: 18px; width: 100%; font-weight: 800; text-align: center; text-decoration: none; display: block;">Pagar

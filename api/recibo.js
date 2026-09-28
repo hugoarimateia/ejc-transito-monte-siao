@@ -84,6 +84,37 @@ module.exports = async (req, res) => {
     } catch (localErr) {}
   }
 
+  // 3. Fallback direto no Mercado Pago (caso o container tenha reiniciado)
+  if (!paymentRecord && queryTxid) {
+    try {
+      const mercadoPago = require("./_mercadopago");
+      if (mercadoPago.isConfigured()) {
+        const cleanId = String(queryTxid).replace(/^PAY/i, "");
+        let mpItem = null;
+        if (/^\d+$/.test(cleanId)) {
+          mpItem = await mercadoPago.consultarPagamentoPorId(cleanId);
+        }
+        if (!mpItem) {
+          mpItem = await mercadoPago.consultarPagamentoPorExternalReference(queryTxid);
+        }
+        if (mpItem && mpItem.status === "approved") {
+          paymentRecord = {
+            txid: mpItem.external_reference || queryTxid,
+            payment_id: String(mpItem.id),
+            order_id: String(mpItem.order?.id || mpItem.id),
+            nome_pagador: `${mpItem.payer?.first_name || ''} ${mpItem.payer?.last_name || ''}`.trim() || "Participante EJC",
+            email: mpItem.payer?.email || "",
+            valor: Number(mpItem.transaction_amount),
+            metodo: "pix",
+            status: "approved",
+            sub: "Geral",
+            pago_em: mpItem.date_approved || new Date().toISOString()
+          };
+        }
+      }
+    } catch (eMp) {}
+  }
+
   if (!paymentRecord) {
     return res.status(404).send(`
       <!DOCTYPE html>
