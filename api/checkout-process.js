@@ -85,7 +85,9 @@ function getFriendlyCardErrorMessage(statusDetail) {
     cc_rejected_invalid_installments: "A quantidade de parcelas selecionada não é permitida para este cartão.",
     cc_rejected_card_type_not_allowed: "Este tipo de cartão não é aceito. Por favor, utilize um cartão de crédito válido.",
     cc_rejected_blacklist: "Cartão não autorizado pela operadora. Utilize outro cartão ou a opção Pix.",
-    cc_rejected_other_reason: "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados, tente outro cartão ou pague via Pix Instantâneo."
+    cc_rejected_other_reason: "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados, tente outro cartão ou pague via Pix Instantâneo.",
+    "3003": "Token de segurança do cartão expirado ou inválido. Por favor, preencha novamente os dados do cartão.",
+    transaction_not_created: "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo."
   };
   return map[statusDetail] || (statusDetail && statusDetail !== "card_rejected" ? `Pagamento recusado (${statusDetail}). Verifique os dados ou utilize outra forma de pagamento.` : "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.");
 }

@@ -2177,37 +2177,9 @@
     }
 
     async function carregarCondicoesParcelamentoMP(amount, effectiveMax) {
-      if (!amount || Number(amount) <= 0) return null;
-      const pubKey = getMercadoPagoPublicKey();
-      if (!pubKey || pubKey === "sua_public_key_aqui" || pubKey.length < 15) {
-        return null;
-      }
-
-      const cacheKey = `${Number(amount).toFixed(2)}_${pubKey}`;
-      if (mpInstallmentsCache && mpInstallmentsCache[cacheKey]) {
-        return mpInstallmentsCache[cacheKey];
-      }
-
-      try {
-        const url = `https://api.mercadopago.com/v1/payment_methods/installments?public_key=${encodeURIComponent(pubKey)}&amount=${Number(amount).toFixed(2)}&payment_method_id=visa`;
-        const res = await fetch(url, {
-          headers: { "Accept": "application/json" },
-          signal: AbortSignal.timeout(4500)
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (Array.isArray(data) && data[0]?.payer_costs) {
-          const costs = data[0].payer_costs.filter(c => c.installments <= effectiveMax);
-          if (mpInstallmentsCache) {
-            mpInstallmentsCache[cacheKey] = costs;
-          }
-          return costs;
-        }
-        return null;
-      } catch (err) {
-        console.warn("[MercadoPago Installments] Erro ao buscar parcelas oficiais:", err.message);
-        return null;
-      }
+      // O Card Payment Brick oficial é o responsável exclusivo por consultar as condições reais
+      // com base no BIN do cartão digitado pelo usuário, eliminando duplicações e requisições hardcoded.
+      return null;
     }
 
     async function renderizarSeletorParcelasManual() {
@@ -2317,69 +2289,23 @@
         return;
       }
 
-      // CASO 3: Modo Mercado Pago Oficial (exibição transparente das condições reais)
+      // CASO 3: Modo Mercado Pago Oficial (as opções e taxas reais são consultadas nativamente pelo Card Payment Brick)
       grid.innerHTML = `
-        <div style="padding: 14px; text-align: center; color: var(--muted); font-size: .85rem; border: 1px dashed var(--border-color); border-radius: 10px;">
-          <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--blue); margin-right: 6px;"></i>
-          <span>Calculando condições do cartão...</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-credit-card" style="color: var(--blue); font-size: 1.1rem;"></i>
+            <div>
+              <strong style="color: var(--text-main); font-size: .92rem;">Parcelamento em até ${effectiveMax}x no cartão</strong>
+              <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                As opções e taxas oficiais são calculadas automaticamente pelo Mercado Pago diretamente no formulário do cartão abaixo.
+              </div>
+            </div>
+          </div>
+          <div>
+            <span style="background: #eff6ff; color: #1d4ed8; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">MERCADO PAGO</span>
+          </div>
         </div>
       `;
-
-      const costs = await carregarCondicoesParcelamentoMP(baseAmount, effectiveMax);
-      if (costs && costs.length > 0) {
-        if (costs.length === 1) {
-          const c = costs[0];
-          grid.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--blue); background: rgba(8, 125, 249, 0.06);">
-              <div>
-                <strong style="color: var(--text-main); font-size: .92rem;">1x de R$ ${Number(c.installment_amount).toFixed(2).replace('.', ',')}</strong>
-                <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                  Total: R$ ${Number(c.total_amount).toFixed(2).replace('.', ',')} (Pagamento à vista)
-                </div>
-              </div>
-              <div>
-                <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS / À VISTA</span>
-              </div>
-            </div>
-          `;
-        } else {
-          grid.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${costs.map(c => `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface);">
-                  <div>
-                    <strong style="color: var(--text-main); font-size: .90rem;">${c.installments}x de R$ ${Number(c.installment_amount).toFixed(2).replace('.', ',')}</strong>
-                    <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                      Total: R$ ${Number(c.total_amount).toFixed(2).replace('.', ',')}
-                    </div>
-                  </div>
-                  <div>
-                    ${c.installment_rate === 0
-                      ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS</span>'
-                      : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Taxa: ${Number(c.installment_rate).toFixed(2).replace('.', ',')}%</span>`
-                    }
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-            <div style="font-size: .78rem; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-circle-info" style="color: var(--blue);"></i>
-              <span>Condições oficiais do Mercado Pago. Selecione a quantidade de parcelas desejada diretamente no formulário do cartão abaixo.</span>
-            </div>
-          `;
-        }
-      } else {
-        // Fallback seguro se a consulta direta não responder
-        grid.innerHTML = `
-          <div style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); font-size: .84rem; color: var(--muted); display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="color: var(--text-main);">1x de R$ ${baseAmount.toFixed(2).replace('.', ',')}</strong> (à vista)
-              <div style="font-size: .76rem; color: var(--muted);">Em até ${effectiveMax}x disponíveis no formulário abaixo</div>
-            </div>
-            <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS</span>
-          </div>
-        `;
-      }
     }
 
     function atualizarResumoTransparente() {
@@ -2495,7 +2421,20 @@
         const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
         amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
         maxInstToSet = Math.min(selectedManualInstallment, effectiveMax);
-        minInstToSet = maxInstToSet;
+        minInstToSet = 1; // Protege contra HTTP 422: nunca define minInstallments estrito igual ao maxInstallments
+      }
+
+      if (amountToCharge < 0.50) {
+        container.innerHTML = `
+          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
+            <i class="fa-solid fa-circle-info" style="margin-top: 2px;"></i>
+            <div>
+              <strong>Valor mínimo para cartão de crédito:</strong>
+              O valor mínimo permitido pelo Mercado Pago para cobrança no cartão é de R$ 0,50. Por favor, utilize a opção <strong>Pix Instantâneo</strong> ao lado.
+            </div>
+          </div>
+        `;
+        return;
       }
 
       if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
@@ -2575,15 +2514,20 @@
             onError: (error) => {
               console.warn("[Card Payment Brick Error Callback]", error);
               isInitializingBrick = false;
-              // Filtro cirúrgico: Não interrompe o fluxo para erros não-críticos ou bloqueios de telemetria/adblockers
+              if (isProcessingCard) {
+                return;
+              }
               if (error && error.type === "non_critical") {
                 return;
               }
               const errStr = String(error?.message || error?.cause || "").toLowerCase();
-              if (errStr.includes("tracks") || errStr.includes("blocked_by_client") || errStr.includes("telemetry")) {
+              if (errStr.includes("tracks") || errStr.includes("blocked_by_client") || errStr.includes("telemetry") || errStr.includes("adblock")) {
                 return;
               }
-              exibirErroCartao("Não foi possível carregar as opções deste cartão. Verifique os dados digitados ou utilize o Pix Instantâneo ao lado.");
+              const feedback = document.getElementById("cardFeedbackMsg");
+              if (!feedback || feedback.style.display !== "block") {
+                exibirErroCartao("Não foi possível carregar as opções de pagamento deste cartão. Verifique o número digitado ou utilize o Pix Instantâneo.");
+              }
             }
           }
         };
@@ -2710,7 +2654,8 @@
           return { success: true, status: data.status, payment_id: data.payment_id };
         }
 
-        const msgErro = data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
+        const friendlyMsg = getFriendlyCardErrorMessage(data.status_detail);
+        const msgErro = friendlyMsg || data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
         exibirErroCartao(msgErro, data.status_detail);
         return {
           success: false,
@@ -2729,10 +2674,35 @@
       }
     }
 
+    function getFriendlyCardErrorMessage(statusDetail) {
+      const map = {
+        accredited: "Pagamento aprovado com sucesso!",
+        cc_rejected_bad_filled_card_number: "Número do cartão incorreto. Por favor, confira os números digitados.",
+        cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os 3 ou 4 dígitos no verso do cartão.",
+        cc_rejected_bad_filled_date: "Data de validade do cartão incorreta ou expirada.",
+        cc_rejected_bad_filled_other: "Dados do cartão incorretos. Por favor, revise as informações preenchidas.",
+        cc_rejected_insufficient_amount: "Limite ou saldo insuficiente no cartão de crédito.",
+        cc_rejected_call_for_authorize: "Pagamento não autorizado pelo banco emissor. Por favor, entre em contato com a operadora do seu cartão para autorizar compras online.",
+        cc_rejected_card_disabled: "Cartão desabilitado ou bloqueado para compras na internet. Entre em contato com seu banco.",
+        cc_rejected_duplicated_payment: "Pagamento duplicado detectado. Aguarde alguns minutos antes de tentar novamente.",
+        cc_rejected_high_risk: "O pagamento não foi autorizado pelas políticas de segurança da operadora. Recomendamos tentar outro cartão ou efetuar o pagamento via Pix Instantâneo.",
+        cc_rejected_max_attempts: "Limite de tentativas excedido para este cartão. Tente novamente mais tarde ou use outro cartão.",
+        cc_rejected_invalid_installments: "A quantidade de parcelas selecionada não é permitida para este cartão. Tente em menos parcelas ou à vista.",
+        cc_rejected_card_type_not_allowed: "Este tipo de cartão não é aceito. Por favor, utilize um cartão de crédito válido.",
+        cc_rejected_blacklist: "Cartão não autorizado pela operadora. Utilize outro cartão ou a opção Pix.",
+        cc_rejected_other_reason: "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados, tente outro cartão ou pague via Pix Instantâneo.",
+        "3003": "Token de segurança do cartão expirado ou inválido. Por favor, preencha novamente os dados do cartão.",
+        transaction_not_created: "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo."
+      };
+      return map[statusDetail] || null;
+    }
+
     function exibirErroCartao(mensagem, statusDetail = null) {
       const feedbackBox = document.getElementById("cardFeedbackMsg");
       if (!feedbackBox) return;
       feedbackBox.style.display = "block";
+      const friendlyFromCode = statusDetail ? getFriendlyCardErrorMessage(statusDetail) : null;
+      const finalMsg = friendlyFromCode || mensagem || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
       const badgeHtml = statusDetail ? `<div style="margin-top: 5px;"><span style="display: inline-block; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 600; border: 1px solid #fca5a5;">Código de retorno: ${statusDetail}</span></div>` : "";
       feedbackBox.innerHTML = `
         <div class="alert-banner alert-danger" style="display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 12px 14px; border-radius: 8px;">
@@ -2740,7 +2710,7 @@
             <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px; color: #dc2626; font-size: 1rem;"></i>
             <div style="color: #991b1b; font-size: 0.90rem; line-height: 1.45;">
               <strong style="display: block; margin-bottom: 2px;">Não foi possível concluir o pagamento:</strong>
-              ${mensagem}
+              ${finalMsg}
               ${badgeHtml}
             </div>
           </div>
@@ -2823,7 +2793,8 @@
                   sessionStorage.removeItem("ejc_card_pending_txid");
                   sessionStorage.removeItem("ejc_card_pending_payment_id");
                 } catch(e) {}
-                exibirErroCartao(serverData.message || serverData.error || "O pagamento não foi autorizado pela operadora. Por favor, tente com outro cartão.");
+                const friendly = getFriendlyCardErrorMessage(serverData.status_detail);
+                exibirErroCartao(friendly || serverData.mensagem_usuario || serverData.message || serverData.error || "O pagamento não foi aprovado pela operadora. Por favor, tente com outro cartão.", serverData.status_detail);
               }
             }
           }
@@ -2859,7 +2830,8 @@
                 sessionStorage.removeItem("ejc_card_pending_txid");
                 sessionStorage.removeItem("ejc_card_pending_payment_id");
               } catch(e) {}
-              exibirErroCartao(serverData.message || serverData.error || "O pagamento não foi autorizado pela operadora. Por favor, tente com outro cartão.");
+              const friendly = getFriendlyCardErrorMessage(serverData.status_detail);
+              exibirErroCartao(friendly || serverData.mensagem_usuario || serverData.message || serverData.error || "O pagamento não foi aprovado pela operadora. Por favor, tente com outro cartão.", serverData.status_detail);
               return;
             }
           }
