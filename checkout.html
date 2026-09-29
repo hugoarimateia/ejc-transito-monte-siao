@@ -775,44 +775,44 @@
               </div>
             </div>
 
-            <!-- PAINEL 2: CARTÃO DE CRÉDITO -->
+            <!-- PAINEL 2: CARTÃO DE CRÉDITO (MERCADO PAGO CHECKOUT PRO) -->
             <div class="method-content-panel" id="panelCard">
-              <!-- RESUMO TRANSPARENTE DE VALORES ANTES DO PAGAMENTO -->
-              <div id="cardTransparentSummary" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: .88rem;">
-                  <span style="color: var(--muted);">Condição de Pagamento:</span>
-                  <strong id="cardSummaryInstallmentsText" style="color: var(--text-main);">-</strong>
+              <div class="card-checkout-pro-container" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 16px; padding: 32px 24px; text-align: center; max-width: 520px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+                
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(8, 125, 249, 0.1); color: var(--blue); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px auto; font-size: 1.8rem;">
+                  <i class="fa-solid fa-credit-card"></i>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: .88rem;" id="cardSummaryMarkupRow">
-                  <span style="color: var(--muted);" id="cardSummaryMarkupLabel">Acréscimo do parcelamento:</span>
-                  <strong id="cardSummaryMarkupValue" style="color: #b45309;">0,00%</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 6px;">
-                  <span style="font-weight: 700; color: var(--text-main);">Valor Total Final:</span>
-                  <strong id="cardSummaryTotalValue" style="color: var(--blue); font-size: 1.2rem;">R$ 0,00</strong>
-                </div>
-              </div>
 
-              <!-- OPÇÕES DETALHADAS DE PARCELAMENTO E CONDIÇÃO REAL -->
-              <div id="cardManualPlanWrapper" style="display: block; margin-bottom: 18px;">
-                <label style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--text-main); margin-bottom: 8px; font-size: .88rem;">
-                  <span id="cardInstallmentHeaderTitle"><i class="fa-solid fa-list-check" style="color: var(--blue);"></i> Condições de Pagamento:</span>
-                  <small id="cardInstallmentHeaderSubtitle" style="color: var(--muted); font-weight: 500;">Condições disponíveis</small>
-                </label>
-                <div id="cardManualOptionsGrid" style="display: flex; flex-direction: column; gap: 8px;">
-                  <!-- Preenchido dinamicamente via JS com as condições reais -->
-                </div>
-              </div>
+                <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
+                  Pagamento com Cartão
+                </h3>
 
-              <!-- MENSAGENS DE FEEDBACK / ERRO AMIGÁVEIS -->
-              <div id="cardFeedbackMsg" style="display: none; margin-bottom: 16px;"></div>
+                <p style="color: var(--text-secondary, #64748b); font-size: 0.95rem; line-height: 1.5; margin-bottom: 22px;">
+                  Você será direcionado ao ambiente seguro do Mercado Pago para concluir seu pagamento.
+                </p>
 
-              <!-- CONTAINER DO CARD PAYMENT BRICK OFICIAL DO MERCADO PAGO -->
-              <div id="cardPaymentBrick_container">
-                <div id="cardBrickLoadingPlaceholder" style="text-align: center; padding: 32px 16px; color: var(--muted); font-size: .88rem;">
-                  <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.8rem; color: var(--blue); margin-bottom: 12px; display: block;"></i>
-                  <span>Inicializando ambiente seguro de pagamento com cartão...</span>
+                <!-- RESUMO DO VALOR OFICIAL -->
+                <div style="background: var(--bg-subtle, #f8fafc); border: 1px dashed var(--border-color); border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.90rem; color: var(--muted); font-weight: 600;">Valor a ser pago:</span>
+                  <strong id="cardProTotalDisplay" style="font-size: 1.3rem; color: var(--blue); font-weight: 800;">R$ 0,00</strong>
                 </div>
+
+                <!-- FEEDBACK / ERRO / PENDÊNCIA -->
+                <div id="cardFeedbackMsg" style="display: none; margin-bottom: 20px; text-align: left;"></div>
+
+                <!-- BOTÃO PRINCIPAL -->
+                <button type="button" id="btnGoToMercadoPago" class="btn" style="width: 100%; padding: 16px 20px; border-radius: 12px; background: #009ee3; color: #ffffff; font-size: 1.05rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(0, 158, 227, 0.35);">
+                  <i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i>
+                  <span>Continuar para o Mercado Pago</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>
+                </button>
+
+                <!-- BADGE DE SEGURANÇA MERCADO PAGO -->
+                <div style="margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.78rem; color: var(--muted);">
+                  <i class="fa-solid fa-shield-halved" style="color: #10b981;"></i>
+                  <span>Ambiente criptografado e certificado pelo Mercado Pago</span>
+                </div>
+
               </div>
             </div>
 
@@ -981,15 +981,8 @@
     let valorTotal = valorBase;
 
     // ==============================================================================
-    // ESTADO CENTRALIZADO DO CARTÃO DE CRÉDITO E MERCADO PAGO BRICK (ANTI-TDZ)
-    // Inicializado no topo do escopo para garantir disponibilidade imediata em qualquer chamada
+    // ESTADO DO CARTÃO DE CRÉDITO (MERCADO PAGO CHECKOUT PRO)
     // ==============================================================================
-    const mpInstallmentsCache = {};
-    let mpInstance = null;
-    let cardBrickController = null;
-    let selectedManualInstallment = 1;
-    let cardBrickCurrentAmount = 0;
-    let isInitializingBrick = false;
     let isProcessingCard = false;
     let cardPollingInterval = null;
     let configLoadingState = "LOADING"; // "LOADING" | "LOADED" | "ERROR"
@@ -1456,14 +1449,8 @@
       panelCard.classList.add("active");
       panelPix.classList.remove("active");
       currentMethod = "credit_card";
-      if (typeof renderizarSeletorParcelasManual === "function") {
-        renderizarSeletorParcelasManual();
-      }
-      if (typeof atualizarResumoTransparente === "function") {
-        atualizarResumoTransparente();
-      }
-      if (typeof montarCardPaymentBrick === "function") {
-        montarCardPaymentBrick();
+      if (typeof atualizarDisplayValorCartaoPro === "function") {
+        atualizarDisplayValorCartaoPro();
       }
     });
 
@@ -1802,14 +1789,8 @@
       checkoutStep2.scrollIntoView({ behavior: "smooth", block: "start" });
 
       if (currentMethod === "credit_card") {
-        if (typeof renderizarSeletorParcelasManual === "function") {
-          renderizarSeletorParcelasManual();
-        }
-        if (typeof atualizarResumoTransparente === "function") {
-          atualizarResumoTransparente();
-        }
-        if (typeof montarCardPaymentBrick === "function") {
-          montarCardPaymentBrick();
+        if (typeof atualizarDisplayValorCartaoPro === "function") {
+          atualizarDisplayValorCartaoPro();
         }
       }
 
@@ -1928,14 +1909,8 @@
 
       atualizarValoresUI();
 
-      if (typeof renderizarSeletorParcelasManual === "function") {
-        renderizarSeletorParcelasManual();
-      }
-      if (typeof atualizarResumoTransparente === "function") {
-        atualizarResumoTransparente();
-      }
-      if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
-        montarCardPaymentBrick();
+      if (currentMethod === "credit_card" && typeof atualizarDisplayValorCartaoPro === "function") {
+        atualizarDisplayValorCartaoPro();
       }
     }
 
@@ -1958,15 +1933,15 @@
           aplicarConfiguracao(cfg);
         } else {
           configLoadingState = "ERROR";
-          if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
-            montarCardPaymentBrick();
+          if (currentMethod === "credit_card" && typeof atualizarDisplayValorCartaoPro === "function") {
+            atualizarDisplayValorCartaoPro();
           }
         }
       } catch (e) {
         console.warn("Falha ao buscar /api/config, usando fallback:", e);
         configLoadingState = "ERROR";
-        if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
-          montarCardPaymentBrick();
+        if (currentMethod === "credit_card" && typeof atualizarDisplayValorCartaoPro === "function") {
+          atualizarDisplayValorCartaoPro();
         }
       }
     }
@@ -2176,501 +2151,205 @@
       return Math.min(configuredMax, maxPossibleByAmount);
     }
 
-    async function carregarCondicoesParcelamentoMP(amount, effectiveMax) {
-      // O Card Payment Brick oficial é o responsável exclusivo por consultar as condições reais
-      // com base no BIN do cartão digitado pelo usuário, eliminando duplicações e requisições hardcoded.
-      return null;
-    }
-
-    async function renderizarSeletorParcelasManual() {
-      const wrap = document.getElementById("cardManualPlanWrapper");
-      const grid = document.getElementById("cardManualOptionsGrid");
-      const headerTitle = document.getElementById("cardInstallmentHeaderTitle");
-      const headerSubtitle = document.getElementById("cardInstallmentHeaderSubtitle");
-      if (!wrap || !grid) return;
-
-      wrap.style.display = "block";
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
-      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
-      const isManual = (activePixConfig.cardInstallmentMode === "manual");
-
-      if (headerTitle) {
-        headerTitle.innerHTML = `<i class="fa-solid fa-list-check" style="color: var(--blue);"></i> ${effectiveMax === 1 ? 'Condição de Pagamento:' : 'Opções de Parcelamento:'}`;
-      }
-      if (headerSubtitle) {
-        headerSubtitle.textContent = (effectiveMax === 1)
-          ? "Pagamento à vista"
-          : (isManual ? "Configuração Comercial EJC" : "Condições Oficiais Mercado Pago");
-      }
-
-      // CASO 1: Apenas 1 parcela elegível (ex: R$ 1,00 ou valor < R$ 5,00)
-      if (effectiveMax === 1) {
-        grid.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--blue); background: rgba(8, 125, 249, 0.06);">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <i class="fa-solid fa-credit-card" style="color: var(--blue); font-size: 1.1rem;"></i>
-              <div>
-                <strong style="color: var(--text-main); font-size: .92rem;">1x de R$ ${baseAmount.toFixed(2).replace('.', ',')}</strong>
-                <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                  Total: R$ ${baseAmount.toFixed(2).replace('.', ',')} (Pagamento à vista)
-                </div>
-              </div>
-            </div>
-            <div>
-              <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS / À VISTA</span>
-            </div>
-          </div>
-          <div style="font-size: .78rem; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-circle-info" style="color: var(--blue);"></i>
-            <span>* Pagamento à vista: Para este valor (abaixo de R$ 5,00), a operadora autoriza exclusivamente a condição à vista (1x).</span>
-          </div>
-        `;
-        return;
-      }
-
-      // CASO 2: Modo Manual com taxas configuradas no Admin
-      if (isManual) {
-        const rates = Array.isArray(activePixConfig.cardInstallmentRates) && activePixConfig.cardInstallmentRates.length > 0
-          ? activePixConfig.cardInstallmentRates
-          : [
-              { installment: 1, rate: 0.00, enabled: true },
-              { installment: 2, rate: 4.50, enabled: true },
-              { installment: 3, rate: 5.50, enabled: true },
-              { installment: 4, rate: 7.00, enabled: true },
-              { installment: 5, rate: 8.50, enabled: true },
-              { installment: 6, rate: 10.00, enabled: true }
-            ];
-
-        const availableRates = rates.filter(r => r.installment <= effectiveMax && r.enabled !== false);
-        if (availableRates.length === 0) {
-          availableRates.push({ installment: 1, rate: 0.00, enabled: true });
-        }
-
-        if (!availableRates.some(r => r.installment === selectedManualInstallment)) {
-          selectedManualInstallment = availableRates[0].installment;
-        }
-
-        grid.innerHTML = availableRates.map(item => {
-          const n = item.installment;
-          const rate = typeof item.rate === "number" ? item.rate : 0;
-          const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
-          const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
-          const isSelected = (n === selectedManualInstallment);
-
-          return `
-            <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid ${isSelected ? 'var(--blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(8, 125, 249, 0.06)' : 'var(--bg-surface)'}; cursor: pointer; transition: all .2s ease;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="radio" name="radioManualInstallment" value="${n}" ${isSelected ? 'checked' : ''} style="accent-color: var(--blue);">
-                <div>
-                  <strong style="color: var(--text-main); font-size: .92rem;">${n}x de R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}</strong>
-                  <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                    Total: R$ ${totalCalculado.toFixed(2).replace('.', ',')}
-                  </div>
-                </div>
-              </div>
-              <div>
-                ${rate === 0 
-                  ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM ACRÉSCIMO</span>'
-                  : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Acréscimo: ${rate.toFixed(2)}%</span>`
-                }
-              </div>
-            </label>
-          `;
-        }).join("");
-
-        grid.querySelectorAll('input[name="radioManualInstallment"]').forEach(radio => {
-          radio.addEventListener("change", function() {
-            selectedManualInstallment = parseInt(this.value, 10);
-            renderizarSeletorParcelasManual();
-            atualizarResumoTransparente();
-            montarCardPaymentBrick(true);
-          });
-        });
-        return;
-      }
-
-      // CASO 3: Modo Mercado Pago Oficial (as opções e taxas reais são consultadas nativamente pelo Card Payment Brick)
-      grid.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-credit-card" style="color: var(--blue); font-size: 1.1rem;"></i>
-            <div>
-              <strong style="color: var(--text-main); font-size: .92rem;">Parcelamento em até ${effectiveMax}x no cartão</strong>
-              <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                As opções e taxas oficiais são calculadas automaticamente pelo Mercado Pago diretamente no formulário do cartão abaixo.
-              </div>
-            </div>
-          </div>
-          <div>
-            <span style="background: #eff6ff; color: #1d4ed8; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">MERCADO PAGO</span>
-          </div>
-        </div>
-      `;
-    }
-
-    function atualizarResumoTransparente() {
-      const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
-      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
-
-      const textInstallments = document.getElementById("cardSummaryInstallmentsText");
-      const rowMarkup = document.getElementById("cardSummaryMarkupRow");
-      const valMarkup = document.getElementById("cardSummaryMarkupValue");
-      const valTotal = document.getElementById("cardSummaryTotalValue");
-
-      if (isManual && effectiveMax > 1) {
-        const rates = activePixConfig.cardInstallmentRates || [];
-        const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
-        const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
-        const totalFinal = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
-        const parcFinal = Math.round((totalFinal / selectedManualInstallment) * 100) / 100;
-        const difAcrescimo = Math.round((totalFinal - baseAmount) * 100) / 100;
-
-        if (textInstallments) textInstallments.textContent = `${selectedManualInstallment}x de R$ ${parcFinal.toFixed(2).replace('.', ',')}`;
-        if (rowMarkup) rowMarkup.style.display = "flex";
-        if (valMarkup) {
-          valMarkup.textContent = rate > 0 
-            ? `${rate.toFixed(2)}% (+R$ ${difAcrescimo.toFixed(2).replace('.', ',')})`
-            : "0,00% (Sem acréscimo)";
-          valMarkup.style.color = rate > 0 ? "#b45309" : "#059669";
-        }
-        if (valTotal) valTotal.textContent = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
-      } else {
-        if (rowMarkup) rowMarkup.style.display = "none";
-        if (effectiveMax === 1) {
-          if (textInstallments) textInstallments.textContent = "À vista (1x no cartão)";
-          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
-        } else {
-          if (textInstallments) textInstallments.textContent = `Em até ${effectiveMax}x no cartão`;
-          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
-        }
+    function atualizarDisplayValorCartaoPro() {
+      const display = document.getElementById("cardProTotalDisplay");
+      if (display) {
+        const val = valorTotal || activePixConfig.valorTaxaInscricao || 0;
+        display.textContent = val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       }
     }
 
-    async function montarCardPaymentBrick(forceRemount = false) {
-      if (isInitializingBrick) return;
-      const container = document.getElementById("cardPaymentBrick_container");
-      if (!container) return;
-
-      const pubKey = getMercadoPagoPublicKey();
-
-      // 1. Estado de Carregamento da Configuração
-      if (!pubKey && configLoadingState === "LOADING") {
-        container.innerHTML = `
-          <div class="alert-banner" style="display: flex; align-items: center; gap: 12px; margin-bottom: 0; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 18px; border-radius: 12px;">
-            <i class="fa-solid fa-spinner fa-spin" style="color: #0284c7; font-size: 1.3rem;"></i>
-            <div>
-              <strong style="color: #0f172a; font-size: .95rem; display: block;">Carregando configuração do cartão...</strong>
-              <span style="font-size: .84rem; color: #64748b;">Sincronizando ambiente seguro do Mercado Pago.</span>
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      // 2. Erro de conexão com a API de Configuração
-      if (!pubKey && configLoadingState === "ERROR") {
-        container.innerHTML = `
-          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
-            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
-            <div>
-              <strong>Não foi possível carregar a configuração do cartão:</strong>
-              Ocorreu uma instabilidade na consulta ao servidor. Por favor, recarregue a página ou utilize o <strong>Pix Instantâneo</strong> ao lado.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      // 3. Chave Pública Não Configurada
-      if (!pubKey || pubKey === "sua_public_key_aqui") {
-        container.innerHTML = `
-          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
-            <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
-            <div>
-              <strong>Pagamento com Cartão em Configuração:</strong>
-              A chave pública do Mercado Pago ainda não foi configurada pela coordenação. Você pode efetuar o pagamento imediato e confirmar sua vaga através do <strong>Pix Instantâneo</strong> ao lado.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      if (typeof window.MercadoPago === "undefined") {
-        container.innerHTML = `
-          <div class="alert-banner alert-warning" style="display: flex;">
-            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
-            <div>
-              Não foi possível carregar a biblioteca de segurança do Mercado Pago. Verifique sua conexão com a internet ou utilize a opção Pix.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
-      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
-      let amountToCharge = baseAmount;
-      let maxInstToSet = effectiveMax;
-      let minInstToSet = 1;
-
-      if (isManual && effectiveMax > 1) {
-        const rates = activePixConfig.cardInstallmentRates || [];
-        const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
-        const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
-        amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
-        maxInstToSet = Math.min(selectedManualInstallment, effectiveMax);
-        minInstToSet = 1; // Protege contra HTTP 422: nunca define minInstallments estrito igual ao maxInstallments
-      }
-
-      if (amountToCharge < 0.50) {
-        container.innerHTML = `
-          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
-            <i class="fa-solid fa-circle-info" style="margin-top: 2px;"></i>
-            <div>
-              <strong>Valor mínimo para cartão de crédito:</strong>
-              O valor mínimo permitido pelo Mercado Pago para cobrança no cartão é de R$ 0,50. Por favor, utilize a opção <strong>Pix Instantâneo</strong> ao lado.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
-        return;
-      }
-
-      isInitializingBrick = true;
-
-      if (cardBrickController && typeof cardBrickController.unmount === "function") {
-        try {
-          await cardBrickController.unmount();
-        } catch (eUnmount) {
-          console.warn("[Card Brick unmount warn]:", eUnmount.message);
-        }
-        cardBrickController = null;
-        window.cardBrickController = null;
-        window.cardPaymentBrickController = null;
-      }
-
-      container.innerHTML = "";
-      cardBrickCurrentAmount = amountToCharge;
-
-      try {
-        if (!mpInstance) {
-          mpInstance = new window.MercadoPago(pubKey, { locale: "pt-BR" });
-        }
-        const bricksBuilder = mpInstance.bricks();
-        const isDark = (document.documentElement.getAttribute("data-theme") === "dark");
-        const userEmail = emailInput?.value.trim() || emailParam || "participante@ejc.site";
-
-        const brickSettings = {
-          initialization: {
-            amount: amountToCharge,
-            payer: {
-              email: userEmail
-            }
-          },
-          customization: {
-            visual: {
-              style: {
-                theme: isDark ? "dark" : "default",
-                customVariables: {
-                  baseColor: "#087df9"
-                }
-              },
-              hideFormTitle: true
-            },
-            paymentMethods: {
-              maxInstallments: maxInstToSet,
-              minInstallments: minInstToSet
-            }
-          },
-          callbacks: {
-            onReady: () => {
-              isInitializingBrick = false;
-              const feedback = document.getElementById("cardFeedbackMsg");
-              if (feedback) feedback.style.display = "none";
-            },
-            onSubmit: async (cardFormData) => {
-              try {
-                const res = await processarPagamentoCartao(cardFormData, amountToCharge);
-                if (!res || !res.success) {
-                  // SINALIZAÇÃO CRÍTICA PARA O CARD PAYMENT BRICK DO MERCADO PAGO:
-                  // Quando onSubmit lança erro / rejeita Promise, o Brick encerra o spinner interno
-                  // e reativa imediatamente o botão "Pagar" para que o usuário possa tentar novamente sem F5!
-                  const err = new Error(res?.error || "Pagamento recusado pela operadora.");
-                  err.status = res?.status || "rejected";
-                  err.status_detail = res?.status_detail;
-                  throw err;
-                }
-                return res;
-              } catch (submitErr) {
-                isProcessingCard = false;
-                throw submitErr;
-              }
-            },
-            onError: (error) => {
-              console.warn("[Card Payment Brick Error Callback]", error);
-              isInitializingBrick = false;
-              if (isProcessingCard) {
-                return;
-              }
-              if (error && error.type === "non_critical") {
-                return;
-              }
-              const errStr = String(error?.message || error?.cause || "").toLowerCase();
-              if (errStr.includes("tracks") || errStr.includes("blocked_by_client") || errStr.includes("telemetry") || errStr.includes("adblock")) {
-                return;
-              }
-              const feedback = document.getElementById("cardFeedbackMsg");
-              if (!feedback || feedback.style.display !== "block") {
-                exibirErroCartao("Não foi possível carregar as opções de pagamento deste cartão. Verifique o número digitado ou utilize o Pix Instantâneo.");
-              }
-            }
-          }
-        };
-
-        cardBrickController = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", brickSettings);
-        window.cardBrickController = cardBrickController;
-        window.cardPaymentBrickController = cardBrickController;
-      } catch (err) {
-        console.error("[Card Brick Mount Error]", err);
-        container.innerHTML = `
-          <div class="alert-banner alert-warning" style="display: flex;">
-            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
-            <div>
-              Não foi possível inicializar o pagamento seguro com cartão no momento. Por favor, utilize o <strong>Pix Instantâneo</strong> ao lado para concluir sua inscrição.
-            </div>
-          </div>
-        `;
-      } finally {
-        isInitializingBrick = false;
-      }
-    }
-
-    async function processarPagamentoCartao(cardFormData, amountCharged) {
+    async function iniciarCheckoutProCartao() {
       if (isProcessingCard) {
-        console.warn("[Checkout Card] Submissão bloqueada: cobrança já em andamento.");
-        return { success: false, error: "Uma cobrança já está sendo processada neste momento." };
+        console.warn("[Checkout Pro Card] Clique bloqueado: criação de preferência já em andamento.");
+        return;
       }
-      isProcessingCard = true;
 
-      const nomeFinal = nameInput.value.trim() || nomeParticipante;
-      const emailFinal = emailInput.value.trim() || emailParam;
-      const wppFinal = wppInput.value.trim() || wppParam || null;
+      const btn = document.getElementById("btnGoToMercadoPago");
+      const feedbackBox = document.getElementById("cardFeedbackMsg");
+
+      const nomeFinal = (nameInput.value || nomeParticipante || "").trim();
+      const emailFinal = (emailInput.value || emailParam || "").trim();
+      const wppFinal = (wppInput.value || wppParam || "").trim() || null;
+
+      if (!nomeFinal || nomeFinal.length < 3) {
+        exibirErroCartao("Por favor, preencha seu nome completo antes de continuar.");
+        return;
+      }
 
       if (!validarEmail(emailFinal)) {
-        isProcessingCard = false;
-        exibirErroCartao("Por favor, informe um endereço de e-mail válido.");
-        return { success: false, error: "Por favor, informe um endereço de e-mail válido." };
+        exibirErroCartao("Por favor, informe um endereço de e-mail válido para o envio do comprovante.");
+        return;
       }
 
-      const feedbackBox = document.getElementById("cardFeedbackMsg");
+      // Proteção de Idempotência e Bloqueio contra Duplo Clique
+      isProcessingCard = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+        btn.style.cursor = "wait";
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Conectando ao Mercado Pago...</span>`;
+      }
       if (feedbackBox) {
-        feedbackBox.style.display = "block";
-        feedbackBox.innerHTML = `
-          <div class="alert-banner" style="background: rgba(8, 125, 249, 0.1); border-color: #087df9; color: var(--blue); display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-circle-notch fa-spin"></i>
-            <span>Processando cobrança com segurança na operadora do cartão...</span>
-          </div>
-        `;
-        feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-
-      const effectiveMax = getEffectiveMaxInstallments(amountCharged);
-      const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      let parcelasFinal = isManual ? Math.min(selectedManualInstallment, effectiveMax) : (cardFormData.installments || 1);
-      if (amountCharged < 5.00 || effectiveMax === 1) {
-        parcelasFinal = 1;
-      } else {
-        parcelasFinal = Math.min(parcelasFinal, effectiveMax);
+        feedbackBox.style.display = "none";
       }
 
       try {
+        console.log("[CHECKOUT_PRO_CREATE_START] Solicitando preferência ao backend EJC...");
         const response = await fetch("/api/checkout-process", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-client-version": String(activePixConfig.versao || 0)
+          },
           body: JSON.stringify({
             metodo: "credit_card",
             tipo: tipoCheckout,
-            valor: amountCharged,
-            token: cardFormData.token,
-            issuer_id: cardFormData.issuer_id,
-            payment_method_id: cardFormData.payment_method_id,
-            installments: parcelasFinal,
+            valor: valorTotal,
+            versao: activePixConfig.versao || 0,
             nome: nomeFinal,
             email: emailFinal,
             whatsapp: wppFinal,
             sub: subSelecionado,
-            inscricao_id: inscricaoIdParam || null,
-            payer: cardFormData.payer
+            inscricao_id: inscricaoIdParam || null
           })
         });
 
         const data = await response.json();
 
-        if (response.ok && data.status === "approved") {
-          if (feedbackBox) feedbackBox.style.display = "none";
-          const pagamentoCard = {
-            txid: data.txid,
-            payment_id: data.payment_id,
-            order_id: data.order_id,
-            metodo: "credit_card",
-            valor: data.valor || amountCharged,
-            status: "approved",
-            nome: nomeFinal,
-            email: emailFinal,
-            sub: subSelecionado,
-            parcelas: parcelasFinal,
-            cartao_ultimos_digitos: data.cartao_ultimos_digitos || (data.detalhes?.card ? data.detalhes.card.last_four_digits : null),
-            cartao_bandeira: data.cartao_bandeira || (data.detalhes ? data.detalhes.payment_method_id : "Cartão"),
-            inscricao_id: inscricaoIdParam || null,
-            pago_em: new Date().toISOString()
-          };
-
-          registrarTransacaoLocal(pagamentoCard);
-          concluirPagamentoComSucesso(pagamentoCard);
-          return { success: true, status: "approved", data };
-        }
-
-        if (data.status === "in_process" || data.status === "pending" || data.status_detail === "pending_review_manual" || String(data.status_detail || "").startsWith("pending_")) {
-          // Validação: se há payment_id ou status_detail do Mercado Pago, direciona para Em Análise
-          const hasRealId = data.payment_id && /^\d+$/.test(String(data.payment_id).trim());
-          if (!hasRealId && !data.status_detail?.includes("pending")) {
-            const errFake = "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo.";
-            exibirErroCartao(errFake);
-            return { success: false, error: errFake, status: "rejected" };
-          }
+        if (response.ok && data && (data.init_point || data.checkout_url)) {
+          const redirectUrl = data.init_point || data.checkout_url;
+          console.log(`[CHECKOUT_PRO_CREATE_SUCCESS] TXID: ${data.txid}, Redirecionando para: ${redirectUrl}`);
 
           try {
-            if (data.txid) sessionStorage.setItem("ejc_card_pending_txid", data.txid);
-            if (data.payment_id) sessionStorage.setItem("ejc_card_pending_payment_id", String(data.payment_id));
-          } catch(e) {}
+            if (data.txid) {
+              sessionStorage.setItem("ejc_card_pending_txid", data.txid);
+              sessionStorage.setItem("ejc_active_card_txid", data.txid);
+            }
+            if (data.preference_id) {
+              sessionStorage.setItem("ejc_card_preference_id", data.preference_id);
+            }
+          } catch (eSave) {}
 
-          exibirCardEmAnalise(data);
-          if (data.txid) iniciarPollingCartao(data.txid);
-          return { success: true, status: data.status || "in_process", payment_id: data.payment_id };
+          window.location.href = redirectUrl;
+          return;
+        } else {
+          throw new Error(data?.error || data?.mensagem_usuario || "Não foi possível gerar a cobrança no Mercado Pago.");
+        }
+      } catch (err) {
+        console.error("[CHECKOUT_PRO_CREATE_ERROR]", err);
+        isProcessingCard = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+          btn.innerHTML = `<i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i> <span>Continuar para o Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
+        }
+        exibirErroCartao(err.message || "Falha ao conectar ao Mercado Pago. Por favor, tente novamente ou utilize o Pix.");
+      }
+    }
+
+    function reiniciarTentativaCartao() {
+      isProcessingCard = false;
+      const feedback = document.getElementById("cardFeedbackMsg");
+      if (feedback) feedback.style.display = "none";
+      const btn = document.getElementById("btnGoToMercadoPago");
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+        btn.innerHTML = `<i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i> <span>Continuar para o Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
+      }
+    }
+    window.reiniciarTentativaCartao = reiniciarTentativaCartao;
+
+    async function verificarRetornoMercadoPago() {
+      const retornoMp = urlParams.get("retorno_mp");
+      const collectionId = urlParams.get("collection_id") || urlParams.get("payment_id");
+      const paramTxid = urlParams.get("txid") || urlParams.get("external_reference");
+      const preferenceId = urlParams.get("preference_id");
+
+      if (!retornoMp && !collectionId && !paramTxid) {
+        return;
+      }
+
+      console.log(`[CHECKOUT_PRO_RETURN] Retorno detectado. Retorno: ${retornoMp}, Payment ID: ${collectionId}, TXID: ${paramTxid}`);
+
+      // Ativa etapa 2 e aba Cartão
+      const step1 = document.getElementById("step1Container");
+      const step2 = document.getElementById("step2Container");
+      if (step1 && step2) {
+        step1.style.display = "none";
+        step2.style.display = "block";
+      }
+
+      tabBtnCard.classList.add("active");
+      tabBtnPix.classList.remove("active");
+      panelCard.classList.add("active");
+      panelPix.classList.remove("active");
+      currentMethod = "credit_card";
+      atualizarDisplayValorCartaoPro();
+
+      const feedbackBox = document.getElementById("cardFeedbackMsg");
+      if (feedbackBox) {
+        feedbackBox.style.display = "block";
+        feedbackBox.innerHTML = `
+          <div class="alert-banner" style="background: rgba(8, 125, 249, 0.1); border-left: 4px solid #087df9; color: var(--blue); padding: 14px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.2rem;"></i>
+            <div>
+              <strong style="display: block;">Consultando confirmação oficial no Mercado Pago...</strong>
+              <span style="font-size: 0.85rem; color: #475569;">Aguarde alguns instantes enquanto validamos sua transação com a operadora.</span>
+            </div>
+          </div>
+        `;
+        feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      try {
+        const queryTarget = paramTxid || collectionId || preferenceId;
+        const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(queryTarget)}&payment_id=${encodeURIComponent(collectionId || "")}&preference_id=${encodeURIComponent(preferenceId || "")}&retorno_mp=${encodeURIComponent(retornoMp || "")}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        });
+
+        if (res.ok) {
+          const serverData = await res.json();
+          if (serverData) {
+            console.log(`[CHECKOUT_PRO_STATUS_SYNC] Status validado pelo backend: ${serverData.status} (detalhe: ${serverData.status_detail})`);
+
+            if (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid") {
+              if (feedbackBox) feedbackBox.style.display = "none";
+              concluirPagamentoComSucesso(serverData);
+              return;
+            }
+
+            if (serverData.status === "in_process" || serverData.status === "pending" || serverData.status_detail === "pending_review_manual" || String(serverData.status_detail || "").startsWith("pending_")) {
+              exibirCardEmAnalise(serverData);
+              if (serverData.txid) iniciarPollingCartao(serverData.txid);
+              return;
+            }
+
+            if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
+              const friendly = getFriendlyCardErrorMessage(serverData.status_detail, serverData.status);
+              exibirErroCartao(friendly || "O pagamento não foi aprovado pela operadora. Você pode tentar novamente com outro cartão.", serverData.status_detail);
+              return;
+            }
+          }
         }
 
-        const friendlyMsg = getFriendlyCardErrorMessage(data.status_detail, data.status);
-        const msgErro = friendlyMsg || data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
-        exibirErroCartao(msgErro, data.status_detail);
-        return {
-          success: false,
-          error: msgErro,
-          status: data.status || "rejected",
-          status_detail: data.status_detail
-        };
-
-      } catch (err) {
-        console.error("[Checkout Card Error]", err);
-        const msgNet = "Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.";
-        exibirErroCartao(msgNet, "network_error");
-        return { success: false, error: msgNet, status: "error" };
-      } finally {
-        isProcessingCard = false;
+        if (retornoMp === "failure") {
+          exibirErroCartao("O pagamento não foi concluído no Mercado Pago. Você pode tentar novamente.");
+        } else {
+          exibirCardEmAnalise({
+            txid: paramTxid || "PENDENTE",
+            payment_id: collectionId || null,
+            status_detail: "pending_review_manual"
+          });
+          if (paramTxid) iniciarPollingCartao(paramTxid);
+        }
+      } catch (eVerify) {
+        console.warn("[CHECKOUT_PRO_RETURN] Falha na verificação:", eVerify.message);
+        if (paramTxid) iniciarPollingCartao(paramTxid);
       }
     }
 
@@ -3136,6 +2815,15 @@
           checkoutStep2.style.display = "block";
         }
       }
+
+      // Vincula clique do botão oficial Checkout Pro
+      const btnCardPro = document.getElementById("btnGoToMercadoPago");
+      if (btnCardPro) {
+        btnCardPro.addEventListener("click", iniciarCheckoutProCartao);
+      }
+
+      // REGRA 19/43: Reconciliação imediata no retorno de redirect do Mercado Pago
+      verificarRetornoMercadoPago();
     })();
   </script>
 </body>

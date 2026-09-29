@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <script>
+  (function(){
+    try {
+      var s = localStorage.getItem("ejc_theme");
+      var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var t = s || (d ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", t);
+      var iconHref = "images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3";
+      var l = document.querySelector('link[rel="icon"]');
+      if (l) { l.href = iconHref; }
+    } catch(e) {}
+  })();
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#023284">
+  <meta name="description" content="Retorno e Conciliação Segura de Pagamento - EJC Trânsito Monte Sião.">
+  <title>Retorno de Pagamento | EJC Equipe do Trânsito</title>
+  <link rel="icon" type="image/png" href="images/favicondefault.png?v=4" id="favicon-link">
+  <link rel="apple-touch-icon" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/all.min.css" rel="stylesheet">
+  <style>
+    .retorno-container {
+      max-width: 680px;
+      margin: 40px auto 80px;
+      padding: 0 20px;
+    }
+    .retorno-card {
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 16px;
+      padding: 36px 28px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      text-align: center;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: .84rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 16px;
+    }
+    .badge-verifying { background: rgba(8, 125, 249, 0.12); color: #087df9; border: 1px solid rgba(8, 125, 249, 0.25); }
+    .badge-approved { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-pending { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-rejected { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .receipt-box {
+      background: var(--bg-surface, #f8fafc);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 24px 0;
+      text-align: left;
+    }
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border-color, #e2e8f0);
+      font-size: .90rem;
+    }
+    .receipt-row:last-child {
+      border-bottom: none;
+    }
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all .2s ease;
+    }
+    .btn-primary {
+      background: var(--blue, #087df9);
+      color: #ffffff;
+    }
+    .btn-whatsapp {
+      background: #25d366;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <header style="background: var(--bg-card, #ffffff); border-bottom: 1px solid var(--border-color, #e2e8f0); padding: 16px 24px; text-align: center;">
+    <a href="./" style="display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text-main, #0f172a);">
+      <img src="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3" alt="Logo EJC" style="width: 44px; height: 44px; object-fit: contain;">
+      <span style="font-family: 'Archivo Black', sans-serif; font-size: 1.15rem; letter-spacing: -0.5px;">EJC TRÂNSITO</span>
+    </a>
+  </header>
+
+  <main class="retorno-container">
+    <div class="retorno-card">
+
+      <!-- ESTADO 1: VERIFICANDO -->
+      <div id="stateVerifying">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(8, 125, 249, 0.1); color: var(--blue, #087df9); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 1.8rem;">
+          <i class="fa-solid fa-circle-notch fa-spin"></i>
+        </div>
+        <div class="status-badge badge-verifying">Reconciliação em Andamento</div>
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;">Validando Pagamento com o Mercado Pago</h2>
+        <p style="color: var(--text-secondary, #64748b); font-size: .95rem; line-height: 1.5;">
+          Aguarde um momento enquanto confirmamos a transação com a operadora financeira de forma segura.
+        </p>
+      </div>
+
+      <!-- ESTADO 2: APROVADO -->
+      <div id="stateApproved" style="display: none;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16, 185, 129, 0.1); color: #059669; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 1.8rem;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="status-badge badge-approved">✓ Pagamento Confirmado</div>
+        <h2 style="font-size: 1.45rem; font-weight: 800; color: #059669; margin-bottom: 8px;">Check-in Confirmado com Sucesso!</h2>
+        <p style="color: var(--text-secondary, #64748b); font-size: .95rem; line-height: 1.5;">
+          Sua transação no cartão foi aprovada pelo Mercado Pago e sua inscrição está oficialmente validada.
+        </p>
+
+        <div class="receipt-box">
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">Participante:</span>
+            <strong id="recName">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">E-mail:</span>
+            <strong id="recEmail">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">Sub Equipe:</span>
+            <strong id="recSub">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">Forma de Pagamento:</span>
+            <strong>Cartão de Crédito (Mercado Pago)</strong>
+          </div>
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">Valor:</span>
+            <strong id="recValor" style="color: var(--blue, #087df9); font-size: 1.05rem;">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span style="color: var(--muted, #64748b);">Identificador:</span>
+            <span id="recTxid" style="font-family: monospace; font-size: .84rem; color: #475569;">-</span>
+          </div>
+        </div>
+
+        <div id="boxWhatsappLink" style="display: none; margin-bottom: 16px;">
+          <a id="btnLinkWhatsapp" href="#" target="_blank" rel="noopener noreferrer" class="btn-action btn-whatsapp">
+            <i class="fa-brands fa-whatsapp" style="font-size: 1.25rem;"></i>
+            <span>Entrar no Grupo Oficial do WhatsApp</span>
+          </a>
+        </div>
+
+        <a href="./" class="btn-action btn-primary" style="background: var(--bg-surface, #f1f5f9); color: var(--text-main, #334155); border: 1px solid var(--border-color, #cbd5e1);">
+          <i class="fa-solid fa-house"></i>
+          <span>Voltar para a Página Inicial</span>
+        </a>
+      </div>
+
+      <!-- ESTADO 3: EM ANÁLISE / PENDING -->
+      <div id="statePending" style="display: none;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(245, 158, 11, 0.1); color: #d97706; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 1.8rem;">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="status-badge badge-pending">Pagamento em Análise</div>
+        <h2 style="font-size: 1.4rem; font-weight: 800; color: #b45309; margin-bottom: 8px;">Transação em Processamento</h2>
+        <p style="color: var(--text-secondary, #64748b); font-size: .95rem; line-height: 1.5; margin-bottom: 20px;" id="pendingDescText">
+          Seu pagamento foi recebido pelo Mercado Pago e está passando por análise de segurança da operadora. A confirmação será atualizada assim que o processamento for concluído.
+        </p>
+
+        <div style="display: flex; gap: 10px; flex-direction: column;">
+          <button type="button" id="btnRetryCheck" class="btn-action btn-primary">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Consultar Status Novamente</span>
+          </button>
+          <a href="./checkout.html" class="btn-action" style="background: transparent; color: var(--blue, #087df9); border: 1px dashed var(--blue, #087df9);">
+            <span>Ir para o Checkout</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- ESTADO 4: REJEITADO / NÃO APROVADO -->
+      <div id="stateRejected" style="display: none;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 1.8rem;">
+          <i class="fa-solid fa-xmark"></i>
+        </div>
+        <div class="status-badge badge-rejected">Pagamento Não Aprovado</div>
+        <h2 style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-bottom: 8px;">Não foi possível aprovar a cobrança</h2>
+        <p style="color: var(--text-secondary, #64748b); font-size: .95rem; line-height: 1.5; margin-bottom: 24px;" id="rejectedDescText">
+          A operadora do cartão não autorizou esta operação. Você pode tentar novamente com outro cartão ou efetuar o pagamento via Pix Instantâneo.
+        </p>
+
+        <a href="./checkout.html" class="btn-action btn-primary">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>Tentar Novamente no Checkout</span>
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const collectionId = urlParams.get("collection_id") || urlParams.get("payment_id") || "";
+      const txidParam = urlParams.get("txid") || urlParams.get("external_reference") || "";
+      const prefId = urlParams.get("preference_id") || "";
+      const retornoMp = urlParams.get("retorno_mp") || "";
+
+      const queryTarget = txidParam || collectionId || prefId;
+
+      const stateVerifying = document.getElementById("stateVerifying");
+      const stateApproved = document.getElementById("stateApproved");
+      const statePending = document.getElementById("statePending");
+      const stateRejected = document.getElementById("stateRejected");
+
+      function showState(element) {
+        stateVerifying.style.display = "none";
+        stateApproved.style.display = "none";
+        statePending.style.display = "none";
+        stateRejected.style.display = "none";
+        if (element) element.style.display = "block";
+      }
+
+      async function consultarStatus() {
+        if (!queryTarget) {
+          if (retornoMp === "failure") {
+            showState(stateRejected);
+          } else {
+            showState(statePending);
+          }
+          return;
+        }
+
+        try {
+          console.log("[CHECKOUT_PRO_RETURN] Consultando backend para reconciliação real...");
+          const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(queryTarget)}&payment_id=${encodeURIComponent(collectionId)}&preference_id=${encodeURIComponent(prefId)}&retorno_mp=${encodeURIComponent(retornoMp)}&_t=${Date.now()}`, {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data) {
+              console.log(`[CHECKOUT_PRO_STATUS_SYNC] Status retornado: ${data.status} (detalhe: ${data.status_detail})`);
+
+              if (data.status === "approved" || data.status === "confirmado" || data.status === "paid") {
+                document.getElementById("recName").textContent = data.nome_pagador || data.nome || "Participante EJC";
+                document.getElementById("recEmail").textContent = data.email || "-";
+                document.getElementById("recSub").textContent = data.sub || "Equipe do Trânsito";
+                document.getElementById("recValor").textContent = (data.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                document.getElementById("recTxid").textContent = data.txid || queryTarget;
+
+                // REGRA 27: Somente status = approved libera grupo específico
+                if (data.whatsapp_sub_url) {
+                  const boxWpp = document.getElementById("boxWhatsappLink");
+                  const linkWpp = document.getElementById("btnLinkWhatsapp");
+                  if (boxWpp && linkWpp) {
+                    linkWpp.href = data.whatsapp_sub_url;
+                    boxWpp.style.display = "block";
+                  }
+                }
+
+                showState(stateApproved);
+                return;
+              }
+
+              if (data.status === "in_process" || data.status === "pending" || data.status_detail === "pending_review_manual" || String(data.status_detail || "").startsWith("pending_")) {
+                if (data.status_detail === "pending_review_manual") {
+                  document.getElementById("pendingDescText").textContent = "Seu pagamento foi recebido pelo Mercado Pago e está passando por uma análise manual de segurança. A confirmação será atualizada assim que o Mercado Pago concluir o processamento.";
+                }
+                showState(statePending);
+                return;
+              }
+
+              if (data.status === "rejected" || data.status === "rejeitado" || data.status === "cancelled") {
+                showState(stateRejected);
+                return;
+              }
+            }
+          }
+
+          if (retornoMp === "failure") {
+            showState(stateRejected);
+          } else {
+            showState(statePending);
+          }
+        } catch (eErr) {
+          console.warn("[CHECKOUT_PRO_RETURN] Falha na consulta:", eErr.message);
+          showState(statePending);
+        }
+      }
+
+      document.getElementById("btnRetryCheck")?.addEventListener("click", () => {
+        showState(stateVerifying);
+        consultarStatus();
+      });
+
+      consultarStatus();
+    })();
+  </script>
+</body>
+</html>

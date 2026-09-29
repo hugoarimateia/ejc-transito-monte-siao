@@ -329,12 +329,117 @@ function getPublicKey() {
   ).trim();
 }
 
+/**
+ * Cria uma Preferência oficial de Checkout Pro no Mercado Pago.
+ * Endpoint oficial: POST https://api.mercadopago.com/checkout/preferences
+ * Retorna o init_point (URL de pagamento hospedado pelo Mercado Pago)
+ */
+async function criarPreferenciaCheckoutPro({
+  txid,
+  valor,
+  nome,
+  email,
+  telefone,
+  descricao = "Inscrição EJC Trânsito Monte Sião",
+  maxParcelas = 6,
+  notificationUrl,
+  backUrls = {}
+}) {
+  const token = getAccessToken();
+  if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado no servidor.");
+
+  const nomePartes = String(nome || "Participante EJC").trim().split(/\s+/);
+  const firstName = nomePartes[0] || "Participante";
+  const lastName = nomePartes.slice(1).join(" ") || "EJC";
+  const cleanPhone = telefone ? String(telefone).replace(/\D/g, "") : "";
+
+  const payerObj = {
+    name: firstName,
+    surname: lastName,
+    email: String(email).trim().toLowerCase()
+  };
+
+  if (cleanPhone && cleanPhone.length >= 10) {
+    payerObj.phone = {
+      area_code: cleanPhone.substring(0, 2),
+      number: cleanPhone.substring(2)
+    };
+  }
+
+  const preferencePayload = {
+    items: [
+      {
+        id: String(txid),
+        title: "Inscrição EJC Trânsito Monte Sião",
+        description: String(descricao).substring(0, 60),
+        quantity: 1,
+        currency_id: "BRL",
+        unit_price: Number(Number(valor).toFixed(2))
+      }
+    ],
+    payer: payerObj,
+    payment_methods: {
+      excluded_payment_types: [
+        { id: "ticket" },       // Exclui Boleto bancário (evita confusão, o site tem Pix)
+        { id: "bank_transfer" } // Exclui Pix no Checkout Pro (o Pix é nativo e transparente no EJC)
+      ],
+      installments: Math.max(1, Math.min(12, Number(maxParcelas || 6))),
+      default_installments: 1
+    },
+    back_urls: {
+      success: backUrls.success || `https://transitoejc.site/checkout.html?retorno_mp=success&txid=${encodeURIComponent(txid)}`,
+      pending: backUrls.pending || `https://transitoejc.site/checkout.html?retorno_mp=pending&txid=${encodeURIComponent(txid)}`,
+      failure: backUrls.failure || `https://transitoejc.site/checkout.html?retorno_mp=failure&txid=${encodeURIComponent(txid)}`
+    },
+    auto_return: "approved",
+    external_reference: String(txid),
+    statement_descriptor: "EJC TRANSITO",
+    binary_mode: false
+  };
+
+  if (notificationUrl) {
+    preferencePayload.notification_url = notificationUrl;
+  }
+
+  const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": `PREF-${txid}`
+    },
+    body: JSON.stringify(preferencePayload),
+    signal: AbortSignal.timeout(12000)
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = responseData?.message || responseData?.error || `Erro ao criar preferência Checkout Pro (HTTP ${response.status})`;
+    let detailMsg = "";
+    if (Array.isArray(responseData?.cause)) {
+      detailMsg = responseData.cause.map(c => c.description || c.code || JSON.stringify(c)).join("; ");
+    }
+    throw new Error(`${errorMsg}${detailMsg ? ` - ${detailMsg}` : ""}`);
+  }
+
+  return {
+    success: true,
+    id: responseData.id,
+    init_point: responseData.init_point,
+    sandbox_init_point: responseData.sandbox_init_point,
+    external_reference: responseData.external_reference || txid,
+    raw: responseData
+  };
+}
+
 module.exports = {
   getAccessToken,
   getPublicKey,
   isConfigured,
   criarPagamentoPix,
   criarPagamentoCartao,
+  criarPreferenciaCheckoutPro,
   consultarPagamentoPorId,
   getPayment: consultarPagamentoPorId,
   consultarPagamentoPorExternalReference

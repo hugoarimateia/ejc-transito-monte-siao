@@ -101,6 +101,9 @@ module.exports = async (req, res) => {
           if (mpPayloadFetched.external_reference) {
             txid = mpPayloadFetched.external_reference;
           }
+          if (String(txid).startsWith("CARD") || mpPayloadFetched.payment_type_id === "credit_card") {
+            console.log(`[CHECKOUT_PRO_WEBHOOK_RECEIVED] TXID/Ref=${txid}, PaymentId=${mpPaymentId}, Status=${mpPayloadFetched.status}, Detail=${mpPayloadFetched.status_detail}`);
+          }
         }
       } catch (mpErr) {
         console.warn(`[Webhook MP] Falha ao consultar detalhes do pagamento ${mpPaymentId}:`, mpErr.message);

@@ -24,6 +24,14 @@
       "destination": "/checkout.html"
     },
     {
+      "source": "/checkout-retorno",
+      "destination": "/checkout-retorno.html"
+    },
+    {
+      "source": "/checkout-retorno/",
+      "destination": "/checkout-retorno.html"
+    },
+    {
       "source": "/confirmacao-pagamento",
       "destination": "/confirmacao-pagamento.html"
     },
