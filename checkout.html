@@ -2635,26 +2635,26 @@
           return { success: true, status: "approved", data };
         }
 
-        if (data.status === "in_process" || data.status === "pending") {
-          // Validação estrita: somente apresentar 'in_process' se houver payment_id real e numérico retornado pelo MP
+        if (data.status === "in_process" || data.status === "pending" || data.status_detail === "pending_review_manual" || String(data.status_detail || "").startsWith("pending_")) {
+          // Validação: se há payment_id ou status_detail do Mercado Pago, direciona para Em Análise
           const hasRealId = data.payment_id && /^\d+$/.test(String(data.payment_id).trim());
-          if (!hasRealId) {
+          if (!hasRealId && !data.status_detail?.includes("pending")) {
             const errFake = "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo.";
             exibirErroCartao(errFake);
             return { success: false, error: errFake, status: "rejected" };
           }
 
           try {
-            sessionStorage.setItem("ejc_card_pending_txid", data.txid);
-            sessionStorage.setItem("ejc_card_pending_payment_id", String(data.payment_id));
+            if (data.txid) sessionStorage.setItem("ejc_card_pending_txid", data.txid);
+            if (data.payment_id) sessionStorage.setItem("ejc_card_pending_payment_id", String(data.payment_id));
           } catch(e) {}
 
           exibirCardEmAnalise(data);
-          iniciarPollingCartao(data.txid);
-          return { success: true, status: data.status, payment_id: data.payment_id };
+          if (data.txid) iniciarPollingCartao(data.txid);
+          return { success: true, status: data.status || "in_process", payment_id: data.payment_id };
         }
 
-        const friendlyMsg = getFriendlyCardErrorMessage(data.status_detail);
+        const friendlyMsg = getFriendlyCardErrorMessage(data.status_detail, data.status);
         const msgErro = friendlyMsg || data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
         exibirErroCartao(msgErro, data.status_detail);
         return {
@@ -2674,9 +2674,28 @@
       }
     }
 
-    function getFriendlyCardErrorMessage(statusDetail) {
+    function getFriendlyCardErrorMessage(statusDetail, status = null) {
+      if (status === "in_process" || status === "pending" || String(statusDetail).startsWith("pending_")) {
+        if (statusDetail === "pending_review_manual") {
+          return "Seu pagamento foi recebido pelo Mercado Pago e está passando por uma análise. A confirmação será atualizada assim que o Mercado Pago concluir o processamento.";
+        }
+        if (statusDetail === "pending_contingency") {
+          return "Estamos processando seu pagamento. Não se preocupe, em breve você receberá a confirmação.";
+        }
+        if (statusDetail === "pending_waiting_transfer") {
+          return "Aguardando transferência para confirmação do pagamento.";
+        }
+        if (statusDetail === "pending_waiting_payment") {
+          return "Aguardando confirmação do pagamento junto à operadora.";
+        }
+        return "Seu pagamento foi recebido e está em processamento pelo Mercado Pago. A confirmação será atualizada em instantes.";
+      }
       const map = {
         accredited: "Pagamento aprovado com sucesso!",
+        pending_review_manual: "Seu pagamento foi recebido pelo Mercado Pago e está passando por uma análise. A confirmação será atualizada assim que o Mercado Pago concluir o processamento.",
+        pending_contingency: "Estamos processando seu pagamento. Não se preocupe, em breve você receberá a confirmação.",
+        pending_waiting_transfer: "Aguardando transferência para confirmação do pagamento.",
+        pending_waiting_payment: "Aguardando confirmação do pagamento junto à operadora.",
         cc_rejected_bad_filled_card_number: "Número do cartão incorreto. Por favor, confira os números digitados.",
         cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os 3 ou 4 dígitos no verso do cartão.",
         cc_rejected_bad_filled_date: "Data de validade do cartão incorreta ou expirada.",
@@ -2736,17 +2755,24 @@
       const feedbackBox = document.getElementById("cardFeedbackMsg");
       if (!feedbackBox) return;
       feedbackBox.style.display = "block";
+      const isReviewManual = data.status_detail === "pending_review_manual";
+      const tituloAnalise = "Pagamento em análise";
+      const descAnalise = isReviewManual
+        ? "Seu pagamento foi recebido pelo Mercado Pago e está passando por uma análise. A confirmação será atualizada assim que o Mercado Pago concluir o processamento."
+        : (data.mensagem_usuario || data.message || "Seu pagamento foi recebido e está sendo verificado pela operadora. A confirmação será atualizada assim que o processamento for concluído.");
+
       feedbackBox.innerHTML = `
         <div class="alert-banner alert-warning" style="display: flex; flex-direction: column; gap: 10px; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.08); padding: 14px; border-radius: 8px;">
           <div style="display: flex; align-items: flex-start; gap: 10px;">
             <i class="fa-solid fa-clock-rotate-left fa-spin" style="margin-top: 3px; font-size: 1.1rem; color: #d97706;"></i>
             <div>
-              <strong style="color: #b45309; font-size: 0.98rem; display: block;">Pagamento em Análise pelo Mercado Pago</strong>
+              <strong style="color: #b45309; font-size: 0.98rem; display: block;">${tituloAnalise}</strong>
               <div style="margin-top: 4px; font-size: 0.88rem; color: var(--text-secondary, #475569); line-height: 1.45;">
-                ${data.mensagem_usuario || data.message || "Sua transação está sendo verificada pela operadora do cartão. Assim que for confirmada, sua inscrição será liberada automaticamente."}
+                ${descAnalise}
               </div>
               <div style="margin-top: 6px; font-size: 0.82rem; color: #64748b;">
-                Identificador Mercado Pago: <strong>#${data.payment_id}</strong> &bull; TXID: <strong>${data.txid}</strong>
+                ${data.payment_id ? `Identificador Mercado Pago: <strong>#${data.payment_id}</strong> &bull; ` : ""}TXID: <strong>${data.txid}</strong>
+                ${data.status_detail ? ` &bull; Detalhe: <span style="font-family: monospace; font-weight: 600;">${data.status_detail}</span>` : ""}
               </div>
             </div>
           </div>
@@ -2787,13 +2813,16 @@
                   sessionStorage.removeItem("ejc_card_pending_payment_id");
                 } catch(e) {}
                 concluirPagamentoComSucesso(serverData);
+              } else if (serverData.status === "in_process" || serverData.status === "pending" || String(serverData.status_detail).startsWith("pending_")) {
+                // Permanece em análise — NÃO classificar como recusado!
+                exibirCardEmAnalise(serverData);
               } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
                 clearInterval(cardPollingInterval);
                 try {
                   sessionStorage.removeItem("ejc_card_pending_txid");
                   sessionStorage.removeItem("ejc_card_pending_payment_id");
                 } catch(e) {}
-                const friendly = getFriendlyCardErrorMessage(serverData.status_detail);
+                const friendly = getFriendlyCardErrorMessage(serverData.status_detail, serverData.status);
                 exibirErroCartao(friendly || serverData.mensagem_usuario || serverData.message || serverData.error || "O pagamento não foi aprovado pela operadora. Por favor, tente com outro cartão.", serverData.status_detail);
               }
             }
@@ -2824,13 +2853,16 @@
               } catch(e) {}
               concluirPagamentoComSucesso(serverData);
               return;
+            } else if (serverData.status === "in_process" || serverData.status === "pending" || String(serverData.status_detail).startsWith("pending_")) {
+              exibirCardEmAnalise(serverData);
+              return;
             } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
               clearInterval(cardPollingInterval);
               try {
                 sessionStorage.removeItem("ejc_card_pending_txid");
                 sessionStorage.removeItem("ejc_card_pending_payment_id");
               } catch(e) {}
-              const friendly = getFriendlyCardErrorMessage(serverData.status_detail);
+              const friendly = getFriendlyCardErrorMessage(serverData.status_detail, serverData.status);
               exibirErroCartao(friendly || serverData.mensagem_usuario || serverData.message || serverData.error || "O pagamento não foi aprovado pela operadora. Por favor, tente com outro cartão.", serverData.status_detail);
               return;
             }

@@ -69,9 +69,13 @@ function sanitizePixAscii(str, maxLen) {
     .slice(0, maxLen);
 }
 
-function getFriendlyCardErrorMessage(statusDetail) {
+function getFriendlyCardErrorMessage(statusDetail, status = null) {
   const map = {
     accredited: "Pagamento aprovado com sucesso!",
+    pending_review_manual: "Seu pagamento foi recebido pelo Mercado Pago e está passando por uma análise. A confirmação será atualizada assim que o Mercado Pago concluir o processamento.",
+    pending_contingency: "Estamos processando seu pagamento. Não se preocupe, em breve você receberá a confirmação.",
+    pending_waiting_transfer: "Aguardando transferência para confirmação do pagamento.",
+    pending_waiting_payment: "Aguardando confirmação do pagamento junto à operadora.",
     cc_rejected_bad_filled_card_number: "Número do cartão inválido. Verifique os dígitos digitados.",
     cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os 3 ou 4 dígitos no verso do cartão.",
     cc_rejected_bad_filled_date: "Data de validade do cartão incorreta ou expirada.",
@@ -89,7 +93,11 @@ function getFriendlyCardErrorMessage(statusDetail) {
     "3003": "Token de segurança do cartão expirado ou inválido. Por favor, preencha novamente os dados do cartão.",
     transaction_not_created: "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo."
   };
-  return map[statusDetail] || (statusDetail && statusDetail !== "card_rejected" ? `Pagamento recusado (${statusDetail}). Verifique os dados ou utilize outra forma de pagamento.` : "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.");
+  if (map[statusDetail]) return map[statusDetail];
+  if (status === "in_process" || status === "pending" || String(statusDetail).startsWith("pending_")) {
+    return "Seu pagamento foi recebido e está em processamento pelo Mercado Pago. A confirmação será atualizada em instantes.";
+  }
+  return (statusDetail && statusDetail !== "card_rejected") ? `Pagamento recusado (${statusDetail}). Verifique os dados ou utilize outra forma de pagamento.` : "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
 }
 
 function parseTLVBytes(buf) {
@@ -843,7 +851,7 @@ module.exports = async (req, res) => {
         modalidade_pix: isManual ? "manual" : "api_webhook",
         status: transactionFound.status || (isManual ? "aguardando_analise" : "pending"),
         status_detail: realStatusDetail,
-        mensagem_usuario: getFriendlyCardErrorMessage(realStatusDetail) || null,
+        mensagem_usuario: getFriendlyCardErrorMessage(realStatusDetail, transactionFound.status) || null,
         status_analise_manual: transactionFound.status_analise_manual || transactionFound.metadata?.status_analise_manual || (isManual ? "pendente" : null),
         comprovante_caminho: transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || null,
         comprovante_enviado: Boolean(transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || transactionFound.metadata?.comprovante_caminho),

@@ -8,6 +8,7 @@
 const { applyCors } = require("./_cors");
 const adminAuth = require("./_admin-auth");
 const settingsStore = require("./_settings-store");
+const mercadoPago = require("./_mercadopago");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -147,6 +148,135 @@ module.exports = async (req, res) => {
         console.error("[Reset API Error]", err);
         return res.status(500).json({ success: false, error: err.message || "Falha ao resetar inscrições de teste" });
       }
+    }
+
+    // 3. AÇÃO: AUDITORIA MERCADO PAGO (SUPERADMIN E FINANCEIRO)
+    if (action === "audit_mercadopago") {
+      const auth = adminAuth.requireRole(req, res, ["superadmin", "financeiro"]);
+      if (!auth) return;
+
+      const token = mercadoPago.getAccessToken();
+      const pubKey = mercadoPago.getPublicKey();
+      const tokenPresent = Boolean(token && token.length > 10);
+      const pubKeyPresent = Boolean(pubKey && pubKey.length > 10);
+
+      const tokenEnv = token.startsWith("APP_USR-") ? "production" : (token.startsWith("TEST-") ? "test" : "unknown");
+      const pubKeyEnv = pubKey.startsWith("APP_USR-") ? "production" : (pubKey.startsWith("TEST-") ? "test" : "unknown");
+
+      let appId = null;
+      const appMatch = pubKey.match(/APP_USR-([a-f0-9-]+)/i) || token.match(/APP_USR-([0-9]+)-/i);
+      if (appMatch) appId = appMatch[1];
+
+      const auditData = {
+        success: true,
+        token_present: tokenPresent,
+        token_environment: tokenEnv,
+        public_key_present: pubKeyPresent,
+        public_key_environment: pubKeyEnv,
+        public_key_prefix: pubKey ? pubKey.slice(0, 15) : null,
+        application_id: appId,
+        auth_status: null,
+        user_profile: null,
+        recent_payments: [],
+        target_payment: null,
+        errors: []
+      };
+
+      if (tokenPresent) {
+        // 1. Testa autenticação no endpoint /users/me
+        try {
+          const userRes = await fetch("https://api.mercadopago.com/users/me", {
+            headers: { "Authorization": `Bearer ${token}` },
+            signal: AbortSignal.timeout(6000)
+          });
+          auditData.auth_status = userRes.status;
+          if (userRes.ok) {
+            const u = await userRes.json();
+            auditData.user_profile = {
+              id: u.id,
+              nickname: u.nickname,
+              site_id: u.site_id,
+              country_id: u.country_id,
+              user_type: u.user_type,
+              points: u.points,
+              tags: u.tags || []
+            };
+          } else {
+            const errTxt = await userRes.text();
+            auditData.errors.push(`users/me falhou: HTTP ${userRes.status} - ${errTxt.slice(0, 200)}`);
+          }
+        } catch (eUser) {
+          auditData.errors.push(`Exceção users/me: ${eUser.message}`);
+        }
+
+        // 2. Busca pagamentos recentes na API do Mercado Pago
+        try {
+          const payRes = await fetch("https://api.mercadopago.com/v1/payments/search?limit=30&sort=date_created&criteria=desc", {
+            headers: { "Authorization": `Bearer ${token}` },
+            signal: AbortSignal.timeout(8000)
+          });
+          if (payRes.ok) {
+            const searchData = await payRes.json();
+            if (Array.isArray(searchData.results)) {
+              auditData.recent_payments = searchData.results.map(p => ({
+                id: String(p.id),
+                status: p.status,
+                status_detail: p.status_detail,
+                transaction_amount: p.transaction_amount,
+                currency_id: p.currency_id,
+                installments: p.installments,
+                payment_method_id: p.payment_method_id,
+                payment_type_id: p.payment_type_id,
+                date_created: p.date_created,
+                date_approved: p.date_approved,
+                external_reference: p.external_reference,
+                payer_email: p.payer?.email || null,
+                statement_descriptor: p.statement_descriptor || null
+              }));
+            }
+          } else {
+            const errPay = await payRes.text();
+            auditData.errors.push(`payments/search falhou: HTTP ${payRes.status} - ${errPay.slice(0, 200)}`);
+          }
+        } catch (ePay) {
+          auditData.errors.push(`Exceção payments/search: ${ePay.message}`);
+        }
+
+        // 3. Se um payment_id específico foi solicitado ou se algum possui pending_review_manual ou in_process
+        const targetId = body.payment_id || auditData.recent_payments.find(p => p.status_detail === "pending_review_manual" || p.status === "in_process")?.id;
+        if (targetId) {
+          try {
+            const singleRes = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(targetId)}`, {
+              headers: { "Authorization": `Bearer ${token}` },
+              signal: AbortSignal.timeout(6000)
+            });
+            if (singleRes.ok) {
+              const p = await singleRes.json();
+              auditData.target_payment = {
+                id: String(p.id),
+                status: p.status,
+                status_detail: p.status_detail,
+                transaction_amount: p.transaction_amount,
+                currency_id: p.currency_id,
+                installments: p.installments,
+                payment_method_id: p.payment_method_id,
+                payment_type_id: p.payment_type_id,
+                date_created: p.date_created,
+                date_approved: p.date_approved,
+                external_reference: p.external_reference,
+                statement_descriptor: p.statement_descriptor || null,
+                payer_email: p.payer?.email || null,
+                card_last_four: p.card?.last_four_digits || null,
+                card_first_six: p.card?.first_six_digits || null
+              };
+            }
+          } catch (eSingle) {
+            auditData.errors.push(`Exceção get payment ${targetId}: ${eSingle.message}`);
+          }
+        }
+      }
+
+      return res.status(200).json(auditData);
     }
 
     return res.status(400).json({ error: "Ação não reconhecida." });
