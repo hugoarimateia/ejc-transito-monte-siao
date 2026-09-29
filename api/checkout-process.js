@@ -244,6 +244,8 @@ async function persistirTransacaoSupabase({
   const cleanValor = (valor !== null && valor !== undefined && !isNaN(Number(valor))) ? Number(Number(valor).toFixed(2)) : 0;
   const cleanMetodo = String(metodo || "pix").toLowerCase();
   const cleanStatus = String(status || "pending").toLowerCase();
+  let lastRpcErr = null;
+  let lastDirectErr = null;
 
   // 1. Tenta via RPC unificada 'criar_transacao_checkout'
   try {
@@ -281,9 +283,11 @@ async function persistirTransacaoSupabase({
       return { success: true, via: "rpc", data: rpcData };
     } else {
       const errTxt = await resRpc.text();
+      lastRpcErr = `HTTP ${resRpc.status}: ${errTxt}`;
       console.warn(`[persistirTransacaoSupabase] RPC criar_transacao_checkout falhou (${resRpc.status}): ${errTxt}. Acionando fallback direto na tabela pagamentos...`);
     }
   } catch (rpcErr) {
+    lastRpcErr = rpcErr.message;
     console.warn("[persistirTransacaoSupabase] Exceção na RPC:", rpcErr.message);
   }
 
@@ -328,13 +332,15 @@ async function persistirTransacaoSupabase({
       return { success: true, via: "direct_table", data: directData };
     } else {
       const directErr = await directRes.text();
+      lastDirectErr = `HTTP ${directRes.status}: ${directErr}`;
       console.error(`[persistirTransacaoSupabase] Falha no fallback direto (${directRes.status}):`, directErr);
     }
   } catch (directErr) {
+    lastDirectErr = directErr.message;
     console.error("[persistirTransacaoSupabase] Exceção no fallback direto:", directErr.message);
   }
 
-  return { success: false };
+  return { success: false, rpc_err: lastRpcErr, direct_err: lastDirectErr };
 }
 
 async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload = {}, executado_por = "sistema" }) {
@@ -721,7 +727,7 @@ module.exports = async (req, res) => {
               };
 
               // Reconcilia e sincroniza com o Supabase automaticamente!
-              persistirTransacaoSupabase({
+              await persistirTransacaoSupabase({
                 txid: extRef,
                 nome_pagador: transactionFound.nome_pagador,
                 email: transactionFound.email,
@@ -1620,7 +1626,7 @@ module.exports = async (req, res) => {
       const isApproved = statusFinal === "approved";
 
       // 3. Persistência no Supabase (grava approved, pending, in_process, rejected ou error)
-      await persistirTransacaoSupabase({
+      const dbPersistRes = await persistirTransacaoSupabase({
         txid: txid,
         nome_pagador: nome || cartao_titular || "Titular do Cartão",
         email: email.trim().toLowerCase(),
@@ -1784,6 +1790,7 @@ module.exports = async (req, res) => {
           parcelas: totalParcelas,
           cartao_bandeira: bandeira,
           cartao_ultimos_digitos: ultimosDigitos,
+          db_persist: dbPersistRes,
           message: "Pagamento em análise pelo Mercado Pago. Você receberá a confirmação assim que for concluído."
         });
       } else {
@@ -1797,6 +1804,7 @@ module.exports = async (req, res) => {
           order_id: orderId,
           status: "rejected",
           status_detail: statusDetail,
+          db_persist: dbPersistRes,
           error: friendlyMsg,
           message: friendlyMsg,
           mensagem_usuario: friendlyMsg

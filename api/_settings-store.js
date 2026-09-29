@@ -1573,5 +1573,6 @@ module.exports = {
   getDefaultSettings,
   getDefaultStore,
   getDefaultCardRates,
-  normalizarChavePix
+  normalizarChavePix,
+  getSupabaseCredentials
 };
