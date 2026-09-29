@@ -46,6 +46,22 @@
     {
       "source": "/recibo/(.*)",
       "destination": "/api/recibo"
+    },
+    {
+      "source": "/api/admin/inscritos-dados",
+      "destination": "/api/inscritos-dados"
+    },
+    {
+      "source": "/api/admin/inscritos-dados/(.*)",
+      "destination": "/api/inscritos-dados"
+    },
+    {
+      "source": "/api/admin/inscritos-foto",
+      "destination": "/api/inscritos-foto"
+    },
+    {
+      "source": "/api/admin/inscritos-foto/(.*)",
+      "destination": "/api/inscritos-foto"
     }
   ],
   "headers": [
