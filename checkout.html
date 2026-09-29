@@ -2342,6 +2342,13 @@
         minInstToSet = selectedManualInstallment;
       }
 
+      // Regra técnica do Mercado Pago: o Card Payment Brick exige valor mínimo (>= R$ 1.00) para inicialização
+      if (amountToCharge < 1.00) {
+        amountToCharge = (activePixConfig.valorTaxaInscricao && activePixConfig.valorTaxaInscricao >= 1.00)
+          ? activePixConfig.valorTaxaInscricao
+          : 1.00;
+      }
+
       if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
         return;
       }
