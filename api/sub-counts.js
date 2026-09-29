@@ -228,17 +228,18 @@ module.exports = async (req, res) => {
       console.error("[SubCounts API] Erro ao salvar registro na store central:", errSave);
     }
 
-    // Tenta gravar também no Supabase se disponível (em background / best-effort)
+    // Grava também no Supabase com await obrigatório para persistência serverless
+    let remoteCounts = null;
     const { url, key } = getSupabaseCredentials();
-    if (url && key && !url.includes("yggikbshdvnouaoxafcr")) {
+    if (url && key) {
       try {
-        fetch(`${url}/rest/v1/inscricoes`, {
+        const sbInsertRes = await fetch(`${url}/rest/v1/inscricoes`, {
           method: "POST",
           headers: {
             "apikey": key,
             "Authorization": `Bearer ${key}`,
             "Content-Type": "application/json",
-            "Prefer": "return=minimal"
+            "Prefer": "return=representation"
           },
           body: JSON.stringify({
             id: registroInscricao.id,
@@ -248,23 +249,55 @@ module.exports = async (req, res) => {
             sub: registroInscricao.sub,
             tamanho_camisa: registroInscricao.tamanho_camisa,
             forma_pagamento: registroInscricao.forma_pagamento,
-            pagamento_status: registroInscricao.pagamento_status
+            pagamento_status: registroInscricao.pagamento_status,
+            arquivado: false
           }),
-          signal: AbortSignal.timeout(3500)
-        }).catch(() => {});
-      } catch (e) {}
+          signal: AbortSignal.timeout(5000)
+        });
+
+        if (sbInsertRes.ok) {
+          // Atualiza contagens oficiais imediatamente via RPC
+          const sbCountRes = await fetch(`${url}/rest/v1/rpc/contagem_inscricoes_por_sub`, {
+            method: "POST",
+            headers: {
+              "apikey": key,
+              "Authorization": `Bearer ${key}`,
+              "Content-Type": "application/json"
+            },
+            signal: AbortSignal.timeout(3000)
+          });
+          if (sbCountRes.ok) {
+            const dataRpc = await sbCountRes.json();
+            if (Array.isArray(dataRpc)) {
+              remoteCounts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+              dataRpc.forEach(item => {
+                const s = normalizarSub(item.sub);
+                if (s && remoteCounts[s] !== undefined) {
+                  remoteCounts[s] = Number(item.total || 0);
+                }
+              });
+            }
+          }
+        }
+      } catch (errDb) {
+        console.warn("[SubCounts API] Erro ao gravar inscrição no Supabase:", errDb.message);
+      }
     }
 
     // Calcula novas contagens consolidadas imediatamente
-    const { counts, capacities, total } = calcularContagensOficiais(localStore);
+    const { counts: calculatedCounts, capacities, total: calcTotal } = calcularContagensOficiais(localStore);
+    const finalCounts = remoteCounts || calculatedCounts;
+    const finalTotal = remoteCounts
+      ? Object.values(remoteCounts).reduce((a, b) => a + b, 0)
+      : calcTotal;
 
     return res.status(200).json({
       success: true,
       message: "Inscrição sincronizada com sucesso na base central.",
       id,
-      counts,
+      counts: finalCounts,
       capacities,
-      total,
+      total: finalTotal,
       timestamp: new Date().toISOString()
     });
   }
