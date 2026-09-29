@@ -4,9 +4,8 @@
 
 // 1. Configuração do Supabase
 // Coloque aqui a URL do seu projeto Supabase e a chave pública (anon key).
-// O script SQL completo para criação do banco está no arquivo: supabase-schema.sql
-window.EJC_SUPABASE_URL = "https://yggikbshdvnouaoxafcr.supabase.co";
-window.EJC_SUPABASE_ANON_KEY = "sb_publishable_YiY0CCW6qw4r4G2GXgiD9g_2s7gO-R5";
+window.EJC_SUPABASE_URL = "https://guppedddwnuvluhiaaas.supabase.co";
+window.EJC_SUPABASE_ANON_KEY = "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
 
 // 2. Configuração do Pix Dinâmico (Padrão Banco Central / BR Code)
 // Dados oficiais da coordenação para recebimento das contribuições e inscrições.
