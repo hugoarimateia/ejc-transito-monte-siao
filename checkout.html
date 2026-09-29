@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#023284">
   <meta name="description" content="Checkout Oficial do EJC - Equipe do Trânsito. Pagamento seguro de inscrição e contribuição via Pix e Cartão de Crédito.">
   <title>Checkout Seguro | EJC Equipe do Trânsito</title>
-  <link rel="icon" type="image/png" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3" id="favicon-link">
+  <link rel="icon" type="image/png" href="images/favicondefault.png?v=4" id="favicon-link">
   <link rel="apple-touch-icon" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -969,7 +969,7 @@
       cardInstallmentMode: (localConfig && localConfig.card_installment_mode) || "mercado_pago",
       cardMaxInstallments: Number((localConfig && localConfig.card_max_installments) || 6),
       cardInstallmentRates: (localConfig && localConfig.card_installment_rates) || [],
-      mpPublicKey: (localConfig && localConfig.mp_public_key) || (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) || ""
+      mpPublicKey: (localConfig && (localConfig.mp_public_key || localConfig.mercado_pago_public_key)) || (window.EJC_ENV && (window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY || window.EJC_ENV.MERCADOPAGO_PUBLIC_KEY || window.EJC_ENV.MP_PUBLIC_KEY)) || ""
     };
 
     let valorBase;
@@ -1888,7 +1888,7 @@
       activePixConfig.cardInstallmentMode = cfg.card_installment_mode || (cfg.pix && cfg.pix.card_installment_mode) || activePixConfig.cardInstallmentMode || "mercado_pago";
       activePixConfig.cardMaxInstallments = Number(cfg.card_max_installments || (cfg.pix && cfg.pix.card_max_installments) || activePixConfig.cardMaxInstallments || 6);
       activePixConfig.cardInstallmentRates = cfg.card_installment_rates || (cfg.pix && cfg.pix.card_installment_rates) || activePixConfig.cardInstallmentRates || [];
-      activePixConfig.mpPublicKey = cfg.mp_public_key || cfg.mercado_pago_public_key || (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) || activePixConfig.mpPublicKey || "";
+      activePixConfig.mpPublicKey = cfg.mp_public_key || cfg.mercado_pago_public_key || (window.EJC_ENV && (window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY || window.EJC_ENV.MERCADOPAGO_PUBLIC_KEY || window.EJC_ENV.MP_PUBLIC_KEY)) || activePixConfig.mpPublicKey || "";
 
       // Persistência reativa no localStorage para sobrevivência a F5 e novas abas
       try {
@@ -1925,7 +1925,10 @@
       }
     }
 
+    let configLoadingState = "LOADING"; // "LOADING" | "LOADED" | "ERROR"
+
     async function carregarConfiguracaoAtiva() {
+      configLoadingState = "LOADING";
       // Busca configuração ativa do servidor com versão do cliente
       const headers = { "Cache-Control": "no-cache", "Pragma": "no-cache" };
       if (activePixConfig.versao) {
@@ -1939,10 +1942,20 @@
         });
         if (res.ok) {
           const cfg = await res.json();
+          configLoadingState = "LOADED";
           aplicarConfiguracao(cfg);
+        } else {
+          configLoadingState = "ERROR";
+          if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
+            montarCardPaymentBrick();
+          }
         }
       } catch (e) {
         console.warn("Falha ao buscar /api/config, usando fallback:", e);
+        configLoadingState = "ERROR";
+        if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
+          montarCardPaymentBrick();
+        }
       }
     }
 
@@ -2138,9 +2151,11 @@
     let isInitializingBrick = false;
 
     function getMercadoPagoPublicKey() {
-      return (
+      return String(
         activePixConfig.mpPublicKey ||
-        (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) ||
+        activePixConfig.mp_public_key ||
+        activePixConfig.mercado_pago_public_key ||
+        (window.EJC_ENV && (window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY || window.EJC_ENV.MERCADOPAGO_PUBLIC_KEY || window.EJC_ENV.MP_PUBLIC_KEY)) ||
         ""
       ).trim();
     }
@@ -2257,6 +2272,36 @@
       if (!container) return;
 
       const pubKey = getMercadoPagoPublicKey();
+
+      // 1. Estado de Carregamento da Configuração
+      if (!pubKey && configLoadingState === "LOADING") {
+        container.innerHTML = `
+          <div class="alert-banner" style="display: flex; align-items: center; gap: 12px; margin-bottom: 0; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 18px; border-radius: 12px;">
+            <i class="fa-solid fa-spinner fa-spin" style="color: #0284c7; font-size: 1.3rem;"></i>
+            <div>
+              <strong style="color: #0f172a; font-size: .95rem; display: block;">Carregando configuração do cartão...</strong>
+              <span style="font-size: .84rem; color: #64748b;">Sincronizando ambiente seguro do Mercado Pago.</span>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 2. Erro de conexão com a API de Configuração
+      if (!pubKey && configLoadingState === "ERROR") {
+        container.innerHTML = `
+          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
+            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
+            <div>
+              <strong>Não foi possível carregar a configuração do cartão:</strong>
+              Ocorreu uma instabilidade na consulta ao servidor. Por favor, recarregue a página ou utilize o <strong>Pix Instantâneo</strong> ao lado.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 3. Chave Pública Não Configurada
       if (!pubKey || pubKey === "sua_public_key_aqui") {
         container.innerHTML = `
           <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">

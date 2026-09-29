@@ -77,8 +77,8 @@
   function updateFavicon(theme) {
     const isSubdir = window.location.pathname.includes("/admin");
     const prefix = isSubdir ? "../images/" : "images/";
-    // Favicon unificado exclusivo: "10 EJC MONTE SIÃO.png" para ambos os temas (Light e Dark)
-    const targetFavicon = prefix + encodeURI("10 EJC MONTE SIÃO.png") + "?v=3";
+    // Favicon oficial do navegador: favicondefault.png para ambos os temas (Light e Dark)
+    const targetFavicon = prefix + "favicondefault.png?v=4";
 
     // 1. Atualiza ou cria favicon padrão <link rel="icon">
     let favicon = document.querySelector('link[rel="icon"]');
@@ -95,15 +95,6 @@
     if (shortcutIcon) {
       shortcutIcon.href = targetFavicon;
     }
-
-    // 3. Atualiza ou cria apple touch icon <link rel="apple-touch-icon">
-    let appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
-    if (!appleTouchIcon) {
-      appleTouchIcon = document.createElement("link");
-      appleTouchIcon.rel = "apple-touch-icon";
-      document.head.appendChild(appleTouchIcon);
-    }
-    appleTouchIcon.href = targetFavicon;
   }
 
   // Execução imediata no carregamento para sincronizar tema, logos e favicon

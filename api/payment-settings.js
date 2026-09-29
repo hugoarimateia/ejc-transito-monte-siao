@@ -131,7 +131,19 @@ module.exports = async (req, res) => {
           card_installment_rates: Array.isArray(settings.card_installment_rates) && settings.card_installment_rates.length > 0
             ? settings.card_installment_rates
             : (settingsStore.getDefaultCardRates ? settingsStore.getDefaultCardRates() : []),
-          mp_public_key: settings.mp_public_key || process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || "",
+          mp_public_key: (
+            settings.mp_public_key ||
+            settings.mercado_pago_public_key ||
+            process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+            process.env.MERCADO_PAGO_PUBLIC_KEY ||
+            process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
+            process.env.MERCADOPAGO_PUBLIC_KEY ||
+            process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
+            process.env.MP_PUBLIC_KEY ||
+            process.env.MP_KEY ||
+            process.env.PUBLIC_KEY ||
+            ""
+          ).trim(),
           modalidade_pix: modalidadeEfetiva,
           pix_mode: modalidadeEfetiva,
           pix_chave_mascarada: maskedKey,

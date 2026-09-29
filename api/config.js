@@ -109,8 +109,32 @@ module.exports = async (req, res) => {
     card_installment_rates: Array.isArray(s.card_installment_rates) && s.card_installment_rates.length > 0
       ? s.card_installment_rates
       : (settingsStore.getDefaultCardRates ? settingsStore.getDefaultCardRates() : []),
-    mp_public_key: s.mp_public_key || process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || process.env.MP_PUBLIC_KEY || "",
-    mercado_pago_public_key: s.mp_public_key || process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || process.env.MP_PUBLIC_KEY || "",
+    mp_public_key: (
+      s.mp_public_key ||
+      s.mercado_pago_public_key ||
+      process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
+      process.env.MERCADOPAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
+      process.env.MP_PUBLIC_KEY ||
+      process.env.MP_KEY ||
+      process.env.PUBLIC_KEY ||
+      ""
+    ).trim(),
+    mercado_pago_public_key: (
+      s.mp_public_key ||
+      s.mercado_pago_public_key ||
+      process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
+      process.env.MERCADOPAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
+      process.env.MP_PUBLIC_KEY ||
+      process.env.MP_KEY ||
+      process.env.PUBLIC_KEY ||
+      ""
+    ).trim(),
     lote_atual: pixConfig.lote_atual,
     modalidade_pix: s.modalidade_pix || "api_webhook",
     pix_chave: pixConfig.chave,

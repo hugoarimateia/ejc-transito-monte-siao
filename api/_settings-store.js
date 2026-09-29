@@ -122,7 +122,17 @@ function getDefaultSettings() {
     card_installment_mode: "mercado_pago", // "mercado_pago" (automático) ou "manual" (configuração comercial EJC)
     card_max_installments: 6,
     card_installment_rates: getDefaultCardRates(),
-    mp_public_key: process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || "",
+    mp_public_key: (
+      process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.MERCADO_PAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
+      process.env.MERCADOPAGO_PUBLIC_KEY ||
+      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
+      process.env.MP_PUBLIC_KEY ||
+      process.env.MP_KEY ||
+      process.env.PUBLIC_KEY ||
+      ""
+    ).trim(),
     modalidade_pix: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook", // "api_webhook" ou "manual"
     pix_mode: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook",
     pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || null,

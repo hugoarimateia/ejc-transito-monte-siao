@@ -65,35 +65,6 @@ module.exports = async (req, res) => {
       });
     }
 
-    // DIAGNÓSTICO SEGURO DE VARIÁVEIS DE AMBIENTE (SOMENTE SUPERADMIN)
-    if (action === "diag_env") {
-      const auth = adminAuth.requireRole(req, res, ["superadmin"]);
-      if (!auth) return;
-      const allKeys = Object.keys(process.env);
-      const matches = allKeys.filter(k => /mercado|mp|key|token|deploy/i.test(k));
-      const summary = {};
-      matches.forEach(k => {
-        const val = String(process.env[k] || "");
-        summary[k] = { exists: Boolean(val), length: val.length, prefix: val.slice(0, 10) };
-      });
-
-      let vercelTest = null;
-      if (process.env.VERCEL_DEPLOYMENT_KEY) {
-        try {
-          const vRes = await fetch("https://api.vercel.com/v9/projects", {
-            headers: { Authorization: `Bearer ${process.env.VERCEL_DEPLOYMENT_KEY}` },
-            signal: AbortSignal.timeout(4000)
-          });
-          const vData = await vRes.json();
-          vercelTest = { status: vRes.status, ok: vRes.ok, data: vRes.ok ? vData?.projects?.map(p => p.name) : vData };
-        } catch (e) {
-          vercelTest = { error: e.message };
-        }
-      }
-
-      return res.status(200).json({ success: true, summary, vercelTest });
-    }
-
     // 2. AÇÃO: RESET CONTROLADO DAS INSCRIÇÕES DE TESTE (SOMENTE SUPERADMIN)
     if (action === "reset_test_inscricoes") {
       const auth = adminAuth.requireRole(req, res, ["superadmin"]);

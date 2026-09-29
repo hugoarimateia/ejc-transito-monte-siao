@@ -318,8 +318,13 @@ async function criarPagamentoCartao({
 function getPublicKey() {
   return (
     process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+    process.env.MERCADO_PAGO_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
     process.env.MERCADOPAGO_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
     process.env.MP_PUBLIC_KEY ||
+    process.env.MP_KEY ||
+    process.env.PUBLIC_KEY ||
     ""
   ).trim();
 }
