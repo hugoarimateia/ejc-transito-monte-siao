@@ -65,6 +65,20 @@ module.exports = async (req, res) => {
       });
     }
 
+    // DIAGNÓSTICO SEGURO DE VARIÁVEIS DE AMBIENTE (SOMENTE SUPERADMIN)
+    if (action === "diag_env") {
+      const auth = adminAuth.requireRole(req, res, ["superadmin"]);
+      if (!auth) return;
+      const allKeys = Object.keys(process.env);
+      const matches = allKeys.filter(k => /mercado|mp|key|token/i.test(k));
+      const summary = {};
+      matches.forEach(k => {
+        const val = String(process.env[k] || "");
+        summary[k] = { exists: Boolean(val), length: val.length, prefix: val.slice(0, 10) };
+      });
+      return res.status(200).json({ success: true, summary });
+    }
+
     // 2. AÇÃO: RESET CONTROLADO DAS INSCRIÇÕES DE TESTE (SOMENTE SUPERADMIN)
     if (action === "reset_test_inscricoes") {
       const auth = adminAuth.requireRole(req, res, ["superadmin"]);
