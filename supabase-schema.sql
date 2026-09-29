@@ -434,6 +434,7 @@ ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_enviado BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_em TIMESTAMPTZ;
 ALTER TABLE public.pagamentos ADD COLUMN IF NOT EXISTS comprovante_email_erro TEXT;
+ALTER TABLE public.pagamentos ALTER COLUMN pix_copia_e_cola DROP NOT NULL;
 ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS pagamento_confirmado_em TIMESTAMPTZ;
 
 -- Índices de performance para checkout unificado
