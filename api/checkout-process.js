@@ -22,6 +22,18 @@ function getPublicBaseUrl() {
   return "https://www.transitoejc.site";
 }
 
+function getWebhookNotificationUrl() {
+  const base = `${getPublicBaseUrl()}/api/pix-webhook`;
+  const secret = process.env.PIX_WEBHOOK_SECRET;
+  return secret ? `${base}?secret=${encodeURIComponent(secret)}` : base;
+}
+
+function safeUuidOrNull(val) {
+  if (!val || typeof val !== "string") return null;
+  const clean = val.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean) ? clean : null;
+}
+
 function calcularCRC16(payload) {
   const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload), "utf8");
   let crc = 0xFFFF;
@@ -590,8 +602,8 @@ module.exports = async (req, res) => {
 
       const isManual = transactionFound.modalidade_pix === "manual" || transactionFound.metadata?.modalidade_pix === "manual";
 
-      // 2.6 Reconciliação Server-Side no Polling (para modalidade api_webhook se transação estiver 'pending')
-      if (!isManual && transactionFound && (transactionFound.status === "pending" || !transactionFound.status)) {
+      // 2.6 Reconciliação Server-Side no Polling (para modalidade api_webhook se transação estiver 'pending' ou 'in_process')
+      if (!isManual && transactionFound && (transactionFound.status === "pending" || transactionFound.status === "in_process" || !transactionFound.status)) {
         if (mercadoPago.isConfigured()) {
           try {
             let approvedItem = null;
@@ -622,7 +634,11 @@ module.exports = async (req, res) => {
                   transactionFound.pago_em = approvedItem.date_approved || new Date().toISOString();
                 }
               } else if (approvedItem.status && approvedItem.status !== transactionFound.status) {
-                transactionFound.status = approvedItem.status;
+                // Proteção contra race condition: nunca rebaixa status terminal 'approved' para 'in_process' ou 'rejected'
+                const isCurrentlyApproved = transactionFound.status === "approved" || transactionFound.status === "confirmado" || transactionFound.status === "paid";
+                if (!isCurrentlyApproved) {
+                  transactionFound.status = approvedItem.status;
+                }
               }
             }
           } catch (eGw) {
@@ -645,7 +661,7 @@ module.exports = async (req, res) => {
       const responsePayload = {
         success: true,
         txid: transactionFound.txid,
-        payment_id: transactionFound.payment_id || transactionFound.metadata?.payment_id || transactionFound.txid,
+        payment_id: transactionFound.payment_id || transactionFound.metadata?.payment_id || (transactionFound.metodo === "credit_card" ? null : transactionFound.txid),
         order_id: transactionFound.order_id || transactionFound.metadata?.order_id || null,
         external_reference: transactionFound.external_reference || transactionFound.metadata?.external_reference || transactionFound.txid,
         modalidade_pix: isManual ? "manual" : "api_webhook",
@@ -1134,7 +1150,7 @@ module.exports = async (req, res) => {
         if (mercadoPago.isConfigured()) {
           try {
             const descricaoCob = tipo === "inscricao" ? `Inscrição EJC Trânsito ${loteAtual}` : "Contribuição EJC Trânsito";
-            const notificationUrl = `${getPublicBaseUrl()}/api/pix-webhook`;
+            const notificationUrl = getWebhookNotificationUrl();
 
             const mpResult = await mercadoPago.criarPagamentoPix({
               valor: valorNumerico,
@@ -1223,7 +1239,7 @@ module.exports = async (req, res) => {
               p_pix_copia_e_cola: payloadPix,
               p_qr_code_base64: qrCodeBase64,
               p_expiracao: expiracao,
-              p_inscricao_id: inscricao_id || null,
+              p_inscricao_id: safeUuidOrNull(inscricao_id),
               p_metadata: {
                 order_id: orderId,
                 payment_id: paymentId,
@@ -1371,7 +1387,7 @@ module.exports = async (req, res) => {
         }
       }
 
-      let paymentId = txid;
+      let paymentId = null;
       let orderId = null;
       let externalReference = txid;
       let statusFinal = "pending";
@@ -1418,10 +1434,10 @@ module.exports = async (req, res) => {
             payer: payerObj,
             txid: txid,
             description: `Inscrição EJC - ${totalParcelas}x (R$ ${valorFinalCobranca.toFixed(2)})`,
-            notification_url: `${getPublicBaseUrl()}/api/pix-webhook`
+            notification_url: getWebhookNotificationUrl()
           });
 
-          paymentId = String(mpResult.id);
+          paymentId = mpResult.id ? String(mpResult.id) : null;
           statusFinal = mpResult.status || "pending"; // 'approved', 'in_process', 'pending', 'rejected'
           statusDetail = mpResult.status_detail || "";
           if (mpResult.card?.last_four_digits) ultimosDigitos = mpResult.card.last_four_digits;
@@ -1456,8 +1472,9 @@ module.exports = async (req, res) => {
       // 3. Persistência no Supabase
       if (supabaseUrl && supabaseKey) {
         try {
+          const safeInscId = safeUuidOrNull(inscricao_id);
           // Cria transação com status retornado pelo Mercado Pago
-          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/criar_transacao_checkout`, {
+          const resRpc = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/criar_transacao_checkout`, {
             method: "POST",
             headers: {
               "apikey": supabaseKey,
@@ -1480,7 +1497,7 @@ module.exports = async (req, res) => {
               p_pix_copia_e_cola: null,
               p_qr_code_base64: null,
               p_expiracao: new Date(Date.now() + 86400000).toISOString(),
-              p_inscricao_id: inscricao_id || null,
+              p_inscricao_id: safeInscId,
               p_metadata: {
                 order_id: orderId,
                 payment_id: paymentId,
@@ -1492,10 +1509,15 @@ module.exports = async (req, res) => {
                 status_detail: statusDetail,
                 modo_parcelamento: cardMode,
                 acrescimo_percentual: markupPercentual,
-                inscricao_id: inscricao_id || null
+                inscricao_id: safeInscId
               }
             })
           });
+
+          if (!resRpc.ok) {
+            const errTxt = await resRpc.text();
+            console.warn("[Checkout Card] Erro ao persistir no Supabase:", resRpc.status, errTxt);
+          }
 
           // Se e somente se o pagamento foi APROVADO, concilia e confirma a inscrição
           if (isApproved) {
@@ -1566,7 +1588,7 @@ module.exports = async (req, res) => {
           parcelas: totalParcelas,
           cartao_ultimos_digitos: ultimosDigitos,
           cartao_bandeira: bandeira,
-          inscricao_id: inscricao_id || null,
+          inscricao_id: safeUuidOrNull(inscricao_id),
           sub: subFinal,
           metadata: {
             order_id: orderId,
@@ -1605,6 +1627,21 @@ module.exports = async (req, res) => {
           email_enviado: Boolean(emailResult.success)
         });
       } else if (statusFinal === "in_process" || statusFinal === "pending") {
+        // Validação estrita: somente apresentar 'in_process' se houver payment_id real (numérico) retornado pelo Mercado Pago
+        const hasRealNumericPaymentId = paymentId && /^\d+$/.test(String(paymentId).trim());
+        if (!hasRealNumericPaymentId) {
+          console.warn(`[Checkout Card] Status ${statusFinal} mas sem payment_id numérico válido do MP (${paymentId}). Tratar como falha.`);
+          return res.status(400).json({
+            success: false,
+            metodo: "credit_card",
+            txid: txid,
+            status: "rejected",
+            status_detail: statusDetail || "transaction_not_created",
+            error: "A transação não pôde ser criada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo.",
+            message: "A transação não pôde ser criada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo.",
+            mensagem_usuario: "A transação não pôde ser criada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo."
+          });
+        }
         return res.status(200).json({
           success: true,
           metodo: "credit_card",

@@ -2547,7 +2547,17 @@
               if (feedback) feedback.style.display = "none";
             },
             onSubmit: async (cardFormData) => {
-              return processarPagamentoCartao(cardFormData, amountToCharge);
+              const res = await processarPagamentoCartao(cardFormData, amountToCharge);
+              if (!res || !res.success) {
+                // SINALIZAÇÃO CRÍTICA PARA O CARD PAYMENT BRICK DO MERCADO PAGO:
+                // Quando onSubmit lança erro / rejeita Promise, o Brick encerra o spinner interno
+                // e reativa imediatamente o botão "Pagar" para que o usuário possa tentar novamente sem F5!
+                const err = new Error(res?.error || "Pagamento recusado pela operadora.");
+                err.status = res?.status || "rejected";
+                err.status_detail = res?.status_detail;
+                throw err;
+              }
+              return res;
             },
             onError: (error) => {
               console.error("[Card Payment Brick Error]", error);
@@ -2578,7 +2588,7 @@
     async function processarPagamentoCartao(cardFormData, amountCharged) {
       if (isProcessingCard) {
         console.warn("[Checkout Card] Submissão bloqueada: cobrança já em andamento.");
-        return;
+        return { success: false, error: "Uma cobrança já está sendo processada neste momento." };
       }
       isProcessingCard = true;
 
@@ -2589,7 +2599,7 @@
       if (!validarEmail(emailFinal)) {
         isProcessingCard = false;
         exibirErroCartao("Por favor, informe um endereço de e-mail válido.");
-        return;
+        return { success: false, error: "Por favor, informe um endereço de e-mail válido." };
       }
 
       const feedbackBox = document.getElementById("cardFeedbackMsg");
@@ -2657,30 +2667,42 @@
 
           registrarTransacaoLocal(pagamentoCard);
           concluirPagamentoComSucesso(pagamentoCard);
-          return;
+          return { success: true, status: "approved", data };
         }
 
         if (data.status === "in_process" || data.status === "pending") {
-          if (feedbackBox) {
-            feedbackBox.style.display = "block";
-            feedbackBox.innerHTML = `
-              <div class="alert-banner alert-warning" style="display: flex;">
-                <i class="fa-solid fa-clock-rotate-left" style="margin-top: 2px;"></i>
-                <div>
-                  <strong>Pagamento em Análise:</strong> ${data.mensagem_usuario || data.message || 'Seu pagamento está sendo verificado pela operadora do cartão. Assim que for confirmado, sua vaga será liberada automaticamente.'}
-                </div>
-              </div>
-            `;
+          // Validação estrita: somente apresentar 'in_process' se houver payment_id real e numérico retornado pelo MP
+          const hasRealId = data.payment_id && /^\d+$/.test(String(data.payment_id).trim());
+          if (!hasRealId) {
+            const errFake = "A transação não pôde ser gerada no Mercado Pago. Por favor, tente novamente ou utilize o Pix Instantâneo.";
+            exibirErroCartao(errFake);
+            return { success: false, error: errFake, status: "rejected" };
           }
-          return;
+
+          try {
+            sessionStorage.setItem("ejc_card_pending_txid", data.txid);
+            sessionStorage.setItem("ejc_card_pending_payment_id", String(data.payment_id));
+          } catch(e) {}
+
+          exibirCardEmAnalise(data);
+          iniciarPollingCartao(data.txid);
+          return { success: true, status: data.status, payment_id: data.payment_id };
         }
 
         const msgErro = data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
         exibirErroCartao(msgErro);
+        return {
+          success: false,
+          error: msgErro,
+          status: data.status || "rejected",
+          status_detail: data.status_detail
+        };
 
       } catch (err) {
         console.error("[Checkout Card Error]", err);
-        exibirErroCartao("Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.");
+        const msgNet = "Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.";
+        exibirErroCartao(msgNet);
+        return { success: false, error: msgNet, status: "error" };
       } finally {
         isProcessingCard = false;
       }
@@ -2691,15 +2713,144 @@
       if (!feedbackBox) return;
       feedbackBox.style.display = "block";
       feedbackBox.innerHTML = `
-        <div class="alert-banner alert-danger" style="display: flex;">
-          <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
-          <div>
-            <strong>Não foi possível concluir o pagamento:</strong> ${mensagem}
+        <div class="alert-banner alert-danger" style="display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 12px 14px; border-radius: 8px;">
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px; color: #dc2626; font-size: 1rem;"></i>
+            <div style="color: #991b1b; font-size: 0.90rem; line-height: 1.45;">
+              <strong style="display: block; margin-bottom: 2px;">Não foi possível concluir o pagamento:</strong>
+              ${mensagem}
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+            <button type="button" onclick="reiniciarTentativaCartao()" class="btn" style="background: #ffffff; color: #b91c1c; border: 1px solid #f87171; padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <i class="fa-solid fa-arrows-rotate"></i> Limpar / Recarregar Formulário de Cartão
+            </button>
           </div>
         </div>
       `;
       feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+
+    window.reiniciarTentativaCartao = async function() {
+      isProcessingCard = false;
+      const feedback = document.getElementById("cardFeedbackMsg");
+      if (feedback) feedback.style.display = "none";
+      await montarCardPaymentBrick(true);
+    };
+
+    let cardPollingInterval = null;
+
+    function exibirCardEmAnalise(data) {
+      const feedbackBox = document.getElementById("cardFeedbackMsg");
+      if (!feedbackBox) return;
+      feedbackBox.style.display = "block";
+      feedbackBox.innerHTML = `
+        <div class="alert-banner alert-warning" style="display: flex; flex-direction: column; gap: 10px; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.08); padding: 14px; border-radius: 8px;">
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fa-solid fa-clock-rotate-left fa-spin" style="margin-top: 3px; font-size: 1.1rem; color: #d97706;"></i>
+            <div>
+              <strong style="color: #b45309; font-size: 0.98rem; display: block;">Pagamento em Análise pelo Mercado Pago</strong>
+              <div style="margin-top: 4px; font-size: 0.88rem; color: var(--text-secondary, #475569); line-height: 1.45;">
+                ${data.mensagem_usuario || data.message || "Sua transação está sendo verificada pela operadora do cartão. Assim que for confirmada, sua inscrição será liberada automaticamente."}
+              </div>
+              <div style="margin-top: 6px; font-size: 0.82rem; color: #64748b;">
+                Identificador Mercado Pago: <strong>#${data.payment_id}</strong> &bull; TXID: <strong>${data.txid}</strong>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+            <button type="button" id="btnConsultarCardStatus" onclick="verificarStatusCardManual('${data.txid}')" class="btn" style="background: #087df9; color: #ffffff; padding: 7px 15px; border-radius: 6px; font-size: 0.85rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+              <i class="fa-solid fa-arrows-rotate"></i> Consultar Status Agora
+            </button>
+          </div>
+        </div>
+      `;
+      feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function iniciarPollingCartao(txid) {
+      clearInterval(cardPollingInterval);
+      if (!txid) return;
+      let cardPollAttempts = 0;
+      const MAX_CARD_POLL = 60; // 60 * 3s = 3 minutos de polling ativo
+      cardPollingInterval = setInterval(async () => {
+        if (document.hidden) return;
+        cardPollAttempts++;
+        if (cardPollAttempts > MAX_CARD_POLL) {
+          clearInterval(cardPollingInterval);
+          return;
+        }
+        try {
+          const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(txid)}&_t=${Date.now()}`, {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+          if (res.ok) {
+            const serverData = await res.json();
+            if (serverData) {
+              if (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid") {
+                clearInterval(cardPollingInterval);
+                try {
+                  sessionStorage.removeItem("ejc_card_pending_txid");
+                  sessionStorage.removeItem("ejc_card_pending_payment_id");
+                } catch(e) {}
+                concluirPagamentoComSucesso(serverData);
+              } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
+                clearInterval(cardPollingInterval);
+                try {
+                  sessionStorage.removeItem("ejc_card_pending_txid");
+                  sessionStorage.removeItem("ejc_card_pending_payment_id");
+                } catch(e) {}
+                exibirErroCartao(serverData.message || serverData.error || "O pagamento não foi autorizado pela operadora. Por favor, tente com outro cartão.");
+              }
+            }
+          }
+        } catch (e) {}
+      }, 3000);
+    }
+
+    window.verificarStatusCardManual = async function(txid) {
+      const btn = document.getElementById("btnConsultarCardStatus");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Consultando Mercado Pago...`;
+      }
+      try {
+        const res = await fetch(`/api/checkout-process?txid=${encodeURIComponent(txid)}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (serverData) {
+            if (serverData.status === "approved" || serverData.status === "confirmado" || serverData.status === "paid") {
+              clearInterval(cardPollingInterval);
+              try {
+                sessionStorage.removeItem("ejc_card_pending_txid");
+                sessionStorage.removeItem("ejc_card_pending_payment_id");
+              } catch(e) {}
+              concluirPagamentoComSucesso(serverData);
+              return;
+            } else if (serverData.status === "rejected" || serverData.status === "rejeitado" || serverData.status === "cancelled") {
+              clearInterval(cardPollingInterval);
+              try {
+                sessionStorage.removeItem("ejc_card_pending_txid");
+                sessionStorage.removeItem("ejc_card_pending_payment_id");
+              } catch(e) {}
+              exibirErroCartao(serverData.message || serverData.error || "O pagamento não foi autorizado pela operadora. Por favor, tente com outro cartão.");
+              return;
+            }
+          }
+        }
+      } catch (errManual) {
+        console.warn("[Card Manual Check Error]", errManual);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Consultar Status Agora`;
+        }
+      }
+    };
 
     // ==============================================================================
     // CONCLUSÃO E TELA DE CHECK-IN CONFIRMADO (CARD VERDE)
@@ -2707,9 +2858,12 @@
     function concluirPagamentoComSucesso(pagamento) {
       clearInterval(pixTimerInterval);
       clearInterval(pixPollingInterval);
+      clearInterval(cardPollingInterval);
 
       try {
         sessionStorage.removeItem("ejc_active_checkout");
+        sessionStorage.removeItem("ejc_card_pending_txid");
+        sessionStorage.removeItem("ejc_card_pending_payment_id");
       } catch (e) {}
 
       // 1. Atualiza status no armazenamento local de pagamentos
@@ -2845,6 +2999,33 @@
 
     // Verificação de restauração de Etapa 2 após reload ou parâmetro de URL
     (async function verificarSessaoAtiva() {
+      // 1. Verificação de recuperação de pagamento em cartão pendente (refresh / F5)
+      try {
+        const pendingCardTxid = sessionStorage.getItem("ejc_card_pending_txid");
+        if (pendingCardTxid) {
+          const resCard = await fetch(`/api/checkout-process?txid=${encodeURIComponent(pendingCardTxid)}&_t=${Date.now()}`);
+          if (resCard.ok) {
+            const cardData = await resCard.json();
+            if (cardData && (cardData.status === "approved" || cardData.status === "confirmado" || cardData.status === "paid")) {
+              sessionStorage.removeItem("ejc_card_pending_txid");
+              sessionStorage.removeItem("ejc_card_pending_payment_id");
+              concluirPagamentoComSucesso(cardData);
+              return;
+            } else if (cardData && (cardData.status === "in_process" || cardData.status === "pending")) {
+              checkoutStep1.style.display = "none";
+              checkoutStep2.style.display = "block";
+              tabBtnCard.click();
+              exibirCardEmAnalise(cardData);
+              iniciarPollingCartao(pendingCardTxid);
+              return;
+            } else {
+              sessionStorage.removeItem("ejc_card_pending_txid");
+              sessionStorage.removeItem("ejc_card_pending_payment_id");
+            }
+          }
+        }
+      } catch (eCardRecov) {}
+
       const urlStep = urlParams.get("step");
       const urlTxid = urlParams.get("txid");
       let sessionData = null;
