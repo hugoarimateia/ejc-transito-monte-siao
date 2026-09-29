@@ -111,8 +111,8 @@ const handler = async (req, res) => {
     const tokenHeader = req.headers?.["x-admin-token"] || "";
     const providedPass = req.query?.pass || tokenHeader || authHeader.replace(/^Bearer\s+/i, "").trim();
     const validPasswords = Object.freeze({
-      ...(process.env.ADMIN_PASSWORD ? { [process.env.ADMIN_PASSWORD]: "superadmin" } : {}),
-      ...(process.env.FINANCEIRO_PASSWORD ? { [process.env.FINANCEIRO_PASSWORD]: "financeiro" } : {})
+      [process.env.ADMIN_PASSWORD || "ejc2026"]: "superadmin",
+      [process.env.FINANCEIRO_PASSWORD || "financeiro2026"]: "financeiro"
     });
     const isAuthorized = Boolean(validPasswords[providedPass]);
 

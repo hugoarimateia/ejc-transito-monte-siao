@@ -3,9 +3,8 @@
 // ==============================================================================
 
 // 1. Configuração do Supabase
-// Os valores reais precisam ser configurados via variáveis de ambiente do servidor.
-window.EJC_SUPABASE_URL = "";
-window.EJC_SUPABASE_ANON_KEY = "";
+window.EJC_SUPABASE_URL = window.EJC_SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co";
+window.EJC_SUPABASE_ANON_KEY = window.EJC_SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
 
 // 2. Configuração do Pix Dinâmico (Padrão Banco Central / BR Code)
 // Valores oficiais serão carregados dinamicamente em runtime a partir do Supabase
