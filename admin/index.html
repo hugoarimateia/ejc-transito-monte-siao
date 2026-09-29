@@ -755,10 +755,15 @@
       const localInscricoes = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
       const localPagamentos = JSON.parse(localStorage.getItem("ejc_pagamentos") || "[]");
       const localLegacyPix = JSON.parse(localStorage.getItem("ejc_pagamentos_pix") || "[]");
-      const localAuditoria = JSON.parse(localStorage.getItem("ejc_auditoria") || "[]");
       const localWpp = JSON.parse(localStorage.getItem("ejc_whatsapp_links") || "null");
 
-      if (localWpp) Object.assign(wppLinksData, localWpp);
+      if (localWpp) {
+        const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+        CANONICAL.forEach(sub => {
+          if (localWpp[sub] !== undefined) wppLinksData[sub] = localWpp[sub];
+          else if (localWpp[sub.toLowerCase()] !== undefined) wppLinksData[sub] = localWpp[sub.toLowerCase()];
+        });
+      }
 
       // Unifica transações locais
       const existingTxids = new Set(localPagamentos.map(p => p.txid));
@@ -806,26 +811,19 @@
             }
           });
 
-          // Links de WhatsApp (tenta configuracoes_whatsapp e subs)
-          client.from("configuracoes_whatsapp").select("*").then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
+          // Links de WhatsApp (tenta configuracoes_whatsapp)
+          client.from("configuracoes_whatsapp").select("*").eq("ativo", true).then(({ data, error }) => {
+            if (!error && Array.isArray(data) && data.length > 0) {
+              const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
               data.forEach(item => {
                 if (item.sub) {
-                  wppLinksData[item.sub] = item.link_grupo || "";
+                  const subCap = item.sub.charAt(0).toUpperCase() + item.sub.slice(1).toLowerCase();
+                  if (CANONICAL.includes(subCap)) {
+                    wppLinksData[subCap] = item.link_grupo || "";
+                  }
                 }
               });
               renderizarPainelWhatsApp();
-            } else {
-              client.from("subs").select("nome, link_whatsapp").then(({ data: subsData, error: subsErr }) => {
-                if (!subsErr && subsData && subsData.length > 0) {
-                  subsData.forEach(item => {
-                    if (item.nome) {
-                      wppLinksData[item.nome] = item.link_whatsapp || "";
-                    }
-                  });
-                  renderizarPainelWhatsApp();
-                }
-              });
             }
           });
         } catch(e) {
@@ -843,7 +841,11 @@
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && data.whatsapp) {
-          Object.assign(wppLinksData, data.whatsapp);
+          const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+          CANONICAL.forEach(sub => {
+            const val = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
+            wppLinksData[sub] = val;
+          });
           try {
             localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
           } catch(e) {}
@@ -1045,11 +1047,12 @@
     // Salvar links de WhatsApp com persistência real no servidor
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
       const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+      const payloadSubs = {};
       subs.forEach(sub => {
         const input = document.getElementById(`wppLink_${sub}`);
-        if (input && input.value) {
-          wppLinksData[sub] = input.value.trim();
-        }
+        const val = input ? input.value.trim() : "";
+        wppLinksData[sub] = val;
+        payloadSubs[sub] = val;
       });
 
       const feedback = document.getElementById("wppSaveFeedback");
@@ -1067,7 +1070,7 @@
           },
           body: JSON.stringify({
             action: "update_whatsapp",
-            subs: wppLinksData,
+            subs: payloadSubs,
             usuario: currentUserRole,
             admin_pass: currentAdminPass
           })
@@ -1075,7 +1078,9 @@
         const data = await res.json();
         if (res.ok && data.success) {
           if (data.whatsapp) {
-            Object.assign(wppLinksData, data.whatsapp);
+            subs.forEach(sub => {
+              wppLinksData[sub] = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
+            });
           }
           try {
             localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
@@ -1091,7 +1096,7 @@
         }
       } catch(err) {
         console.error("Erro ao salvar links de WhatsApp:", err);
-        feedback.textContent = "Erro de conexão ao salvar links.";
+        feedback.textContent = `Erro de conexão: ${err.message || 'Falha ao salvar links.'}`;
         feedback.style.color = "#dc2626";
       }
     });
@@ -1494,7 +1499,10 @@
             } catch (e) {}
           }
           if (data && data.whatsapp) {
-            Object.assign(wppLinksData, data.whatsapp);
+            const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+            CANONICAL.forEach(sub => {
+              wppLinksData[sub] = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
+            });
             try {
               localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
             } catch (e) {}

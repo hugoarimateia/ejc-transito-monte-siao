@@ -590,16 +590,16 @@ if (signupForm) {
       const generalGroupUrl = (window.EJC_WHATSAPP_SUBS && (window.EJC_WHATSAPP_SUBS["Geral"] || window.EJC_WHATSAPP_SUBS["geral"])) || "";
 
       if (whatsappGroupButton) {
-        if (generalGroupUrl) {
+        if (generalGroupUrl && generalGroupUrl.startsWith("http")) {
           whatsappGroupButton.href = generalGroupUrl;
           whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp`;
           whatsappGroupButton.style.pointerEvents = "auto";
           whatsappGroupButton.style.opacity = "1";
         } else {
-          whatsappGroupButton.href = "#";
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Grupo Geral: Aguardando link da coordenação`;
-          whatsappGroupButton.style.pointerEvents = "none";
-          whatsappGroupButton.style.opacity = "0.7";
+          whatsappGroupButton.href = "/api/whatsapp";
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp`;
+          whatsappGroupButton.style.pointerEvents = "auto";
+          whatsappGroupButton.style.opacity = "1";
         }
       }
       if (whatsappSuccess) {
@@ -671,25 +671,13 @@ window.EJC_ACTIVE_VERSION = 0;
 
 function aplicarConfiguracaoNaPagina(cfg) {
   if (!cfg) return;
-  const pixData = cfg.pix || cfg;
-  const incomingVersion = Number(cfg.versao || pixData.versao || 0);
-  const currentVersion = Number(window.EJC_ACTIVE_VERSION || 0);
 
-  // Proteção anti-downgrade: impede que réplica serverless fria reverta para build antigo
-  if (currentVersion > 0 && incomingVersion > 0 && incomingVersion < currentVersion) {
-    console.warn(`[Landing] Ignorando payload desatualizado v${incomingVersion} < v${currentVersion}`);
-    return;
-  }
-  if (incomingVersion > 0) {
-    window.EJC_ACTIVE_VERSION = incomingVersion;
-  }
-
-  // Atualiza links de WhatsApp se presentes no payload oficial
+  // Atualiza links de WhatsApp se presentes no payload oficial (independe de versão financeira)
   if (cfg.whatsapp) {
     window.EJC_WHATSAPP_SUBS = window.EJC_WHATSAPP_SUBS || {};
     Object.assign(window.EJC_WHATSAPP_SUBS, cfg.whatsapp);
     const geralLink = cfg.whatsapp.geral || cfg.whatsapp.Geral;
-    if (geralLink) {
+    if (geralLink && typeof geralLink === "string" && geralLink.startsWith("http")) {
       document.querySelectorAll('[data-whatsapp-target="geral"]').forEach(el => {
         el.href = geralLink;
       });
@@ -697,7 +685,22 @@ function aplicarConfiguracaoNaPagina(cfg) {
       if (floatBtn) floatBtn.href = geralLink;
       const navWpp = document.querySelector(".nav-cta");
       if (navWpp) navWpp.href = geralLink;
+      const successWpp = document.querySelector("#whatsapp-group-button");
+      if (successWpp) successWpp.href = geralLink;
     }
+  }
+
+  const pixData = cfg.pix || cfg;
+  const incomingVersion = Number(cfg.versao || pixData.versao || 0);
+  const currentVersion = Number(window.EJC_ACTIVE_VERSION || 0);
+
+  // Proteção anti-downgrade financeiro: impede que réplica serverless fria reverta preço
+  if (currentVersion > 0 && incomingVersion > 0 && incomingVersion < currentVersion) {
+    console.warn(`[Landing] Ignorando payload financeiro desatualizado v${incomingVersion} < v${currentVersion}`);
+    return;
+  }
+  if (incomingVersion > 0) {
+    window.EJC_ACTIVE_VERSION = incomingVersion;
   }
 
   const rawVal = pixData.valorTaxaInscricao !== undefined ? pixData.valorTaxaInscricao : (pixData.valor_inscricao !== undefined ? pixData.valor_inscricao : cfg.valor_inscricao);
@@ -874,3 +877,19 @@ if (btnSubmitContributionCheckout) {
     window.location.href = `/checkout?tipo=contribuicao&valor=${valorFinal}&nome=${encodeURIComponent(contributorName)}`;
   });
 }
+
+// Garantidor dinâmico e resiliente de redirecionamento para o Grupo Geral do WhatsApp
+document.addEventListener("click", (e) => {
+  const target = e.target.closest('[data-whatsapp-target="geral"], .whatsapp-float, .nav-cta, #whatsapp-group-button');
+  if (!target) return;
+  const currentHref = target.getAttribute("href");
+  if (!currentHref || currentHref === "#" || currentHref.trim() === "") {
+    e.preventDefault();
+    const liveGeral = (window.EJC_WHATSAPP_SUBS && (window.EJC_WHATSAPP_SUBS["Geral"] || window.EJC_WHATSAPP_SUBS["geral"])) || "";
+    if (liveGeral && liveGeral.startsWith("http")) {
+      window.open(liveGeral, "_blank", "noopener,noreferrer");
+    } else {
+      window.open("/api/whatsapp", "_blank", "noopener,noreferrer");
+    }
+  }
+});

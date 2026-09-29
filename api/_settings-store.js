@@ -124,6 +124,11 @@ function getDefaultStore() {
     lotes: [],
     historico: [],
     whatsapp: {
+      Verde: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "",
+      Vermelho: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "",
+      Amarelo: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "",
+      Laranja: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || "",
+      Geral: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "",
       verde: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "",
       vermelho: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "",
       amarelo: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "",
@@ -303,19 +308,23 @@ async function getActiveSettings() {
           // Sincroniza WhatsApp do Supabase (tabela configuracoes_whatsapp ou subs)
           try {
             let loadedWpp = false;
-            const wppRes = await fetch(`${url}/rest/v1/configuracoes_whatsapp?ativo=eq.true`, {
+            const wppRes = await fetch(`${url}/rest/v1/configuracoes_whatsapp?ativo=eq.true&order=atualizado_em.asc`, {
               headers: { "apikey": key, "Authorization": `Bearer ${key}` },
-              signal: AbortSignal.timeout(2000)
+              signal: AbortSignal.timeout(3000)
             });
             if (wppRes.ok) {
               const wppRows = await wppRes.json();
               if (Array.isArray(wppRows) && wppRows.length > 0) {
                 const wppMap = {};
+                const CANONICAL_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
                 wppRows.forEach(r => {
                   if (r.sub) {
-                    const link = r.link_grupo || "";
-                    wppMap[String(r.sub).toLowerCase()] = link;
-                    wppMap[r.sub] = link;
+                    const subCap = r.sub.charAt(0).toUpperCase() + r.sub.slice(1).toLowerCase();
+                    if (CANONICAL_SUBS.includes(subCap)) {
+                      const link = (r.link_grupo !== undefined && r.link_grupo !== null) ? String(r.link_grupo).trim() : "";
+                      wppMap[subCap] = link;
+                      wppMap[subCap.toLowerCase()] = link;
+                    }
                   }
                 });
                 localData.whatsapp = { ...localData.whatsapp, ...wppMap };
@@ -334,7 +343,11 @@ async function getActiveSettings() {
                   const wppMap = {};
                   subsRows.forEach(r => {
                     if (r.nome && r.link_whatsapp) {
-                      wppMap[String(r.nome).toLowerCase()] = r.link_whatsapp;
+                      const subCap = r.nome.charAt(0).toUpperCase() + r.nome.slice(1).toLowerCase();
+                      if (subCap !== "Azul") {
+                        wppMap[subCap] = r.link_whatsapp.trim();
+                        wppMap[subCap.toLowerCase()] = r.link_whatsapp.trim();
+                      }
                     }
                   });
                   localData.whatsapp = { ...localData.whatsapp, ...wppMap };
@@ -818,20 +831,33 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
     throw new Error("Dados de links do WhatsApp inválidos.");
   }
 
+  const CANONICAL_SUBS = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+  const agora = new Date().toISOString();
+  const normalizedSubs = {};
+
+  // Normaliza e filtra apenas subs oficiais
+  for (const rawSub of Object.keys(subsData)) {
+    const subCap = rawSub.charAt(0).toUpperCase() + rawSub.slice(1).toLowerCase();
+    if (CANONICAL_SUBS.includes(subCap)) {
+      const link = (subsData[rawSub] !== undefined && subsData[rawSub] !== null) ? String(subsData[rawSub]).trim() : "";
+      normalizedSubs[subCap] = link;
+      normalizedSubs[subCap.toLowerCase()] = link;
+    }
+  }
+
   const localData = loadLocalStore();
   localData.whatsapp = {
     ...localData.whatsapp,
-    ...subsData
+    ...normalizedSubs
   };
 
-  const agora = new Date().toISOString();
   const auditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     acao: "WHATSAPP_LINKS_UPDATED",
     usuario: usuario || "admin",
     campo_afetado: "configuracoes_whatsapp",
     valor_anterior: null,
-    valor_novo: JSON.stringify(subsData),
+    valor_novo: JSON.stringify(normalizedSubs),
     motivo: "Atualização dos links dos grupos WhatsApp",
     ip_origem: ip || "127.0.0.1",
     criado_em: agora
@@ -839,43 +865,44 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
 
   if (!Array.isArray(localData.historico)) localData.historico = [];
   localData.historico.unshift(auditEntry);
-
   saveLocalStore(localData);
 
-  // Tenta persistir no Supabase se configurado
+  // Persiste no Supabase com validação real e resolução de conflito em 'sub'
+  let supabasePersisted = false;
   const { url, key } = getSupabaseCredentials();
   if (url && key) {
     try {
-      const subs = Object.keys(subsData);
-      const promises = [];
-      for (const sub of subs) {
-        const link = subsData[sub] !== undefined ? String(subsData[sub]).trim() : "";
-        const subCap = sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
+      for (const subCap of CANONICAL_SUBS) {
+        if (normalizedSubs[subCap] === undefined) continue;
+        const link = normalizedSubs[subCap];
 
-        // 1. Tenta tabela configuracoes_whatsapp
-        promises.push(
-          fetch(`${url}/rest/v1/configuracoes_whatsapp`, {
-            method: "POST",
-            headers: {
-              "apikey": key,
-              "Authorization": `Bearer ${key}`,
-              "Content-Type": "application/json",
-              "Prefer": "resolution=merge-duplicates"
-            },
-            body: JSON.stringify({
-              sub: subCap,
-              link_grupo: link,
-              ativo: true,
-              atualizado_em: agora,
-              atualizado_por: usuario || "admin"
-            })
-          }).catch(err => console.warn(`[Wpp Sync] Erro ao sincronizar configuracoes_whatsapp (${subCap}):`, err.message))
-        );
+        // 1. Tenta tabela configuracoes_whatsapp com ?on_conflict=sub
+        const resWpp = await fetch(`${url}/rest/v1/configuracoes_whatsapp?on_conflict=sub`, {
+          method: "POST",
+          headers: {
+            "apikey": key,
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=representation"
+          },
+          body: JSON.stringify({
+            sub: subCap,
+            link_grupo: link,
+            ativo: true,
+            atualizado_em: agora,
+            atualizado_por: usuario || "admin"
+          })
+        });
 
-        // 2. Tenta tabela subs (coluna link_whatsapp se for sub de equipe)
+        if (!resWpp.ok) {
+          const errText = await resWpp.text();
+          throw new Error(`Falha ao persistir configuracoes_whatsapp (${subCap}): [HTTP ${resWpp.status}] ${errText}`);
+        }
+
+        // 2. Sincroniza tabela subs se for equipe
         if (subCap !== "Geral") {
-          promises.push(
-            fetch(`${url}/rest/v1/subs?nome=ilike.${encodeURIComponent(subCap)}`, {
+          try {
+            await fetch(`${url}/rest/v1/subs?nome=ilike.${encodeURIComponent(subCap)}`, {
               method: "PATCH",
               headers: {
                 "apikey": key,
@@ -883,21 +910,25 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
                 "Content-Type": "application/json"
               },
               body: JSON.stringify({ link_whatsapp: link })
-            }).catch(err => console.warn(`[Wpp Sync] Erro ao sincronizar subs (${subCap}):`, err.message))
-          );
+            });
+          } catch (eSub) {
+            console.warn(`[Wpp Sync] Aviso ao atualizar subs (${subCap}):`, eSub.message);
+          }
         }
       }
-      await Promise.all(promises);
+      supabasePersisted = true;
     } catch (e) {
-      console.warn("[SettingsStore updateWhatsAppSettings] Supabase sync falhou:", e.message);
+      console.error("[SettingsStore updateWhatsAppSettings] Erro ao sincronizar com Supabase:", e.message);
+      throw e;
     }
   }
 
   return {
     success: true,
     persisted: true,
+    supabasePersisted,
     whatsapp: localData.whatsapp,
-    message: "Links dos grupos de WhatsApp salvos com sucesso no servidor."
+    message: "Links dos grupos de WhatsApp salvos com sucesso e persistidos no Supabase."
   };
 }
 

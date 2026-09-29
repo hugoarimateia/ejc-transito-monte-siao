@@ -2301,37 +2301,38 @@
     }
 
     async function obterLinkWhatsAppSub(sub) {
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
-        try {
-          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-          // 1. Tenta tabela configuracoes_whatsapp
-          try {
-            const { data } = await client.from("configuracoes_whatsapp").select("link_grupo, ativo").eq("sub", sub).single();
-            if (data && data.ativo && data.link_grupo) return data.link_grupo;
-          } catch(e1) {}
-          // 2. Tenta tabela subs
-          try {
-            const { data: subData } = await client.from("subs").select("link_whatsapp").ilike("nome", sub).single();
-            if (subData && subData.link_whatsapp) return subData.link_whatsapp;
-          } catch(e2) {}
-        } catch(e) {}
-      }
+      const cleanSub = String(sub || "Geral").trim();
+      const subCap = cleanSub.charAt(0).toUpperCase() + cleanSub.slice(1).toLowerCase();
 
-      // 3. Fallback na API central /api/config
+      // 1. Consulta a API central /api/config oficial
       try {
         const cfgRes = await fetch(`/api/config?_t=${Date.now()}`);
         if (cfgRes.ok) {
           const cfg = await cfgRes.json();
-          const subKey = String(sub || "").toLowerCase();
-          if (cfg.whatsapp && cfg.whatsapp[subKey]) return cfg.whatsapp[subKey];
+          if (cfg && cfg.whatsapp) {
+            const link = cfg.whatsapp[subCap] || cfg.whatsapp[subCap.toLowerCase()] || cfg.whatsapp["Geral"] || cfg.whatsapp["geral"];
+            if (link && link.startsWith("http")) return link;
+          }
         }
       } catch(eApi) {}
 
-      const adminLinks = JSON.parse(localStorage.getItem("ejc_whatsapp_links") || "{}");
-      if (adminLinks[sub]) return adminLinks[sub];
+      // 2. Consulta Supabase diretamente se conectado
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
+        try {
+          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
+          try {
+            const { data } = await client.from("configuracoes_whatsapp").select("link_grupo, ativo").ilike("sub", subCap).eq("ativo", true).maybeSingle();
+            if (data && data.link_grupo && data.link_grupo.startsWith("http")) return data.link_grupo;
+          } catch(e1) {}
+          try {
+            const { data: subData } = await client.from("subs").select("link_whatsapp").ilike("nome", subCap).maybeSingle();
+            if (subData && subData.link_whatsapp && subData.link_whatsapp.startsWith("http")) return subData.link_whatsapp;
+          } catch(e2) {}
+        } catch(e) {}
+      }
 
-      const fallbackSubs = window.EJC_WHATSAPP_SUBS || {};
-      return fallbackSubs[sub] || fallbackSubs["Geral"] || "";
+      // 3. Fallback seguro para o redirecionador de WhatsApp oficial
+      return `/api/whatsapp`;
     }
 
     // Inicialização da configuração ativa

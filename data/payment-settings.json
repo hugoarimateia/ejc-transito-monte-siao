@@ -1,34 +1,117 @@
 {
   "settings": {
-    "versao": 1,
+    "versao": 13,
     "ativo": true,
-    "configurado": false,
-    "lote_atual": "Aguardando Coordenação",
-    "valor_inscricao": null,
+    "configurado": true,
+    "lote_atual": "Lote 1 - Oficial",
+    "valor_inscricao": 180,
     "valor_promocional": null,
     "taxa_adicional": 0,
     "max_parcelas": 12,
     "modalidade_pix": "api_webhook",
     "pix_mode": "api_webhook",
-    "pix_chave": null,
-    "pix_tipo_chave": null,
-    "pix_beneficiario": null,
+    "pix_chave": "leoeuler03@gmail.com",
+    "pix_tipo_chave": "EMAIL",
+    "pix_beneficiario": "EJC TRANSITO MONTE SIAO",
     "pix_documento": "",
-    "pix_cidade": null,
+    "pix_cidade": "CAMPINA GRANDE",
     "pix_instituicao": "",
     "pix_instrucoes_manual": "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     "pix_permite_comprovante": true,
-    "motivo_alteracao": "Configuração inicial - Aguardando definição pelo Administrador",
-    "atualizado_por": "sistema",
-    "atualizado_em": "2026-09-29T01:45:16.817Z"
+    "motivo_alteracao": "Configuração auditada definitiva R$ 180",
+    "atualizado_por": "superadmin",
+    "atualizado_em": "2026-09-29T02:21:24.936Z",
+    "id": "21d99679-2fb7-40ea-a82f-e5369962e78d",
+    "criado_em": "2026-09-29T02:05:18.257273+00:00",
+    "preco_efetivo": 180
   },
-  "lotes": [],
-  "historico": [],
+  "lotes": [
+    {
+      "id": "31a7c759-9d1e-40b4-88fc-03f38d71b47e",
+      "nome": "1º Lote",
+      "valor": 50,
+      "ativo": true,
+      "data_inicio": "2026-09-29T00:53:00.07571+00:00",
+      "data_fim": null,
+      "criado_em": "2026-09-29T00:53:00.07571+00:00"
+    },
+    {
+      "id": "lote-1790648485169",
+      "nome": "Lote 1 - Oficial",
+      "valor": 180,
+      "ativo": true,
+      "criado_em": "2026-09-29T02:21:24.936Z"
+    }
+  ],
+  "historico": [
+    {
+      "id": "audit-1790648485764-stbp",
+      "acao": "WHATSAPP_LINKS_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "configuracoes_whatsapp",
+      "valor_anterior": null,
+      "valor_novo": "{\"Geral\":\"https://chat.whatsapp.com/TESTE_PROD_GERAL\",\"geral\":\"https://chat.whatsapp.com/TESTE_PROD_GERAL\",\"Verde\":\"https://chat.whatsapp.com/TESTE_PROD_VERDE\",\"verde\":\"https://chat.whatsapp.com/TESTE_PROD_VERDE\",\"Vermelho\":\"https://chat.whatsapp.com/TESTE_PROD_VERMELHO\",\"vermelho\":\"https://chat.whatsapp.com/TESTE_PROD_VERMELHO\",\"Amarelo\":\"https://chat.whatsapp.com/TESTE_PROD_AMARELO\",\"amarelo\":\"https://chat.whatsapp.com/TESTE_PROD_AMARELO\",\"Laranja\":\"https://chat.whatsapp.com/TESTE_PROD_LARANJA\",\"laranja\":\"https://chat.whatsapp.com/TESTE_PROD_LARANJA\"}",
+      "motivo": "Atualização dos links dos grupos WhatsApp",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T02:21:25.763Z"
+    },
+    {
+      "id": "audit-1790648484936-eeej",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (Lote Especial Produção)",
+      "valor_novo": "R$ 180.00 (Lote 1 - Oficial)",
+      "motivo": "Configuração auditada definitiva R$ 180",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T02:21:24.936Z",
+      "detalhes": {
+        "versao": 13,
+        "lote": "Lote 1 - Oficial",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "67c0336d-5c54-4294-b5cd-10a02431bb93",
+      "acao": "PRICE_UPDATED",
+      "usuario": "financeiro",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "180.00",
+      "valor_novo": "50",
+      "motivo": "testenovo",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T01:53:50.112512+00:00",
+      "detalhes": {
+        "lote": "Lote Especial Produção",
+        "versao": 8
+      }
+    },
+    {
+      "id": "1ca79cdf-68fa-46c4-a8eb-13ed7bb5bee2",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50.00",
+      "valor_novo": "180",
+      "motivo": "Teste de persistência e validação definitiva multi-dispositivo",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T01:48:15.987533+00:00",
+      "detalhes": {
+        "lote": "Lote Especial Produção",
+        "versao": 6
+      }
+    }
+  ],
   "whatsapp": {
-    "verde": "",
-    "vermelho": "",
-    "amarelo": "",
-    "laranja": "",
-    "geral": ""
+    "Verde": "https://chat.whatsapp.com/TESTE_PROD_VERDE",
+    "Vermelho": "https://chat.whatsapp.com/TESTE_PROD_VERMELHO",
+    "Amarelo": "https://chat.whatsapp.com/TESTE_PROD_AMARELO",
+    "Laranja": "https://chat.whatsapp.com/TESTE_PROD_LARANJA",
+    "Geral": "https://chat.whatsapp.com/TESTE_PROD_GERAL",
+    "verde": "https://chat.whatsapp.com/TESTE_PROD_VERDE",
+    "vermelho": "https://chat.whatsapp.com/TESTE_PROD_VERMELHO",
+    "amarelo": "https://chat.whatsapp.com/TESTE_PROD_AMARELO",
+    "laranja": "https://chat.whatsapp.com/TESTE_PROD_LARANJA",
+    "geral": "https://chat.whatsapp.com/TESTE_PROD_GERAL"
   }
 }

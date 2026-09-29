@@ -679,14 +679,34 @@
       document.getElementById("apprTxid").textContent = data.txid || "-";
       document.getElementById("apprValor").textContent = Number(data.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-      if (data.whatsapp_link) {
-        document.getElementById("btnWhatsAppGroup").href = data.whatsapp_link;
+      const wppBtn = document.getElementById("btnWhatsAppGroup");
+      if (data.whatsapp_link && typeof data.whatsapp_link === "string" && data.whatsapp_link.startsWith("http")) {
+        wppBtn.href = data.whatsapp_link;
+        wppBtn.style.opacity = "1";
+        wppBtn.style.pointerEvents = "auto";
       } else {
-        const wppBtn = document.getElementById("btnWhatsAppGroup");
-        wppBtn.href = "#";
-        wppBtn.textContent = "Link do grupo será enviado pela coordenação";
-        wppBtn.style.opacity = "0.7";
-        wppBtn.style.pointerEvents = "none";
+        const subName = data.sub || "Geral";
+        fetch(`/api/config?_t=${Date.now()}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(cfg => {
+            if (cfg && cfg.whatsapp) {
+              const liveLink = cfg.whatsapp[subName] || cfg.whatsapp[subName.toLowerCase()] || cfg.whatsapp["Geral"] || cfg.whatsapp["geral"];
+              if (liveLink && liveLink.startsWith("http")) {
+                wppBtn.href = liveLink;
+                wppBtn.style.opacity = "1";
+                wppBtn.style.pointerEvents = "auto";
+                return;
+              }
+            }
+            wppBtn.href = "/api/whatsapp";
+            wppBtn.style.opacity = "1";
+            wppBtn.style.pointerEvents = "auto";
+          })
+          .catch(() => {
+            wppBtn.href = "/api/whatsapp";
+            wppBtn.style.opacity = "1";
+            wppBtn.style.pointerEvents = "auto";
+          });
       }
 
       if (data.comprovante_email_enviado) {

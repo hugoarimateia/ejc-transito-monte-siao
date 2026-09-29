@@ -71,12 +71,23 @@ module.exports = async (req, res) => {
     tempoExpiracaoMinutos: Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15)
   };
 
+  const verde = (w.Verde || w.verde || process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "").trim();
+  const vermelho = (w.Vermelho || w.vermelho || process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "").trim();
+  const amarelo = (w.Amarelo || w.amarelo || process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "").trim();
+  const laranja = (w.Laranja || w.laranja || process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || "").trim();
+  const geral = (w.Geral || w.geral || process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "").trim();
+
   const whatsappConfig = {
-    verde: (w.verde !== undefined && w.verde !== null) ? String(w.verde).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_VERDE || ""),
-    vermelho: (w.vermelho !== undefined && w.vermelho !== null) ? String(w.vermelho).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || ""),
-    amarelo: (w.amarelo !== undefined && w.amarelo !== null) ? String(w.amarelo).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || ""),
-    laranja: (w.laranja !== undefined && w.laranja !== null) ? String(w.laranja).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || ""),
-    geral: (w.geral !== undefined && w.geral !== null) ? String(w.geral).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "")
+    verde,
+    vermelho,
+    amarelo,
+    laranja,
+    geral,
+    Verde: verde,
+    Vermelho: vermelho,
+    Amarelo: amarelo,
+    Laranja: laranja,
+    Geral: geral
   };
 
   return res.status(200).json({
