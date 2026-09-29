@@ -302,12 +302,25 @@ ALTER TABLE public.subs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inscricoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagamentos_pix ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Leitura pública de subs" ON public.subs;
 CREATE POLICY "Leitura pública de subs" ON public.subs FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Inserção pública de inscrições" ON public.inscricoes;
 CREATE POLICY "Inserção pública de inscrições" ON public.inscricoes FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura de inscrição via token" ON public.inscricoes;
 CREATE POLICY "Leitura de inscrição via token" ON public.inscricoes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização controlada de inscrições" ON public.inscricoes;
 CREATE POLICY "Atualização controlada de inscrições" ON public.inscricoes FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Criação de pagamentos Pix" ON public.pagamentos_pix;
 CREATE POLICY "Criação de pagamentos Pix" ON public.pagamentos_pix FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura de pagamentos Pix" ON public.pagamentos_pix;
 CREATE POLICY "Leitura de pagamentos Pix" ON public.pagamentos_pix FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização de pagamentos Pix" ON public.pagamentos_pix;
 CREATE POLICY "Atualização de pagamentos Pix" ON public.pagamentos_pix FOR UPDATE USING (true);
 
 -- 11. STORAGE (BUCKET 'fotos')
@@ -315,14 +328,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('fotos', 'fotos', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+DROP POLICY IF EXISTS "Upload público de fotos" ON storage.objects;
 CREATE POLICY "Upload público de fotos"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'fotos');
 
+DROP POLICY IF EXISTS "Leitura pública de fotos" ON storage.objects;
 CREATE POLICY "Leitura pública de fotos"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'fotos');
 
+DROP POLICY IF EXISTS "Remoção controlada de fotos" ON storage.objects;
 CREATE POLICY "Remoção controlada de fotos"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'fotos');

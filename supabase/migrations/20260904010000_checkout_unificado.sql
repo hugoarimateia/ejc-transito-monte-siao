@@ -220,13 +220,26 @@ ALTER TABLE public.pagamentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auditoria_transacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.configuracoes_whatsapp ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Inserção pública de pagamentos" ON public.pagamentos;
 CREATE POLICY "Inserção pública de pagamentos" ON public.pagamentos FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura pública de pagamentos por txid" ON public.pagamentos;
 CREATE POLICY "Leitura pública de pagamentos por txid" ON public.pagamentos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização pública de pagamentos" ON public.pagamentos;
 CREATE POLICY "Atualização pública de pagamentos" ON public.pagamentos FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Inserção de auditoria" ON public.auditoria_transacoes;
 CREATE POLICY "Inserção de auditoria" ON public.auditoria_transacoes FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura de auditoria" ON public.auditoria_transacoes;
 CREATE POLICY "Leitura de auditoria" ON public.auditoria_transacoes FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Leitura pública de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Leitura pública de links whatsapp" ON public.configuracoes_whatsapp FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Atualização de links whatsapp" ON public.configuracoes_whatsapp FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Inserção de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Inserção de links whatsapp" ON public.configuracoes_whatsapp FOR INSERT WITH CHECK (true);

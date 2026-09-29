@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS public.subs (
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Migra sub legada 'Azul' para 'Laranja' se existir
+UPDATE public.subs 
+SET nome = 'Laranja', cor = '#f97316', casal_coordenador = 'Alan e Kallyne', link_whatsapp = 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja'
+WHERE nome = 'Azul' AND NOT EXISTS (SELECT 1 FROM public.subs WHERE nome = 'Laranja');
+
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
 VALUES
@@ -79,8 +84,18 @@ CREATE TABLE IF NOT EXISTS public.pagamentos_pix (
     payload_webhook JSONB
 );
 
-CREATE INDEX IF NOT EXISTS idx_pagamentos_pix_txid ON public.pagamentos_pix(txid);
-CREATE INDEX IF NOT EXISTS idx_pagamentos_pix_status ON public.pagamentos_pix(status);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name = 'pagamentos_pix' 
+          AND table_type = 'BASE TABLE'
+    ) THEN
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_pagamentos_pix_txid ON public.pagamentos_pix(txid)';
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_pagamentos_pix_status ON public.pagamentos_pix(status)';
+    END IF;
+END $$;
 
 -- 4. FUNÇÃO RPC: CONTAGEM DE INSCRIÇÕES POR SUB
 CREATE OR REPLACE FUNCTION public.contagem_inscricoes_por_sub()
@@ -305,20 +320,39 @@ $$;
 -- 10. CONFIGURAÇÃO DE ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.subs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inscricoes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pagamentos_pix ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de leitura pública para subs e contagem
+DROP POLICY IF EXISTS "Leitura pública de subs" ON public.subs;
 CREATE POLICY "Leitura pública de subs" ON public.subs FOR SELECT USING (true);
 
 -- Inscrições: anônimo pode inserir e consultar sua própria inscrição pelo token
+DROP POLICY IF EXISTS "Inserção pública de inscrições" ON public.inscricoes;
 CREATE POLICY "Inserção pública de inscrições" ON public.inscricoes FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura de inscrição via token" ON public.inscricoes;
 CREATE POLICY "Leitura de inscrição via token" ON public.inscricoes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização controlada de inscrições" ON public.inscricoes;
 CREATE POLICY "Atualização controlada de inscrições" ON public.inscricoes FOR UPDATE USING (true);
 
 -- Pagamentos Pix: inserção e leitura pública do status pelo txid
-CREATE POLICY "Criação de pagamentos Pix" ON public.pagamentos_pix FOR INSERT WITH CHECK (true);
-CREATE POLICY "Leitura de pagamentos Pix" ON public.pagamentos_pix FOR SELECT USING (true);
-CREATE POLICY "Atualização de pagamentos Pix" ON public.pagamentos_pix FOR UPDATE USING (true);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name = 'pagamentos_pix' 
+          AND table_type = 'BASE TABLE'
+    ) THEN
+        EXECUTE 'ALTER TABLE public.pagamentos_pix ENABLE ROW LEVEL SECURITY';
+        EXECUTE 'DROP POLICY IF EXISTS "Criação de pagamentos Pix" ON public.pagamentos_pix';
+        EXECUTE 'CREATE POLICY "Criação de pagamentos Pix" ON public.pagamentos_pix FOR INSERT WITH CHECK (true)';
+        EXECUTE 'DROP POLICY IF EXISTS "Leitura de pagamentos Pix" ON public.pagamentos_pix';
+        EXECUTE 'CREATE POLICY "Leitura de pagamentos Pix" ON public.pagamentos_pix FOR SELECT USING (true)';
+        EXECUTE 'DROP POLICY IF EXISTS "Atualização de pagamentos Pix" ON public.pagamentos_pix';
+        EXECUTE 'CREATE POLICY "Atualização de pagamentos Pix" ON public.pagamentos_pix FOR UPDATE USING (true)';
+    END IF;
+END $$;
 
 -- 11. STORAGE (BUCKET 'fotos')
 -- Observação: Crie o bucket 'fotos' com visibilidade pública no painel Storage do Supabase.
@@ -326,14 +360,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('fotos', 'fotos', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+DROP POLICY IF EXISTS "Upload público de fotos" ON storage.objects;
 CREATE POLICY "Upload público de fotos"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'fotos');
 
+DROP POLICY IF EXISTS "Leitura pública de fotos" ON storage.objects;
 CREATE POLICY "Leitura pública de fotos"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'fotos');
 
+DROP POLICY IF EXISTS "Remoção controlada de fotos" ON storage.objects;
 CREATE POLICY "Remoção controlada de fotos"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'fotos');
@@ -604,15 +641,28 @@ ALTER TABLE public.pagamentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auditoria_transacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.configuracoes_whatsapp ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Inserção pública de pagamentos" ON public.pagamentos;
 CREATE POLICY "Inserção pública de pagamentos" ON public.pagamentos FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura pública de pagamentos por txid" ON public.pagamentos;
 CREATE POLICY "Leitura pública de pagamentos por txid" ON public.pagamentos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização pública de pagamentos" ON public.pagamentos;
 CREATE POLICY "Atualização pública de pagamentos" ON public.pagamentos FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Inserção de auditoria" ON public.auditoria_transacoes;
 CREATE POLICY "Inserção de auditoria" ON public.auditoria_transacoes FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Leitura de auditoria" ON public.auditoria_transacoes;
 CREATE POLICY "Leitura de auditoria" ON public.auditoria_transacoes FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Leitura pública de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Leitura pública de links whatsapp" ON public.configuracoes_whatsapp FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualização de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Atualização de links whatsapp" ON public.configuracoes_whatsapp FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Inserção de links whatsapp" ON public.configuracoes_whatsapp;
 CREATE POLICY "Inserção de links whatsapp" ON public.configuracoes_whatsapp FOR INSERT WITH CHECK (true);
 
 -- ==============================================================================
@@ -659,8 +709,10 @@ CREATE TABLE IF NOT EXISTS public.lotes_inscricao (
 
 -- Popula lote inicial padrão caso não exista
 INSERT INTO public.lotes_inscricao (nome, valor, ativo)
-VALUES ('1º Lote', 50.00, true)
-ON CONFLICT DO NOTHING;
+SELECT '1º Lote', 50.00, true
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.lotes_inscricao WHERE nome = '1º Lote'
+);
 
 -- Popula configuração financeira padrão caso não exista nenhuma ativa
 INSERT INTO public.configuracoes_financeiras (
@@ -904,33 +956,39 @@ ALTER TABLE public.configuracoes_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lotes_inscricao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.historico_configuracoes_financeiras ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Leitura publica de configuracoes financeiras ativas" ON public.configuracoes_financeiras;
 CREATE POLICY "Leitura publica de configuracoes financeiras ativas" 
 ON public.configuracoes_financeiras 
 FOR SELECT 
 USING (ativo = true);
 
+DROP POLICY IF EXISTS "Modificacao administrativa de configuracoes financeiras" ON public.configuracoes_financeiras;
 CREATE POLICY "Modificacao administrativa de configuracoes financeiras" 
 ON public.configuracoes_financeiras 
 FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Leitura publica de lotes" ON public.lotes_inscricao;
 CREATE POLICY "Leitura publica de lotes" 
 ON public.lotes_inscricao 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Modificacao de lotes" ON public.lotes_inscricao;
 CREATE POLICY "Modificacao de lotes" 
 ON public.lotes_inscricao 
 FOR ALL 
 USING (true) 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Insercao de historico de auditoria financeira" ON public.historico_configuracoes_financeiras;
 CREATE POLICY "Insercao de historico de auditoria financeira" 
 ON public.historico_configuracoes_financeiras 
 FOR INSERT 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Leitura de historico de auditoria financeira" ON public.historico_configuracoes_financeiras;
 CREATE POLICY "Leitura de historico de auditoria financeira" 
 ON public.historico_configuracoes_financeiras 
 FOR SELECT 
@@ -939,6 +997,8 @@ USING (true);
 -- ==============================================================================
 -- 14. CONCESSÃO EXPLÍCITA DE PRIVILÉGIOS (GRANTS)
 -- ==============================================================================
+GRANT ALL ON TABLE public.subs TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.inscricoes TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.pagamentos TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.auditoria_transacoes TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.configuracoes_whatsapp TO anon, authenticated, service_role;
@@ -946,17 +1006,17 @@ GRANT ALL ON TABLE public.configuracoes_financeiras TO anon, authenticated, serv
 GRANT ALL ON TABLE public.lotes_inscricao TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.historico_configuracoes_financeiras TO anon, authenticated, service_role;
 
-GRANT EXECUTE ON FUNCTION public.criar_transacao_checkout(
-    TEXT, TEXT, TEXT, TEXT, TEXT, NUMERIC, TEXT, INT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, UUID, JSONB
-) TO anon, authenticated, service_role;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'pagamentos_pix') 
+       OR EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'public' AND table_name = 'pagamentos_pix') THEN
+        EXECUTE 'GRANT ALL ON TABLE public.pagamentos_pix TO anon, authenticated, service_role';
+    END IF;
+END $$;
 
-GRANT EXECUTE ON FUNCTION public.confirmar_pagamento_unificado(
-    TEXT, TEXT, TEXT, JSONB
-) TO anon, authenticated, service_role;
+DO $$
+BEGIN
+    EXECUTE 'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role';
+END $$;
 
-GRANT EXECUTE ON FUNCTION public.obter_configuracao_financeira_ativa() TO anon, authenticated, service_role;
-
-GRANT EXECUTE ON FUNCTION public.atualizar_configuracao_financeira(
-    TEXT, TEXT, NUMERIC, NUMERIC, NUMERIC, INT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT
-) TO anon, authenticated, service_role;
 

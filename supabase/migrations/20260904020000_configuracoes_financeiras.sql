@@ -289,12 +289,14 @@ ALTER TABLE public.lotes_inscricao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.historico_configuracoes_financeiras ENABLE ROW LEVEL SECURITY;
 
 -- Leitura pública da configuração ativa
+DROP POLICY IF EXISTS "Leitura publica de configuracoes financeiras ativas" ON public.configuracoes_financeiras;
 CREATE POLICY "Leitura publica de configuracoes financeiras ativas" 
 ON public.configuracoes_financeiras 
 FOR SELECT 
 USING (ativo = true);
 
 -- Escrita restrita a service role / administradores autenticados
+DROP POLICY IF EXISTS "Modificacao administrativa de configuracoes financeiras" ON public.configuracoes_financeiras;
 CREATE POLICY "Modificacao administrativa de configuracoes financeiras" 
 ON public.configuracoes_financeiras 
 FOR ALL 
@@ -302,11 +304,13 @@ USING (true)
 WITH CHECK (true);
 
 -- Lotes: leitura pública e escrita administrativa
+DROP POLICY IF EXISTS "Leitura publica de lotes" ON public.lotes_inscricao;
 CREATE POLICY "Leitura publica de lotes" 
 ON public.lotes_inscricao 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Modificacao de lotes" ON public.lotes_inscricao;
 CREATE POLICY "Modificacao de lotes" 
 ON public.lotes_inscricao 
 FOR ALL 
@@ -314,11 +318,13 @@ USING (true)
 WITH CHECK (true);
 
 -- Histórico de auditoria: inserção livre e leitura administrativa
+DROP POLICY IF EXISTS "Insercao de historico de auditoria financeira" ON public.historico_configuracoes_financeiras;
 CREATE POLICY "Insercao de historico de auditoria financeira" 
 ON public.historico_configuracoes_financeiras 
 FOR INSERT 
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Leitura de historico de auditoria financeira" ON public.historico_configuracoes_financeiras;
 CREATE POLICY "Leitura de historico de auditoria financeira" 
 ON public.historico_configuracoes_financeiras 
 FOR SELECT 
