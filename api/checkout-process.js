@@ -12,12 +12,12 @@ function getPublicBaseUrl() {
   const custom = process.env.SITE_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
   if (custom) return custom.replace(/\/$/, "");
   if (process.env.VERCEL_ENV === "production" || !process.env.VERCEL_ENV) {
-    return "https://transitoejc.site";
+    return "https://www.transitoejc.site";
   }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
   }
-  return "https://transitoejc.site";
+  return "https://www.transitoejc.site";
 }
 
 function calcularCRC16(payload) {
