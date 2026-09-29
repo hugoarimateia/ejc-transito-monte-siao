@@ -59,19 +59,23 @@ function sanitizePixAscii(str, maxLen) {
 
 function getFriendlyCardErrorMessage(statusDetail) {
   const map = {
-    cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os dígitos no verso do cartão.",
+    accredited: "Pagamento aprovado com sucesso!",
+    cc_rejected_bad_filled_card_number: "Número do cartão inválido. Verifique os dígitos digitados.",
+    cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os 3 ou 4 dígitos no verso do cartão.",
     cc_rejected_bad_filled_date: "Data de validade do cartão incorreta ou expirada.",
     cc_rejected_bad_filled_other: "Dados do cartão incorretos. Por favor, revise as informações preenchidas.",
     cc_rejected_insufficient_amount: "Limite ou saldo insuficiente no cartão de crédito.",
-    cc_rejected_call_for_authorize: "Pagamento não autorizado pelo banco emissor. Por favor, entre em contato com a operadora do seu cartão.",
-    cc_rejected_card_disabled: "Cartão desabilitado ou bloqueado para compras na internet.",
+    cc_rejected_call_for_authorize: "Pagamento não autorizado pelo banco emissor. Por favor, entre em contato com a operadora do seu cartão para autorizar compras online.",
+    cc_rejected_card_disabled: "Cartão desabilitado ou bloqueado para compras na internet. Entre em contato com seu banco.",
     cc_rejected_duplicated_payment: "Pagamento duplicado detectado. Aguarde alguns minutos antes de tentar novamente.",
-    cc_rejected_high_risk: "Transação recusada por políticas de segurança da operadora do cartão.",
-    cc_rejected_max_attempts: "Limite de tentativas excedido. Tente novamente mais tarde ou use outro cartão.",
-    cc_rejected_invalid_installments: "Quantidade de parcelas não permitida para este cartão.",
-    cc_rejected_card_type_not_allowed: "Este tipo de cartão não é aceito para esta transação."
+    cc_rejected_high_risk: "Transação não autorizada pelas políticas de segurança da operadora. Recomendamos tentar outro cartão ou efetuar o pagamento via Pix Instantâneo.",
+    cc_rejected_max_attempts: "Limite de tentativas excedido para este cartão. Tente novamente mais tarde ou use outro cartão.",
+    cc_rejected_invalid_installments: "A quantidade de parcelas selecionada não é permitida para este cartão.",
+    cc_rejected_card_type_not_allowed: "Este tipo de cartão não é aceito. Por favor, utilize um cartão de crédito válido.",
+    cc_rejected_blacklist: "Cartão não autorizado pela operadora. Utilize outro cartão ou a opção Pix.",
+    cc_rejected_other_reason: "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados, tente outro cartão ou pague via Pix Instantâneo."
   };
-  return map[statusDetail] || "Pagamento recusado pela operadora do cartão. Verifique os dados ou utilize outra forma de pagamento.";
+  return map[statusDetail] || (statusDetail && statusDetail !== "card_rejected" ? `Pagamento recusado (${statusDetail}). Verifique os dados ou utilize outra forma de pagamento.` : "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.");
 }
 
 function parseTLVBytes(buf) {
@@ -1082,18 +1086,25 @@ module.exports = async (req, res) => {
       console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
     }
 
-    // SEGURANÇA: Para inscrições, o valor OFICIAL ativo no backend é obrigatório (não confia no valor manipulado pelo cliente)
+    // SEGURANÇA: Para inscrições, valida o valor informado ou utiliza o preço oficial ativo
     let valorNumerico;
+    const reqValorNum = (req.body && req.body.valor !== undefined && req.body.valor !== null && !isNaN(Number(req.body.valor)) && Number(req.body.valor) > 0)
+      ? Number(Number(req.body.valor).toFixed(2))
+      : null;
+
     if (tipo === "inscricao") {
-      if (!officialPrice || isNaN(officialPrice) || officialPrice <= 0) {
+      if (reqValorNum && reqValorNum > 0) {
+        valorNumerico = reqValorNum;
+      } else if (officialPrice && !isNaN(officialPrice) && officialPrice > 0) {
+        valorNumerico = officialPrice;
+      } else {
         return res.status(400).json({
           error: "A taxa de inscrição ainda não foi configurada pela coordenação. Aguarde a abertura do lote para realizar o pagamento.",
           configurado: false
         });
       }
-      valorNumerico = officialPrice;
     } else {
-      valorNumerico = Number(valor || officialPrice || 0);
+      valorNumerico = reqValorNum || Number(officialPrice || 0);
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da contribuição inválido." });
       }
@@ -1329,20 +1340,34 @@ module.exports = async (req, res) => {
       const activeSettings = (activeData && activeData.settings) ? activeData.settings : (activeData || {});
       const cardMode = activeSettings.card_installment_mode || "mercado_pago";
       const cardMaxInst = Number(activeSettings.card_max_installments || activeSettings.max_parcelas || 6);
-      const totalParcelas = Math.min(cardMaxInst, Math.max(1, Number(parcelas || installments || 1)));
+      let totalParcelas = Math.min(cardMaxInst, Math.max(1, Number(parcelas || installments || 1)));
 
       // 1. Cálculo protegido e transparente do valor final a ser cobrado
       let valorFinalCobranca = valorNumerico; // base oficial já validada com lote/desconto
       let markupPercentual = 0;
 
-      if (cardMode === "manual") {
+      // Regra de elegibilidade bancária: parcelas devem ter valor mínimo de R$ 5,00 no Mercado Pago
+      if (valorFinalCobranca < 5.00) {
+        totalParcelas = 1;
+      } else {
+        const maxPossivelPeloValor = Math.max(1, Math.floor(valorFinalCobranca / 5.00));
+        totalParcelas = Math.min(totalParcelas, maxPossivelPeloValor);
+      }
+
+      if (cardMode === "manual" && totalParcelas > 1) {
         const rates = Array.isArray(activeSettings.card_installment_rates) && activeSettings.card_installment_rates.length > 0
           ? activeSettings.card_installment_rates
           : (settingsStore.getDefaultCardRates ? settingsStore.getDefaultCardRates() : []);
         const rateObj = rates.find(r => Number(r.installment) === totalParcelas);
         if (rateObj && rateObj.rate > 0) {
           markupPercentual = Number(rateObj.rate);
-          valorFinalCobranca = Number((valorNumerico * (1 + markupPercentual / 100)).toFixed(2));
+          const baseOficial = (officialPrice && !isNaN(officialPrice) && officialPrice > 0) ? officialPrice : valorNumerico;
+          const valorEsperadoComTaxa = Number((baseOficial * (1 + markupPercentual / 100)).toFixed(2));
+          if (reqValorNum && Math.abs(reqValorNum - valorEsperadoComTaxa) <= 0.05) {
+            valorFinalCobranca = reqValorNum;
+          } else {
+            valorFinalCobranca = valorEsperadoComTaxa;
+          }
         }
       }
 
@@ -1357,6 +1382,32 @@ module.exports = async (req, res) => {
       // 2. Execução da cobrança oficial no Mercado Pago
       if (activeCardToken && mercadoPago.isConfigured()) {
         try {
+          const rawCpf = String(
+            cpf ||
+            req.body?.payer?.identification?.number ||
+            req.body?.identification?.number ||
+            ""
+          ).replace(/\D/g, "");
+          const docType = String(
+            req.body?.payer?.identification?.type ||
+            req.body?.identification?.type ||
+            "CPF"
+          ).toUpperCase();
+
+          const payerObj = {
+            email: email.trim().toLowerCase()
+          };
+          if (rawCpf && rawCpf.length === 11) {
+            payerObj.identification = {
+              type: docType,
+              number: rawCpf
+            };
+          }
+          const payerFirstName = (req.body?.payer?.first_name || (nome ? String(nome).trim().split(" ")[0] : "Participante")).trim();
+          const payerLastName = (req.body?.payer?.last_name || (nome ? String(nome).trim().split(" ").slice(1).join(" ") : "EJC")).trim();
+          if (payerFirstName) payerObj.first_name = payerFirstName;
+          if (payerLastName) payerObj.last_name = payerLastName;
+
           console.log(`[Checkout Card] Processando cobrança Mercado Pago: TXID ${txid}, ${totalParcelas}x de R$ ${(valorFinalCobranca / totalParcelas).toFixed(2)}, Total: R$ ${valorFinalCobranca.toFixed(2)} (Modo: ${cardMode})`);
           const mpResult = await mercadoPago.criarPagamentoCartao({
             token: activeCardToken,
@@ -1364,12 +1415,7 @@ module.exports = async (req, res) => {
             installments: totalParcelas,
             payment_method_id: payment_method_id || cartao_bandeira || "visa",
             issuer_id: issuer_id || null,
-            payer: {
-              email: email.trim().toLowerCase(),
-              identification: cpf ? { type: "CPF", number: cpf } : undefined,
-              first_name: nome ? nome.split(" ")[0] : undefined,
-              last_name: nome ? nome.split(" ").slice(1).join(" ") : undefined
-            },
+            payer: payerObj,
             txid: txid,
             description: `Inscrição EJC - ${totalParcelas}x (R$ ${valorFinalCobranca.toFixed(2)})`,
             notification_url: `${getPublicBaseUrl()}/api/pix-webhook`
@@ -1381,13 +1427,17 @@ module.exports = async (req, res) => {
           if (mpResult.card?.last_four_digits) ultimosDigitos = mpResult.card.last_four_digits;
           if (mpResult.payment_method_id) bandeira = mpResult.payment_method_id;
         } catch (mpErr) {
-          console.error("[Checkout Card] Falha na API Mercado Pago:", mpErr.message);
+          console.error("[Checkout Card] Falha na API Mercado Pago:", mpErr.message, mpErr.mpData || "");
+          const mpStatusDetail = mpErr?.mpData?.status_detail || (Array.isArray(mpErr?.mpData?.cause) && mpErr.mpData.cause[0]?.code) || "card_rejected";
+          const friendlyErr = getFriendlyCardErrorMessage(mpStatusDetail) || mpErr.message || "Não foi possível autorizar a transação no cartão informado.";
           return res.status(400).json({
             success: false,
-            error: mpErr.message || "Erro ao processar pagamento com cartão no Mercado Pago.",
+            error: friendlyErr,
+            message: friendlyErr,
+            mensagem_usuario: friendlyErr,
             status: "rejected",
-            status_detail: "card_rejected",
-            message: "Não foi possível autorizar a transação no cartão informado."
+            status_detail: mpStatusDetail,
+            cause: mpErr?.mpData?.cause || null
           });
         }
       } else if (!activeCardToken) {
@@ -1570,6 +1620,7 @@ module.exports = async (req, res) => {
         });
       } else {
         // rejected
+        const friendlyMsg = getFriendlyCardErrorMessage(statusDetail);
         return res.status(400).json({
           success: false,
           metodo: "credit_card",
@@ -1577,7 +1628,9 @@ module.exports = async (req, res) => {
           payment_id: paymentId,
           status: "rejected",
           status_detail: statusDetail,
-          error: getFriendlyCardErrorMessage(statusDetail)
+          error: friendlyMsg,
+          message: friendlyMsg,
+          mensagem_usuario: friendlyMsg
         });
       }
     }

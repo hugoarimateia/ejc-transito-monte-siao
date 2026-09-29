@@ -237,7 +237,7 @@ async function criarPagamentoCartao({
     token: String(token).trim(),
     transaction_amount: Number(Number(transaction_amount).toFixed(2)),
     installments: Math.max(1, parseInt(installments, 10) || 1),
-    payment_method_id: String(payment_method_id || "").toLowerCase(),
+    payment_method_id: String(payment_method_id || "visa").toLowerCase(),
     description: String(description).substring(0, 60),
     external_reference: String(txid),
     payer: {

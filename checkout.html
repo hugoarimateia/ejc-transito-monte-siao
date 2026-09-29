@@ -777,19 +777,8 @@
 
             <!-- PAINEL 2: CARTÃO DE CRÉDITO -->
             <div class="method-content-panel" id="panelCard">
-              <!-- SELETOR MANUAL DE PARCELAS (EXIBIDO QUANDO O MODO MANUAL ESTIVER ATIVO) -->
-              <div id="cardManualPlanWrapper" style="display: none; margin-bottom: 18px;">
-                <label style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--text-main); margin-bottom: 8px; font-size: .88rem;">
-                  <span><i class="fa-solid fa-list-check" style="color: var(--blue);"></i> Opções de Parcelamento:</span>
-                  <small style="color: var(--muted); font-weight: 500;">Configuração Comercial EJC</small>
-                </label>
-                <div id="cardManualOptionsGrid" style="display: flex; flex-direction: column; gap: 8px;">
-                  <!-- Preenchido dinamicamente via JS com as parcelas configuradas no Admin -->
-                </div>
-              </div>
-
               <!-- RESUMO TRANSPARENTE DE VALORES ANTES DO PAGAMENTO -->
-              <div id="cardTransparentSummary" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+              <div id="cardTransparentSummary" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: .88rem;">
                   <span style="color: var(--muted);">Condição de Pagamento:</span>
                   <strong id="cardSummaryInstallmentsText" style="color: var(--text-main);">-</strong>
@@ -801,6 +790,17 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 6px;">
                   <span style="font-weight: 700; color: var(--text-main);">Valor Total Final:</span>
                   <strong id="cardSummaryTotalValue" style="color: var(--blue); font-size: 1.2rem;">R$ 0,00</strong>
+                </div>
+              </div>
+
+              <!-- OPÇÕES DETALHADAS DE PARCELAMENTO E CONDIÇÃO REAL -->
+              <div id="cardManualPlanWrapper" style="display: block; margin-bottom: 18px;">
+                <label style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--text-main); margin-bottom: 8px; font-size: .88rem;">
+                  <span id="cardInstallmentHeaderTitle"><i class="fa-solid fa-list-check" style="color: var(--blue);"></i> Condições de Pagamento:</span>
+                  <small id="cardInstallmentHeaderSubtitle" style="color: var(--muted); font-weight: 500;">Condições disponíveis</small>
+                </label>
+                <div id="cardManualOptionsGrid" style="display: flex; flex-direction: column; gap: 8px;">
+                  <!-- Preenchido dinamicamente via JS com as condições reais -->
                 </div>
               </div>
 
@@ -2160,88 +2160,228 @@
       ).trim();
     }
 
-    function renderizarSeletorParcelasManual() {
+    function getEffectiveMaxInstallments(baseAmount) {
+      const configuredMax = Number(activePixConfig.cardMaxInstallments || activePixConfig.maxParcelas || 6);
+      if (!baseAmount || baseAmount < 5.00) {
+        return 1;
+      }
+      const maxPossibleByAmount = Math.max(1, Math.floor(baseAmount / 5.00));
+      return Math.min(configuredMax, maxPossibleByAmount);
+    }
+
+    const mpInstallmentsCache = {};
+
+    async function carregarCondicoesParcelamentoMP(amount, effectiveMax) {
+      const pubKey = getMercadoPagoPublicKey();
+      const cacheKey = `${amount.toFixed(2)}_${pubKey}`;
+      if (mpInstallmentsCache[cacheKey]) {
+        return mpInstallmentsCache[cacheKey];
+      }
+
+      if (!pubKey || pubKey === "sua_public_key_aqui") {
+        return null;
+      }
+
+      try {
+        const url = `https://api.mercadopago.com/v1/payment_methods/installments?public_key=${encodeURIComponent(pubKey)}&amount=${amount.toFixed(2)}&payment_method_id=visa`;
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (Array.isArray(data) && data[0]?.payer_costs) {
+          const costs = data[0].payer_costs.filter(c => c.installments <= effectiveMax);
+          mpInstallmentsCache[cacheKey] = costs;
+          return costs;
+        }
+        return null;
+      } catch (err) {
+        console.warn("[MercadoPago Installments] Erro ao buscar parcelas oficiais:", err.message);
+        return null;
+      }
+    }
+
+    async function renderizarSeletorParcelasManual() {
       const wrap = document.getElementById("cardManualPlanWrapper");
       const grid = document.getElementById("cardManualOptionsGrid");
+      const headerTitle = document.getElementById("cardInstallmentHeaderTitle");
+      const headerSubtitle = document.getElementById("cardInstallmentHeaderSubtitle");
       if (!wrap || !grid) return;
 
-      const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      if (!isManual) {
-        wrap.style.display = "none";
-        return;
-      }
-
       wrap.style.display = "block";
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
-      const maxInst = activePixConfig.cardMaxInstallments || 6;
-      const rates = Array.isArray(activePixConfig.cardInstallmentRates) && activePixConfig.cardInstallmentRates.length > 0
-        ? activePixConfig.cardInstallmentRates
-        : [
-            { installment: 1, rate: 0.00, enabled: true },
-            { installment: 2, rate: 4.50, enabled: true },
-            { installment: 3, rate: 5.50, enabled: true },
-            { installment: 4, rate: 7.00, enabled: true },
-            { installment: 5, rate: 8.50, enabled: true },
-            { installment: 6, rate: 10.00, enabled: true }
-          ];
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
+      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
+      const isManual = (activePixConfig.cardInstallmentMode === "manual");
 
-      const availableRates = rates.filter(r => r.installment <= maxInst && r.enabled !== false);
-      if (availableRates.length === 0) {
-        availableRates.push({ installment: 1, rate: 0.00, enabled: true });
+      if (headerTitle) {
+        headerTitle.innerHTML = `<i class="fa-solid fa-list-check" style="color: var(--blue);"></i> ${effectiveMax === 1 ? 'Condição de Pagamento:' : 'Opções de Parcelamento:'}`;
+      }
+      if (headerSubtitle) {
+        headerSubtitle.textContent = (effectiveMax === 1)
+          ? "Pagamento à vista"
+          : (isManual ? "Configuração Comercial EJC" : "Condições Oficiais Mercado Pago");
       }
 
-      if (!availableRates.some(r => r.installment === selectedManualInstallment)) {
-        selectedManualInstallment = availableRates[0].installment;
-      }
-
-      grid.innerHTML = availableRates.map(item => {
-        const n = item.installment;
-        const rate = typeof item.rate === "number" ? item.rate : 0;
-        const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
-        const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
-        const isSelected = (n === selectedManualInstallment);
-
-        return `
-          <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid ${isSelected ? 'var(--blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(8, 125, 249, 0.06)' : 'var(--bg-surface)'}; cursor: pointer; transition: all .2s ease;">
+      // CASO 1: Apenas 1 parcela elegível (ex: R$ 1,00 ou valor < R$ 5,00)
+      if (effectiveMax === 1) {
+        grid.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--blue); background: rgba(8, 125, 249, 0.06);">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <input type="radio" name="radioManualInstallment" value="${n}" ${isSelected ? 'checked' : ''} style="accent-color: var(--blue);">
+              <i class="fa-solid fa-credit-card" style="color: var(--blue); font-size: 1.1rem;"></i>
               <div>
-                <strong style="color: var(--text-main); font-size: .92rem;">${n}x de R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}</strong>
+                <strong style="color: var(--text-main); font-size: .92rem;">1x de R$ ${baseAmount.toFixed(2).replace('.', ',')}</strong>
                 <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
-                  Total: R$ ${totalCalculado.toFixed(2).replace('.', ',')}
+                  Total: R$ ${baseAmount.toFixed(2).replace('.', ',')} (Pagamento à vista)
                 </div>
               </div>
             </div>
             <div>
-              ${rate === 0 
-                ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM ACRÉSCIMO</span>'
-                : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Acréscimo: ${rate.toFixed(2)}%</span>`
-              }
+              <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS / À VISTA</span>
             </div>
-          </label>
+          </div>
+          <div style="font-size: .78rem; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-circle-info" style="color: var(--blue);"></i>
+            <span>* Pagamento à vista: Para este valor (abaixo de R$ 5,00), a operadora autoriza exclusivamente a condição à vista (1x).</span>
+          </div>
         `;
-      }).join("");
+        return;
+      }
 
-      grid.querySelectorAll('input[name="radioManualInstallment"]').forEach(radio => {
-        radio.addEventListener("change", function() {
-          selectedManualInstallment = parseInt(this.value, 10);
-          renderizarSeletorParcelasManual();
-          atualizarResumoTransparente();
-          montarCardPaymentBrick(true);
+      // CASO 2: Modo Manual com taxas configuradas no Admin
+      if (isManual) {
+        const rates = Array.isArray(activePixConfig.cardInstallmentRates) && activePixConfig.cardInstallmentRates.length > 0
+          ? activePixConfig.cardInstallmentRates
+          : [
+              { installment: 1, rate: 0.00, enabled: true },
+              { installment: 2, rate: 4.50, enabled: true },
+              { installment: 3, rate: 5.50, enabled: true },
+              { installment: 4, rate: 7.00, enabled: true },
+              { installment: 5, rate: 8.50, enabled: true },
+              { installment: 6, rate: 10.00, enabled: true }
+            ];
+
+        const availableRates = rates.filter(r => r.installment <= effectiveMax && r.enabled !== false);
+        if (availableRates.length === 0) {
+          availableRates.push({ installment: 1, rate: 0.00, enabled: true });
+        }
+
+        if (!availableRates.some(r => r.installment === selectedManualInstallment)) {
+          selectedManualInstallment = availableRates[0].installment;
+        }
+
+        grid.innerHTML = availableRates.map(item => {
+          const n = item.installment;
+          const rate = typeof item.rate === "number" ? item.rate : 0;
+          const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+          const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
+          const isSelected = (n === selectedManualInstallment);
+
+          return `
+            <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid ${isSelected ? 'var(--blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(8, 125, 249, 0.06)' : 'var(--bg-surface)'}; cursor: pointer; transition: all .2s ease;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="radio" name="radioManualInstallment" value="${n}" ${isSelected ? 'checked' : ''} style="accent-color: var(--blue);">
+                <div>
+                  <strong style="color: var(--text-main); font-size: .92rem;">${n}x de R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}</strong>
+                  <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                    Total: R$ ${totalCalculado.toFixed(2).replace('.', ',')}
+                  </div>
+                </div>
+              </div>
+              <div>
+                ${rate === 0 
+                  ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM ACRÉSCIMO</span>'
+                  : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Acréscimo: ${rate.toFixed(2)}%</span>`
+                }
+              </div>
+            </label>
+          `;
+        }).join("");
+
+        grid.querySelectorAll('input[name="radioManualInstallment"]').forEach(radio => {
+          radio.addEventListener("change", function() {
+            selectedManualInstallment = parseInt(this.value, 10);
+            renderizarSeletorParcelasManual();
+            atualizarResumoTransparente();
+            montarCardPaymentBrick(true);
+          });
         });
-      });
+        return;
+      }
+
+      // CASO 3: Modo Mercado Pago Oficial (exibição transparente das condições reais)
+      grid.innerHTML = `
+        <div style="padding: 14px; text-align: center; color: var(--muted); font-size: .85rem; border: 1px dashed var(--border-color); border-radius: 10px;">
+          <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--blue); margin-right: 6px;"></i>
+          <span>Calculando condições do cartão...</span>
+        </div>
+      `;
+
+      const costs = await carregarCondicoesParcelamentoMP(baseAmount, effectiveMax);
+      if (costs && costs.length > 0) {
+        if (costs.length === 1) {
+          const c = costs[0];
+          grid.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--blue); background: rgba(8, 125, 249, 0.06);">
+              <div>
+                <strong style="color: var(--text-main); font-size: .92rem;">1x de R$ ${Number(c.installment_amount).toFixed(2).replace('.', ',')}</strong>
+                <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                  Total: R$ ${Number(c.total_amount).toFixed(2).replace('.', ',')} (Pagamento à vista)
+                </div>
+              </div>
+              <div>
+                <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS / À VISTA</span>
+              </div>
+            </div>
+          `;
+        } else {
+          grid.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${costs.map(c => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface);">
+                  <div>
+                    <strong style="color: var(--text-main); font-size: .90rem;">${c.installments}x de R$ ${Number(c.installment_amount).toFixed(2).replace('.', ',')}</strong>
+                    <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                      Total: R$ ${Number(c.total_amount).toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+                  <div>
+                    ${c.installment_rate === 0
+                      ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS</span>'
+                      : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Taxa: ${Number(c.installment_rate).toFixed(2).replace('.', ',')}%</span>`
+                    }
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+            <div style="font-size: .78rem; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-circle-info" style="color: var(--blue);"></i>
+              <span>Condições oficiais do Mercado Pago. Selecione a quantidade de parcelas desejada diretamente no formulário do cartão abaixo.</span>
+            </div>
+          `;
+        }
+      } else {
+        // Fallback seguro se a consulta direta não responder
+        grid.innerHTML = `
+          <div style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); font-size: .84rem; color: var(--muted); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <strong style="color: var(--text-main);">1x de R$ ${baseAmount.toFixed(2).replace('.', ',')}</strong> (à vista)
+              <div style="font-size: .76rem; color: var(--muted);">Em até ${effectiveMax}x disponíveis no formulário abaixo</div>
+            </div>
+            <span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM JUROS</span>
+          </div>
+        `;
+      }
     }
 
     function atualizarResumoTransparente() {
       const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
+      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
 
       const textInstallments = document.getElementById("cardSummaryInstallmentsText");
       const rowMarkup = document.getElementById("cardSummaryMarkupRow");
       const valMarkup = document.getElementById("cardSummaryMarkupValue");
       const valTotal = document.getElementById("cardSummaryTotalValue");
 
-      if (isManual) {
+      if (isManual && effectiveMax > 1) {
         const rates = activePixConfig.cardInstallmentRates || [];
         const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
         const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
@@ -2259,10 +2399,14 @@
         }
         if (valTotal) valTotal.textContent = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
       } else {
-        const maxInst = activePixConfig.cardMaxInstallments || 6;
-        if (textInstallments) textInstallments.textContent = `Em até ${maxInst}x no cartão`;
         if (rowMarkup) rowMarkup.style.display = "none";
-        if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+        if (effectiveMax === 1) {
+          if (textInstallments) textInstallments.textContent = "À vista (1x no cartão)";
+          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+        } else {
+          if (textInstallments) textInstallments.textContent = `Em até ${effectiveMax}x no cartão`;
+          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+        }
       }
     }
 
@@ -2328,18 +2472,19 @@
       }
 
       const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 1.00;
+      const effectiveMax = getEffectiveMaxInstallments(baseAmount);
       let amountToCharge = baseAmount;
-      let maxInstToSet = activePixConfig.cardMaxInstallments || 6;
+      let maxInstToSet = effectiveMax;
       let minInstToSet = 1;
 
-      if (isManual) {
+      if (isManual && effectiveMax > 1) {
         const rates = activePixConfig.cardInstallmentRates || [];
         const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
         const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
         amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
-        maxInstToSet = selectedManualInstallment;
-        minInstToSet = selectedManualInstallment;
+        maxInstToSet = Math.min(selectedManualInstallment, effectiveMax);
+        minInstToSet = maxInstToSet;
       }
 
       // Regra técnica do Mercado Pago: o Card Payment Brick exige valor mínimo (>= R$ 1.00) para inicialização
@@ -2428,12 +2573,21 @@
       }
     }
 
+    let isProcessingCard = false;
+
     async function processarPagamentoCartao(cardFormData, amountCharged) {
+      if (isProcessingCard) {
+        console.warn("[Checkout Card] Submissão bloqueada: cobrança já em andamento.");
+        return;
+      }
+      isProcessingCard = true;
+
       const nomeFinal = nameInput.value.trim() || nomeParticipante;
       const emailFinal = emailInput.value.trim() || emailParam;
       const wppFinal = wppInput.value.trim() || wppParam || null;
 
       if (!validarEmail(emailFinal)) {
+        isProcessingCard = false;
         exibirErroCartao("Por favor, informe um endereço de e-mail válido.");
         return;
       }
@@ -2450,8 +2604,14 @@
         feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
+      const effectiveMax = getEffectiveMaxInstallments(amountCharged);
       const isManual = (activePixConfig.cardInstallmentMode === "manual");
-      const parcelasFinal = isManual ? selectedManualInstallment : (cardFormData.installments || 1);
+      let parcelasFinal = isManual ? Math.min(selectedManualInstallment, effectiveMax) : (cardFormData.installments || 1);
+      if (amountCharged < 5.00 || effectiveMax === 1) {
+        parcelasFinal = 1;
+      } else {
+        parcelasFinal = Math.min(parcelasFinal, effectiveMax);
+      }
 
       try {
         const response = await fetch("/api/checkout-process", {
@@ -2507,7 +2667,7 @@
               <div class="alert-banner alert-warning" style="display: flex;">
                 <i class="fa-solid fa-clock-rotate-left" style="margin-top: 2px;"></i>
                 <div>
-                  <strong>Pagamento em Análise:</strong> ${data.mensagem_usuario || 'Seu pagamento está sendo verificado pela operadora do cartão. Assim que for confirmado, sua vaga será liberada automaticamente.'}
+                  <strong>Pagamento em Análise:</strong> ${data.mensagem_usuario || data.message || 'Seu pagamento está sendo verificado pela operadora do cartão. Assim que for confirmado, sua vaga será liberada automaticamente.'}
                 </div>
               </div>
             `;
@@ -2515,12 +2675,14 @@
           return;
         }
 
-        const msgErro = data.mensagem_usuario || data.message || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
+        const msgErro = data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
         exibirErroCartao(msgErro);
 
       } catch (err) {
         console.error("[Checkout Card Error]", err);
         exibirErroCartao("Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.");
+      } finally {
+        isProcessingCard = false;
       }
     }
 
