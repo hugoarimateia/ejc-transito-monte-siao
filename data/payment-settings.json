@@ -1,11 +1,11 @@
 {
   "settings": {
-    "versao": 16,
+    "versao": 18,
     "ativo": true,
     "configurado": true,
     "lote_atual": "1º Lote - Oficial",
-    "valor_inscricao": 190,
-    "valor_promocional": null,
+    "valor_inscricao": 50,
+    "valor_promocional": 0.01,
     "taxa_adicional": 0,
     "max_parcelas": 12,
     "modalidade_pix": "api_webhook",
@@ -18,12 +18,53 @@
     "pix_instituicao": "",
     "pix_instrucoes_manual": "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     "pix_permite_comprovante": true,
-    "motivo_alteracao": "Auditoria Definitiva R$ 190",
-    "atualizado_por": "superadmin",
-    "atualizado_em": "2026-09-29T03:02:14.879555+00:00",
-    "id": "13a7361e-00a4-4bdc-9d58-7eaffdc0b03c",
-    "criado_em": "2026-09-29T03:02:14.879555+00:00",
-    "preco_efetivo": 190
+    "motivo_alteracao": "teste 00:07",
+    "atualizado_por": "financeiro",
+    "atualizado_em": "2026-09-29T03:07:24.152047+00:00",
+    "id": "368976f1-b08d-43d4-8955-de6b6540d125",
+    "criado_em": "2026-09-29T03:07:24.152047+00:00",
+    "preco_efetivo": 0.01,
+    "card_installment_mode": "mercado_pago",
+    "card_max_installments": 6,
+    "card_installment_rates": [
+      {
+        "installment": 1,
+        "rate": 0,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 2,
+        "rate": 4,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 3,
+        "rate": 6,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 4,
+        "rate": 8,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 5,
+        "rate": 10,
+        "rate_type": "percentage",
+        "enabled": false
+      },
+      {
+        "installment": 6,
+        "rate": 12,
+        "rate_type": "percentage",
+        "enabled": false
+      }
+    ],
+    "mp_public_key": ""
   },
   "lotes": [
     {
@@ -37,6 +78,128 @@
     }
   ],
   "historico": [
+    {
+      "id": "audit-1790663505922-19ny",
+      "acao": "CARD_SETTINGS_UPDATED",
+      "usuario": "admin_tester",
+      "campo_afetado": "card_installment_settings",
+      "valor_anterior": "{\"mode\":\"manual\",\"max\":4}",
+      "valor_novo": "{\"mode\":\"mercado_pago\",\"max\":6,\"ratesCount\":6}",
+      "motivo": "Restauração do modo automático oficial MP",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T06:31:45.922Z",
+      "detalhes": {
+        "mode": "mercado_pago",
+        "max_installments": 6,
+        "rates": [
+          {
+            "installment": 1,
+            "rate": 0,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 2,
+            "rate": 4,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 3,
+            "rate": 6,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 4,
+            "rate": 8,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 5,
+            "rate": 10,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 6,
+            "rate": 12,
+            "rate_type": "percentage",
+            "enabled": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "audit-1790663503593-1txr",
+      "acao": "PRICE_UPDATED",
+      "usuario": "admin_tester",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
+      "valor_novo": "R$ 100.00 (1º Lote)",
+      "motivo": "Alteração de valor da taxa de inscrição",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T06:31:43.593Z",
+      "detalhes": {
+        "versao": 19,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1790663500815-se02",
+      "acao": "CARD_SETTINGS_UPDATED",
+      "usuario": "admin_tester",
+      "campo_afetado": "card_installment_settings",
+      "valor_anterior": "{\"mode\":\"mercado_pago\",\"max\":6}",
+      "valor_novo": "{\"mode\":\"manual\",\"max\":4,\"ratesCount\":6}",
+      "motivo": "Teste de política comercial de parcelamento",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T06:31:40.815Z",
+      "detalhes": {
+        "mode": "manual",
+        "max_installments": 4,
+        "rates": [
+          {
+            "installment": 1,
+            "rate": 0,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 2,
+            "rate": 4,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 3,
+            "rate": 6,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 4,
+            "rate": 8,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 5,
+            "rate": 10,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 6,
+            "rate": 12,
+            "rate_type": "percentage",
+            "enabled": false
+          }
+        ]
+      }
+    },
     {
       "id": "audit-1790652517578-hm3m",
       "acao": "WHATSAPP_LINKS_UPDATED",
@@ -162,15 +325,16 @@
     }
   ],
   "whatsapp": {
-    "Verde": "https://chat.whatsapp.com/teste_verde",
-    "Vermelho": "https://chat.whatsapp.com/teste_vermelho",
-    "Amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
-    "Laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
-    "Geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL",
-    "verde": "https://chat.whatsapp.com/teste_verde",
-    "vermelho": "https://chat.whatsapp.com/teste_vermelho",
-    "amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
-    "laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
-    "geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL"
-  }
+    "Verde": "https://chat.whatsapp.com/KTtckLqAArcJukxaj769lh?s=sh&p=i&mlu=0&ilr=4",
+    "Vermelho": "https://chat.whatsapp.com/IIB3bqFxWYu3mpaGJToCf1?s=sh&p=i&mlu=0&ilr=4",
+    "Amarelo": "https://chat.whatsapp.com/Ib4MdPHaM7l3PV9icymnNW?s=sh&p=i&mlu=0&ilr=4",
+    "Laranja": "https://chat.whatsapp.com/IeYqhFU7IcDLy6m4mHoAZ8?s=sh&p=i&mlu=0&ilr=4",
+    "Geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t",
+    "verde": "https://chat.whatsapp.com/KTtckLqAArcJukxaj769lh?s=sh&p=i&mlu=0&ilr=4",
+    "vermelho": "https://chat.whatsapp.com/IIB3bqFxWYu3mpaGJToCf1?s=sh&p=i&mlu=0&ilr=4",
+    "amarelo": "https://chat.whatsapp.com/Ib4MdPHaM7l3PV9icymnNW?s=sh&p=i&mlu=0&ilr=4",
+    "laranja": "https://chat.whatsapp.com/IeYqhFU7IcDLy6m4mHoAZ8?s=sh&p=i&mlu=0&ilr=4",
+    "geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+  },
+  "pagamentos": []
 }

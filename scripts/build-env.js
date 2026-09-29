@@ -50,7 +50,8 @@ const config = {
   WHATSAPP_VERMELHO: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "",
   WHATSAPP_AMARELO: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "",
   WHATSAPP_LARANJA: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || "",
-  WHATSAPP_GERAL: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || ""
+  WHATSAPP_GERAL: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "",
+  MERCADO_PAGO_PUBLIC_KEY: process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || process.env.MP_PUBLIC_KEY || ""
 };
 
 const outputContent = `// Arquivo gerado automaticamente durante o build da Vercel

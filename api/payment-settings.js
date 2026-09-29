@@ -126,6 +126,12 @@ module.exports = async (req, res) => {
         success: true,
         settings: {
           ...settings,
+          card_installment_mode: settings.card_installment_mode || "mercado_pago",
+          card_max_installments: Number(settings.card_max_installments || settings.max_parcelas || 6),
+          card_installment_rates: Array.isArray(settings.card_installment_rates) && settings.card_installment_rates.length > 0
+            ? settings.card_installment_rates
+            : (settingsStore.getDefaultCardRates ? settingsStore.getDefaultCardRates() : []),
+          mp_public_key: settings.mp_public_key || process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || "",
           modalidade_pix: modalidadeEfetiva,
           pix_mode: modalidadeEfetiva,
           pix_chave_mascarada: maskedKey,
@@ -142,7 +148,7 @@ module.exports = async (req, res) => {
           canApprovePayments: canApprove,
           role: userRole,
           allowedActions: canEditFinance
-            ? ["finance.view", "finance.edit", "payment.settings.edit", "pix.settings.edit", "whatsapp.edit", "payments.approve"]
+            ? ["finance.view", "finance.edit", "payment.settings.edit", "pix.settings.edit", "card.settings.edit", "whatsapp.edit", "payments.approve"]
             : (canEditWhatsapp ? ["finance.view", "whatsapp.edit"] : ["finance.view"])
         }
       });
@@ -188,7 +194,7 @@ module.exports = async (req, res) => {
     const clientIp = req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1";
 
     // Validação de permissões para ações financeiras estritas
-    if (["update_prices", "update_pix", "sync_full_settings"].includes(action)) {
+    if (["update_prices", "update_pix", "update_card_settings", "update_card", "sync_full_settings"].includes(action)) {
       if (!canEditFinance) {
         return res.status(403).json({
           error: "Permissão insuficiente. Apenas administradores financeiros ou a coordenação geral podem alterar dados financeiros."
@@ -291,6 +297,29 @@ module.exports = async (req, res) => {
         return res.status(500).json({
           success: false,
           error: err.message || "Falha ao persistir alterações do PIX no servidor."
+        });
+      }
+    }
+
+    // Ação B.2: Atualizar Configurações do Cartão de Crédito e Parcelamento
+    if (action === "update_card_settings" || action === "update_card") {
+      try {
+        const result = await settingsStore.updateCardSettings({
+          usuario: adminUser,
+          card_installment_mode: bodyData.card_installment_mode,
+          card_max_installments: bodyData.card_max_installments,
+          card_installment_rates: bodyData.card_installment_rates,
+          mp_public_key: bodyData.mp_public_key,
+          motivo: motivo,
+          ip: String(clientIp)
+        });
+
+        return res.status(200).json(result);
+      } catch (err) {
+        console.error("[Update Card Settings Error]", err);
+        return res.status(400).json({
+          success: false,
+          error: err.message || "Falha ao persistir configurações do cartão."
         });
       }
     }

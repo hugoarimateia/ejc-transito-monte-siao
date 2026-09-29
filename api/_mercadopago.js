@@ -201,10 +201,136 @@ async function consultarPagamentoPorExternalReference(externalReference) {
   }
 }
 
+/**
+ * Cria uma cobrança por Cartão de Crédito na API oficial do Mercado Pago.
+ * Suporta tokenização segura via Card Payment Brick (MercadoPago.js v2).
+ *
+ * @param {Object} params
+ * @param {string} params.token - Token seguro gerado pelo Card Payment Brick
+ * @param {number} params.transaction_amount - Valor total da cobrança
+ * @param {number} params.installments - Quantidade de parcelas
+ * @param {string} params.payment_method_id - ID da bandeira (ex: "visa", "master")
+ * @param {string|number} [params.issuer_id] - ID do banco emissor
+ * @param {Object} params.payer - Dados do pagador (email, identification, etc.)
+ * @param {string} params.txid - Nosso identificador (external_reference)
+ * @param {string} [params.description] - Descrição da cobrança
+ * @param {string} [params.notification_url] - URL de notificação / Webhook
+ * @returns {Promise<Object>} Resultado oficial retornado pelo Mercado Pago
+ */
+async function criarPagamentoCartao({
+  token,
+  transaction_amount,
+  installments,
+  payment_method_id,
+  issuer_id,
+  payer,
+  txid,
+  description = "Inscrição EJC Trânsito Monte Sião",
+  notification_url
+}) {
+  const mpAccessToken = getAccessToken();
+  if (!mpAccessToken) {
+    throw new Error("Mercado Pago não está configurado no servidor (MERCADOPAGO_ACCESS_TOKEN ausente).");
+  }
+
+  const payload = {
+    token: String(token).trim(),
+    transaction_amount: Number(Number(transaction_amount).toFixed(2)),
+    installments: Math.max(1, parseInt(installments, 10) || 1),
+    payment_method_id: String(payment_method_id || "").toLowerCase(),
+    description: String(description).substring(0, 60),
+    external_reference: String(txid),
+    payer: {
+      email: String(payer?.email || "").trim().toLowerCase()
+    }
+  };
+
+  if (issuer_id) {
+    payload.issuer_id = String(issuer_id);
+  }
+
+  if (payer?.identification?.number) {
+    payload.payer.identification = {
+      type: payer.identification.type || "CPF",
+      number: String(payer.identification.number).replace(/\D/g, "")
+    };
+  }
+
+  if (payer?.first_name) {
+    payload.payer.first_name = String(payer.first_name).trim();
+  }
+  if (payer?.last_name) {
+    payload.payer.last_name = String(payer.last_name).trim();
+  }
+
+  if (notification_url) {
+    payload.notification_url = notification_url;
+  }
+
+  const response = await fetch(`${MP_API_BASE}/payments`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${mpAccessToken}`,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": `CARD-${txid}`
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(15000)
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    const errorMsg =
+      responseData?.message ||
+      responseData?.error ||
+      `Erro ao processar pagamento com cartão no Mercado Pago (HTTP ${response.status})`;
+    let detailMsg = "";
+    if (Array.isArray(responseData?.cause)) {
+      detailMsg = responseData.cause.map(c => c.description || c.code || JSON.stringify(c)).join("; ");
+    } else if (responseData?.cause) {
+      detailMsg = typeof responseData.cause === "string" ? responseData.cause : JSON.stringify(responseData.cause);
+    }
+    const err = new Error(`${errorMsg}${detailMsg ? ` - ${detailMsg}` : ""}`);
+    err.status = response.status;
+    err.mpData = responseData;
+    throw err;
+  }
+
+  return {
+    success: true,
+    id: String(responseData.id),
+    status: responseData.status || "pending",
+    status_detail: responseData.status_detail || "",
+    transaction_amount: responseData.transaction_amount,
+    installments: responseData.installments,
+    payment_method_id: responseData.payment_method_id,
+    payment_type_id: responseData.payment_type_id,
+    card: {
+      first_six_digits: responseData.card?.first_six_digits || null,
+      last_four_digits: responseData.card?.last_four_digits || null
+    },
+    external_reference: responseData.external_reference || txid,
+    raw: responseData
+  };
+}
+
+function getPublicKey() {
+  return (
+    process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+    process.env.MERCADOPAGO_PUBLIC_KEY ||
+    process.env.MP_PUBLIC_KEY ||
+    ""
+  ).trim();
+}
+
 module.exports = {
   getAccessToken,
+  getPublicKey,
   isConfigured,
   criarPagamentoPix,
+  criarPagamentoCartao,
   consultarPagamentoPorId,
+  getPayment: consultarPagamentoPorId,
   consultarPagamentoPorExternalReference
 };

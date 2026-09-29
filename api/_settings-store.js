@@ -90,6 +90,24 @@ function getNextMonotonicVersion(knownCurrent = 0) {
   return maxV + 1;
 }
 
+// Tabela padrão de acréscimos comerciais de parcelamento (1x a 12x)
+function getDefaultCardRates() {
+  return [
+    { installment: 1, rate: 0.0, rate_type: "percentage", enabled: true },
+    { installment: 2, rate: 4.5, rate_type: "percentage", enabled: true },
+    { installment: 3, rate: 5.5, rate_type: "percentage", enabled: true },
+    { installment: 4, rate: 7.0, rate_type: "percentage", enabled: true },
+    { installment: 5, rate: 8.5, rate_type: "percentage", enabled: true },
+    { installment: 6, rate: 10.0, rate_type: "percentage", enabled: true },
+    { installment: 7, rate: 11.5, rate_type: "percentage", enabled: false },
+    { installment: 8, rate: 13.0, rate_type: "percentage", enabled: false },
+    { installment: 9, rate: 14.5, rate_type: "percentage", enabled: false },
+    { installment: 10, rate: 16.0, rate_type: "percentage", enabled: false },
+    { installment: 11, rate: 17.5, rate_type: "percentage", enabled: false },
+    { installment: 12, rate: 19.0, rate_type: "percentage", enabled: false }
+  ];
+}
+
 // Configurações padrão de fábrica (somente usadas se banco estiver vazio antes do Admin configurar)
 function getDefaultSettings() {
   return {
@@ -101,6 +119,10 @@ function getDefaultSettings() {
     valor_promocional: null,
     taxa_adicional: 0.0,
     max_parcelas: 12,
+    card_installment_mode: "mercado_pago", // "mercado_pago" (automático) ou "manual" (configuração comercial EJC)
+    card_max_installments: 6,
+    card_installment_rates: getDefaultCardRates(),
+    mp_public_key: process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || process.env.MERCADOPAGO_PUBLIC_KEY || "",
     modalidade_pix: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook", // "api_webhook" ou "manual"
     pix_mode: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook",
     pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || null,
@@ -824,6 +846,192 @@ async function updatePixSettings({
 }
 
 // ==============================================================================
+// ESCRITA 2.5: ATUALIZAR CARTÃO DE CRÉDITO & PARCELAMENTO (UPDATE_CARD)
+// ==============================================================================
+async function updateCardSettings({
+  usuario = "admin",
+  card_installment_mode,
+  card_max_installments,
+  card_installment_rates,
+  mp_public_key,
+  motivo,
+  ip = "127.0.0.1"
+}) {
+  const mode = String(card_installment_mode || "mercado_pago").toLowerCase().trim();
+  if (!["mercado_pago", "manual"].includes(mode)) {
+    throw new Error("Modo de parcelamento inválido. Use 'mercado_pago' (Automático) ou 'manual' (Configuração EJC).");
+  }
+
+  const maxInst = parseInt(card_max_installments, 10);
+  if (isNaN(maxInst) || maxInst < 1 || maxInst > 12) {
+    throw new Error("Máximo de parcelas deve ser um número inteiro entre 1 e 12.");
+  }
+
+  const activeData = await getActiveSettings();
+  const currentSettings = activeData.settings;
+  const currentVersao = Number(currentSettings.versao || 1);
+  const nextVersao = getNextMonotonicVersion(currentVersao);
+
+  let rawRates = Array.isArray(card_installment_rates) && card_installment_rates.length > 0
+    ? card_installment_rates
+    : (Array.isArray(currentSettings.card_installment_rates) && currentSettings.card_installment_rates.length > 0
+        ? currentSettings.card_installment_rates
+        : getDefaultCardRates());
+
+  const rates = rawRates.map((r, idx) => {
+    const instNum = parseInt(r.installment || (idx + 1), 10);
+    const rateNum = Number(Number(r.rate || 0).toFixed(2));
+    if (isNaN(rateNum) || rateNum < 0 || rateNum > 100) {
+      throw new Error(`Acréscimo inválido para a parcela ${instNum}x.`);
+    }
+    return {
+      installment: instNum,
+      rate: rateNum,
+      rate_type: "percentage",
+      enabled: r.enabled !== false
+    };
+  });
+
+  const novoSettings = {
+    ...currentSettings,
+    versao: nextVersao,
+    card_installment_mode: mode,
+    card_max_installments: maxInst,
+    card_installment_rates: rates,
+    mp_public_key: mp_public_key !== undefined ? String(mp_public_key).trim() : (currentSettings.mp_public_key || ""),
+    motivo_alteracao: motivo || `Atualização das condições de parcelamento (Modo: ${mode}, Máx: ${maxInst}x)`,
+    atualizado_por: usuario,
+    atualizado_em: new Date().toISOString()
+  };
+
+  const auditEntry = {
+    id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    acao: "CARD_SETTINGS_UPDATED",
+    usuario: usuario,
+    campo_afetado: "card_installment_settings",
+    valor_anterior: JSON.stringify({
+      mode: currentSettings.card_installment_mode || "mercado_pago",
+      max: currentSettings.card_max_installments || 6
+    }),
+    valor_novo: JSON.stringify({
+      mode: mode,
+      max: maxInst,
+      ratesCount: rates.length
+    }),
+    motivo: motivo || `Alteração das condições de cartão de crédito para modo ${mode}`,
+    ip_origem: ip,
+    criado_em: new Date().toISOString(),
+    detalhes: {
+      mode,
+      max_installments: maxInst,
+      rates
+    }
+  };
+
+  // 1. Grava no Supabase (se configurado)
+  let supabasePersisted = false;
+  const { url, key } = getSupabaseCredentials();
+  if (url && key) {
+    try {
+      await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
+        method: "PATCH",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({ ativo: false, atualizado_em: new Date().toISOString() }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({
+          versao: nextVersao,
+          ativo: true,
+          lote_atual: currentSettings.lote_atual || "1º Lote",
+          valor_inscricao: currentSettings.valor_inscricao ?? 50.0,
+          valor_promocional: currentSettings.valor_promocional ?? null,
+          taxa_adicional: currentSettings.taxa_adicional ?? 0.0,
+          max_parcelas: maxInst,
+          card_installment_mode: mode,
+          card_max_installments: maxInst,
+          card_installment_rates: rates,
+          mp_public_key: novoSettings.mp_public_key || "",
+          pix_chave: currentSettings.pix_chave || "leoeuler03@gmail.com",
+          pix_tipo_chave: currentSettings.pix_tipo_chave || "EMAIL",
+          pix_beneficiario: currentSettings.pix_beneficiario || "EJC TRANSITO MONTE SIAO",
+          pix_documento: currentSettings.pix_documento || "",
+          pix_cidade: currentSettings.pix_cidade || "CAMPINA GRANDE",
+          motivo_alteracao: novoSettings.motivo_alteracao,
+          atualizado_por: usuario,
+          atualizado_em: novoSettings.atualizado_em
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (directRes.ok) {
+        supabasePersisted = true;
+        await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
+          method: "POST",
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify({
+            acao: "CARD_SETTINGS_UPDATED",
+            usuario: usuario,
+            campo_afetado: "card_installment_settings",
+            valor_anterior: auditEntry.valor_anterior,
+            valor_novo: auditEntry.valor_novo,
+            motivo: auditEntry.motivo,
+            ip_origem: ip,
+            detalhes: auditEntry.detalhes
+          }),
+          signal: AbortSignal.timeout(5000)
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("[SettingsStore updateCardSettings] Erro ao persistir no Supabase:", err.message);
+    }
+  }
+
+  // 2. Grava no store local e memória
+  const localData = loadLocalStore();
+  localData.settings = novoSettings;
+  if (!Array.isArray(localData.historico)) localData.historico = [];
+  localData.historico.unshift(auditEntry);
+  if (localData.historico.length > 100) localData.historico.pop();
+  saveLocalStore(localData);
+  memoryStore = localData;
+
+  const verifyData = loadLocalStore();
+  if (verifyData.settings.card_installment_mode !== mode) {
+    throw new Error(`Falha de verificação read-after-write: modo esperado ${mode}, mas gravado ${verifyData.settings.card_installment_mode}`);
+  }
+
+  return {
+    success: true,
+    persisted: true,
+    supabasePersisted,
+    settings: verifyData.settings,
+    auditEntry,
+    message: mode === "mercado_pago"
+      ? "Condições automáticas do Mercado Pago ativadas com sucesso."
+      : `Configuração manual de parcelamento (até ${maxInst}x) salva com sucesso.`
+  };
+}
+
+// ==============================================================================
 // ESCRITA 3: ATUALIZAR WHATSAPP (UPDATE_WHATSAPP)
 // ==============================================================================
 async function updateWhatsAppSettings({ subsData, usuario, ip }) {
@@ -1356,6 +1564,7 @@ module.exports = {
   getNextMonotonicVersion,
   updatePriceSettings,
   updatePixSettings,
+  updateCardSettings,
   updateWhatsAppSettings,
   approvePayment,
   rejectPayment,
@@ -1364,5 +1573,6 @@ module.exports = {
   saveLocalStore,
   getDefaultSettings,
   getDefaultStore,
+  getDefaultCardRates,
   normalizarChavePix
 };

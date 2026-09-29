@@ -26,6 +26,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <link href="css/all.min.css" rel="stylesheet">
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <style>
     .step-pill {
       display: inline-flex;
@@ -776,53 +777,43 @@
 
             <!-- PAINEL 2: CARTÃO DE CRÉDITO -->
             <div class="method-content-panel" id="panelCard">
-              <form id="cardPaymentForm" class="card-form-grid" novalidate>
-                <div class="card-field">
-                  <label for="cardNumber">Número do Cartão</label>
-                  <div class="card-input-wrap">
-                    <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric" required>
-                    <i class="fa-solid fa-credit-card card-brand-icon" id="cardBrandIcon"></i>
-                  </div>
+              <!-- SELETOR MANUAL DE PARCELAS (EXIBIDO QUANDO O MODO MANUAL ESTIVER ATIVO) -->
+              <div id="cardManualPlanWrapper" style="display: none; margin-bottom: 18px;">
+                <label style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--text-main); margin-bottom: 8px; font-size: .88rem;">
+                  <span><i class="fa-solid fa-list-check" style="color: var(--blue);"></i> Opções de Parcelamento:</span>
+                  <small style="color: var(--muted); font-weight: 500;">Configuração Comercial EJC</small>
+                </label>
+                <div id="cardManualOptionsGrid" style="display: flex; flex-direction: column; gap: 8px;">
+                  <!-- Preenchido dinamicamente via JS com as parcelas configuradas no Admin -->
                 </div>
+              </div>
 
-                <div class="card-field">
-                  <label for="cardHolderName">Nome Impresso no Cartão</label>
-                  <div class="card-input-wrap">
-                    <input type="text" id="cardHolderName" placeholder="NOME COMO ESTÁ NO CARTÃO" style="text-transform: uppercase;" required>
-                  </div>
+              <!-- RESUMO TRANSPARENTE DE VALORES ANTES DO PAGAMENTO -->
+              <div id="cardTransparentSummary" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: .88rem;">
+                  <span style="color: var(--muted);">Condição de Pagamento:</span>
+                  <strong id="cardSummaryInstallmentsText" style="color: var(--text-main);">-</strong>
                 </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: .88rem;" id="cardSummaryMarkupRow">
+                  <span style="color: var(--muted);" id="cardSummaryMarkupLabel">Acréscimo do parcelamento:</span>
+                  <strong id="cardSummaryMarkupValue" style="color: #b45309;">0,00%</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 6px;">
+                  <span style="font-weight: 700; color: var(--text-main);">Valor Total Final:</span>
+                  <strong id="cardSummaryTotalValue" style="color: var(--blue); font-size: 1.2rem;">R$ 0,00</strong>
+                </div>
+              </div>
 
-                <div class="card-row-half">
-                  <div class="card-field">
-                    <label for="cardExpiry">Validade (MM/AA)</label>
-                    <div class="card-input-wrap">
-                      <input type="text" id="cardExpiry" placeholder="MM/AA" maxlength="5" inputmode="numeric" required>
-                    </div>
-                  </div>
-                  <div class="card-field">
-                    <label for="cardCvv">CVV / Cód. Segurança</label>
-                    <div class="card-input-wrap">
-                      <input type="password" id="cardCvv" placeholder="123" maxlength="4" inputmode="numeric" required>
-                    </div>
-                  </div>
-                </div>
+              <!-- MENSAGENS DE FEEDBACK / ERRO AMIGÁVEIS -->
+              <div id="cardFeedbackMsg" style="display: none; margin-bottom: 16px;"></div>
 
-                <div class="card-field">
-                  <label for="cardInstallments">Opções de Parcelamento</label>
-                  <div class="card-input-wrap">
-                    <select id="cardInstallments">
-                      <option value="1">1x à vista (Carregando...)</option>
-                    </select>
-                  </div>
+              <!-- CONTAINER DO CARD PAYMENT BRICK OFICIAL DO MERCADO PAGO -->
+              <div id="cardPaymentBrick_container">
+                <div id="cardBrickLoadingPlaceholder" style="text-align: center; padding: 32px 16px; color: var(--muted); font-size: .88rem;">
+                  <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.8rem; color: var(--blue); margin-bottom: 12px; display: block;"></i>
+                  <span>Inicializando ambiente seguro de pagamento com cartão...</span>
                 </div>
-
-                <button type="submit" class="button button-primary" id="btnSubmitCard" style="width: 100%; min-height: 52px; margin-top: 10px;">
-                  Pagar com Cartão de Crédito
-                </button>
-                <div id="cardProcessingFeedback" style="display: none; text-align: center; color: #93c5fd; font-size: .88rem; font-weight: 700;">
-                  <i class="fa-solid fa-circle-notch fa-spin"></i> Processando pagamento com segurança...
-                </div>
-              </form>
+              </div>
             </div>
 
           </div>
@@ -974,8 +965,11 @@
         const raw = (localConfig && localConfig.valor_inscricao !== null && localConfig.valor_inscricao !== undefined) ? localConfig.valor_inscricao : (urlValorParam > 0 ? urlValorParam : (window.EJC_PIX_CONFIG ? window.EJC_PIX_CONFIG.valorTaxaInscricao : null));
         return (raw !== null && raw !== undefined && raw !== "" && Number(raw) > 0) ? Number(raw) : null;
       })(),
-      valorPromocional: (localConfig && localConfig.valor_promocional !== undefined && localConfig.valor_promocional !== null) ? Number(localConfig.valor_promocional) : null,
-      maxParcelas: Number((localConfig && localConfig.max_parcelas) || 12)
+      maxParcelas: Number((localConfig && localConfig.max_parcelas) || 12),
+      cardInstallmentMode: (localConfig && localConfig.card_installment_mode) || "mercado_pago",
+      cardMaxInstallments: Number((localConfig && localConfig.card_max_installments) || 6),
+      cardInstallmentRates: (localConfig && localConfig.card_installment_rates) || [],
+      mpPublicKey: (localConfig && localConfig.mp_public_key) || (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) || ""
     };
 
     let valorBase;
@@ -1025,8 +1019,12 @@
         document.getElementById("labelItemTaxa").textContent = "Valor Contribuído";
         document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      if (typeof renderizarSeletorParcelasManual === "function") {
+        renderizarSeletorParcelasManual();
       }
-      atualizarOpcoesParcelas(valorTotal, activePixConfig.maxParcelas);
+      if (typeof atualizarResumoTransparente === "function") {
+        atualizarResumoTransparente();
+      }
     }
 
     // Elementos do Resumo
@@ -1401,6 +1399,15 @@
       panelCard.classList.add("active");
       panelPix.classList.remove("active");
       currentMethod = "credit_card";
+      if (typeof renderizarSeletorParcelasManual === "function") {
+        renderizarSeletorParcelasManual();
+      }
+      if (typeof atualizarResumoTransparente === "function") {
+        atualizarResumoTransparente();
+      }
+      if (typeof montarCardPaymentBrick === "function") {
+        montarCardPaymentBrick();
+      }
     });
 
     // Validação de E-mail
@@ -1417,20 +1424,6 @@
     let pixTimerInterval = null;
     let pixPollingInterval = null;
     let isTransitioningToStep2 = false;
-
-    function atualizarOpcoesParcelas(valor, maxParcelas) {
-      const select = document.getElementById("cardInstallments");
-      if (!select) return;
-      select.innerHTML = "";
-      const maxLimit = Math.min(12, Math.max(1, Number(maxParcelas || activePixConfig.maxParcelas || 12)));
-      for (let i = 1; i <= maxLimit; i++) {
-        const valParcela = (valor / i).toFixed(2).replace('.', ',');
-        const option = document.createElement("option");
-        option.value = i;
-        option.textContent = `${i}x de R$ ${valParcela} ${i === 1 ? '(à vista)' : 'sem juros'}`;
-        select.appendChild(option);
-      }
-    }
 
     // ----------------------------------------------------------------------------
     // TRANSIÇÃO ETAPA 1 -> ETAPA 2 (DISPARADA PELO BOTÃO "CONTINUAR PARA PAGAMENTO")
@@ -1751,6 +1744,18 @@
       checkoutStep2.style.display = "block";
       checkoutStep2.scrollIntoView({ behavior: "smooth", block: "start" });
 
+      if (currentMethod === "credit_card") {
+        if (typeof renderizarSeletorParcelasManual === "function") {
+          renderizarSeletorParcelasManual();
+        }
+        if (typeof atualizarResumoTransparente === "function") {
+          atualizarResumoTransparente();
+        }
+        if (typeof montarCardPaymentBrick === "function") {
+          montarCardPaymentBrick();
+        }
+      }
+
       // Atualiza URL com parâmetros sem recarregar a página
       try {
         const newUrl = new URL(window.location.href);
@@ -1836,6 +1841,12 @@
       activePixConfig.valorPromocional = (rawPromo !== undefined && rawPromo !== null && rawPromo !== "") ? Number(rawPromo) : null;
       activePixConfig.maxParcelas = Number(pixData.maxParcelas || pixData.max_parcelas || cfg.max_parcelas || activePixConfig.maxParcelas || 12);
 
+      // Configurações do Cartão de Crédito e Parcelamento
+      activePixConfig.cardInstallmentMode = cfg.card_installment_mode || (cfg.pix && cfg.pix.card_installment_mode) || activePixConfig.cardInstallmentMode || "mercado_pago";
+      activePixConfig.cardMaxInstallments = Number(cfg.card_max_installments || (cfg.pix && cfg.pix.card_max_installments) || activePixConfig.cardMaxInstallments || 6);
+      activePixConfig.cardInstallmentRates = cfg.card_installment_rates || (cfg.pix && cfg.pix.card_installment_rates) || activePixConfig.cardInstallmentRates || [];
+      activePixConfig.mpPublicKey = cfg.mp_public_key || cfg.mercado_pago_public_key || (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) || activePixConfig.mpPublicKey || "";
+
       // Persistência reativa no localStorage para sobrevivência a F5 e novas abas
       try {
         localStorage.setItem("ejc_config_financeira", JSON.stringify({
@@ -1850,11 +1861,25 @@
           pix_cidade: activePixConfig.cidade,
           pix_instrucoes_manual: activePixConfig.instrucoesManual,
           pix_permite_comprovante: activePixConfig.permiteComprovante,
-          max_parcelas: activePixConfig.maxParcelas
+          max_parcelas: activePixConfig.maxParcelas,
+          card_installment_mode: activePixConfig.cardInstallmentMode,
+          card_max_installments: activePixConfig.cardMaxInstallments,
+          card_installment_rates: activePixConfig.cardInstallmentRates,
+          mp_public_key: activePixConfig.mpPublicKey
         }));
       } catch (eStorage) {}
 
       atualizarValoresUI();
+
+      if (typeof renderizarSeletorParcelasManual === "function") {
+        renderizarSeletorParcelasManual();
+      }
+      if (typeof atualizarResumoTransparente === "function") {
+        atualizarResumoTransparente();
+      }
+      if (currentMethod === "credit_card" && typeof montarCardPaymentBrick === "function") {
+        montarCardPaymentBrick();
+      }
     }
 
     async function carregarConfiguracaoAtiva() {
@@ -2061,69 +2086,277 @@
     });
 
     // ==============================================================================
-    // PAGAMENTO VIA CARTÃO DE CRÉDITO NA ETAPA 2
+    // PAGAMENTO VIA CARTÃO DE CRÉDITO NA ETAPA 2 (CARD PAYMENT BRICK OFICIAL)
     // ==============================================================================
-    const cardInput = document.getElementById("cardNumber");
-    const brandIcon = document.getElementById("cardBrandIcon");
+    let mpInstance = null;
+    let cardBrickController = null;
+    let selectedManualInstallment = 1;
+    let cardBrickCurrentAmount = 0;
+    let isInitializingBrick = false;
 
-    cardInput.addEventListener("input", function() {
-      let v = this.value.replace(/\D/g, "").substring(0, 16);
-      v = v.replace(/(\d{4})(?=\d)/g, "$1 ");
-      this.value = v;
+    function getMercadoPagoPublicKey() {
+      return (
+        activePixConfig.mpPublicKey ||
+        (window.EJC_ENV && window.EJC_ENV.MERCADO_PAGO_PUBLIC_KEY) ||
+        ""
+      ).trim();
+    }
 
-      const num = v.replace(/\s/g, "");
-      if (/^4/.test(num)) {
-        brandIcon.className = "fa-brands fa-cc-visa card-brand-icon";
-      } else if (/^5[1-5]/.test(num)) {
-        brandIcon.className = "fa-brands fa-cc-mastercard card-brand-icon";
-      } else if (/^(4011|5067|5090|6277|6363)/.test(num)) {
-        brandIcon.className = "fa-solid fa-credit-card card-brand-icon";
-      } else if (/^3[47]/.test(num)) {
-        brandIcon.className = "fa-brands fa-cc-amex card-brand-icon";
-      } else {
-        brandIcon.className = "fa-solid fa-credit-card card-brand-icon";
+    function renderizarSeletorParcelasManual() {
+      const wrap = document.getElementById("cardManualPlanWrapper");
+      const grid = document.getElementById("cardManualOptionsGrid");
+      if (!wrap || !grid) return;
+
+      const isManual = (activePixConfig.cardInstallmentMode === "manual");
+      if (!isManual) {
+        wrap.style.display = "none";
+        return;
       }
-    });
 
-    const expiryInput = document.getElementById("cardExpiry");
-    expiryInput.addEventListener("input", function() {
-      let v = this.value.replace(/\D/g, "").substring(0, 4);
-      if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
-      this.value = v;
-    });
+      wrap.style.display = "block";
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
+      const maxInst = activePixConfig.cardMaxInstallments || 6;
+      const rates = Array.isArray(activePixConfig.cardInstallmentRates) && activePixConfig.cardInstallmentRates.length > 0
+        ? activePixConfig.cardInstallmentRates
+        : [
+            { installment: 1, rate: 0.00, enabled: true },
+            { installment: 2, rate: 4.50, enabled: true },
+            { installment: 3, rate: 5.50, enabled: true },
+            { installment: 4, rate: 7.00, enabled: true },
+            { installment: 5, rate: 8.50, enabled: true },
+            { installment: 6, rate: 10.00, enabled: true }
+          ];
 
-    const cardForm = document.getElementById("cardPaymentForm");
-    cardForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+      const availableRates = rates.filter(r => r.installment <= maxInst && r.enabled !== false);
+      if (availableRates.length === 0) {
+        availableRates.push({ installment: 1, rate: 0.00, enabled: true });
+      }
+
+      if (!availableRates.some(r => r.installment === selectedManualInstallment)) {
+        selectedManualInstallment = availableRates[0].installment;
+      }
+
+      grid.innerHTML = availableRates.map(item => {
+        const n = item.installment;
+        const rate = typeof item.rate === "number" ? item.rate : 0;
+        const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+        const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
+        const isSelected = (n === selectedManualInstallment);
+
+        return `
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; border: 1.5px solid ${isSelected ? 'var(--blue)' : 'var(--border-color)'}; background: ${isSelected ? 'rgba(8, 125, 249, 0.06)' : 'var(--bg-surface)'}; cursor: pointer; transition: all .2s ease;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="radio" name="radioManualInstallment" value="${n}" ${isSelected ? 'checked' : ''} style="accent-color: var(--blue);">
+              <div>
+                <strong style="color: var(--text-main); font-size: .92rem;">${n}x de R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}</strong>
+                <div style="font-size: .78rem; color: var(--muted); margin-top: 2px;">
+                  Total: R$ ${totalCalculado.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            </div>
+            <div>
+              ${rate === 0 
+                ? '<span style="background: #ecfdf5; color: #047857; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">SEM ACRÉSCIMO</span>'
+                : `<span style="background: #fef3c7; color: #b45309; font-size: .74rem; font-weight: 800; padding: 3px 8px; border-radius: 6px;">Acréscimo: ${rate.toFixed(2)}%</span>`
+              }
+            </div>
+          </label>
+        `;
+      }).join("");
+
+      grid.querySelectorAll('input[name="radioManualInstallment"]').forEach(radio => {
+        radio.addEventListener("change", function() {
+          selectedManualInstallment = parseInt(this.value, 10);
+          renderizarSeletorParcelasManual();
+          atualizarResumoTransparente();
+          montarCardPaymentBrick(true);
+        });
+      });
+    }
+
+    function atualizarResumoTransparente() {
+      const isManual = (activePixConfig.cardInstallmentMode === "manual");
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
+
+      const textInstallments = document.getElementById("cardSummaryInstallmentsText");
+      const rowMarkup = document.getElementById("cardSummaryMarkupRow");
+      const valMarkup = document.getElementById("cardSummaryMarkupValue");
+      const valTotal = document.getElementById("cardSummaryTotalValue");
+
+      if (isManual) {
+        const rates = activePixConfig.cardInstallmentRates || [];
+        const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
+        const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
+        const totalFinal = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+        const parcFinal = Math.round((totalFinal / selectedManualInstallment) * 100) / 100;
+        const difAcrescimo = Math.round((totalFinal - baseAmount) * 100) / 100;
+
+        if (textInstallments) textInstallments.textContent = `${selectedManualInstallment}x de R$ ${parcFinal.toFixed(2).replace('.', ',')}`;
+        if (rowMarkup) rowMarkup.style.display = "flex";
+        if (valMarkup) {
+          valMarkup.textContent = rate > 0 
+            ? `${rate.toFixed(2)}% (+R$ ${difAcrescimo.toFixed(2).replace('.', ',')})`
+            : "0,00% (Sem acréscimo)";
+          valMarkup.style.color = rate > 0 ? "#b45309" : "#059669";
+        }
+        if (valTotal) valTotal.textContent = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
+      } else {
+        const maxInst = activePixConfig.cardMaxInstallments || 6;
+        if (textInstallments) textInstallments.textContent = `Em até ${maxInst}x no cartão`;
+        if (rowMarkup) rowMarkup.style.display = "none";
+        if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+      }
+    }
+
+    async function montarCardPaymentBrick(forceRemount = false) {
+      if (isInitializingBrick) return;
+      const container = document.getElementById("cardPaymentBrick_container");
+      if (!container) return;
+
+      const pubKey = getMercadoPagoPublicKey();
+      if (!pubKey || pubKey === "sua_public_key_aqui") {
+        container.innerHTML = `
+          <div class="alert-banner alert-warning" style="display: flex; margin-bottom: 0;">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+            <div>
+              <strong>Pagamento com Cartão em Configuração:</strong>
+              A chave pública do Mercado Pago ainda não foi configurada pela coordenação. Você pode efetuar o pagamento imediato e confirmar sua vaga através do <strong>Pix Instantâneo</strong> ao lado.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (typeof window.MercadoPago === "undefined") {
+        container.innerHTML = `
+          <div class="alert-banner alert-warning" style="display: flex;">
+            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
+            <div>
+              Não foi possível carregar a biblioteca de segurança do Mercado Pago. Verifique sua conexão com a internet ou utilize a opção Pix.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const isManual = (activePixConfig.cardInstallmentMode === "manual");
+      const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || 100.00;
+      let amountToCharge = baseAmount;
+      let maxInstToSet = activePixConfig.cardMaxInstallments || 6;
+      let minInstToSet = 1;
+
+      if (isManual) {
+        const rates = activePixConfig.cardInstallmentRates || [];
+        const currentItem = rates.find(r => r.installment === selectedManualInstallment) || { rate: 0 };
+        const rate = typeof currentItem.rate === "number" ? currentItem.rate : 0;
+        amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+        maxInstToSet = selectedManualInstallment;
+        minInstToSet = selectedManualInstallment;
+      }
+
+      if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
+        return;
+      }
+
+      isInitializingBrick = true;
+
+      if (cardBrickController && typeof cardBrickController.unmount === "function") {
+        try {
+          await cardBrickController.unmount();
+        } catch (eUnmount) {}
+        cardBrickController = null;
+      }
+
+      container.innerHTML = "";
+      cardBrickCurrentAmount = amountToCharge;
+
+      try {
+        if (!mpInstance) {
+          mpInstance = new window.MercadoPago(pubKey, { locale: "pt-BR" });
+        }
+        const bricksBuilder = mpInstance.bricks();
+        const isDark = (document.documentElement.getAttribute("data-theme") === "dark");
+        const userEmail = emailInput?.value.trim() || emailParam || "participante@ejc.site";
+
+        const brickSettings = {
+          initialization: {
+            amount: amountToCharge,
+            payer: {
+              email: userEmail
+            }
+          },
+          customization: {
+            visual: {
+              style: {
+                theme: isDark ? "dark" : "default",
+                customVariables: {
+                  baseColor: "#087df9"
+                }
+              },
+              hideFormTitle: true
+            },
+            paymentMethods: {
+              maxInstallments: maxInstToSet,
+              minInstallments: minInstToSet
+            }
+          },
+          callbacks: {
+            onReady: () => {
+              isInitializingBrick = false;
+              const feedback = document.getElementById("cardFeedbackMsg");
+              if (feedback) feedback.style.display = "none";
+            },
+            onSubmit: async (cardFormData) => {
+              return processarPagamentoCartao(cardFormData, amountToCharge);
+            },
+            onError: (error) => {
+              console.error("[Card Payment Brick Error]", error);
+              isInitializingBrick = false;
+              exibirErroCartao("Não foi possível carregar as opções deste cartão. Verifique os dados ou utilize outra forma de pagamento.");
+            }
+          }
+        };
+
+        cardBrickController = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", brickSettings);
+      } catch (err) {
+        console.error("[Card Brick Mount Error]", err);
+        container.innerHTML = `
+          <div class="alert-banner alert-warning" style="display: flex;">
+            <i class="fa-solid fa-circle-exclamation" style="margin-top: 2px;"></i>
+            <div>
+              Não foi possível inicializar o pagamento seguro com cartão no momento. Por favor, utilize o <strong>Pix Instantâneo</strong> ao lado para concluir sua inscrição.
+            </div>
+          </div>
+        `;
+      } finally {
+        isInitializingBrick = false;
+      }
+    }
+
+    async function processarPagamentoCartao(cardFormData, amountCharged) {
       const nomeFinal = nameInput.value.trim() || nomeParticipante;
       const emailFinal = emailInput.value.trim() || emailParam;
+      const wppFinal = wppInput.value.trim() || wppParam || null;
 
       if (!validarEmail(emailFinal)) {
-        alert("E-mail inválido. Por favor, volte à Etapa 1 e confirme o endereço.");
+        exibirErroCartao("Por favor, informe um endereço de e-mail válido.");
         return;
       }
 
-      const cardRaw = cardInput.value.replace(/\s/g, "");
-      const holder = document.getElementById("cardHolderName").value.trim();
-      const expiry = expiryInput.value.trim();
-      const cvv = document.getElementById("cardCvv").value.trim();
-      const installments = Number(document.getElementById("cardInstallments").value || 1);
-
-      if (cardRaw.length < 15 || !holder || expiry.length < 5 || cvv.length < 3) {
-        alert("Por favor, preencha todos os dados do cartão corretamente.");
-        return;
+      const feedbackBox = document.getElementById("cardFeedbackMsg");
+      if (feedbackBox) {
+        feedbackBox.style.display = "block";
+        feedbackBox.innerHTML = `
+          <div class="alert-banner" style="background: rgba(8, 125, 249, 0.1); border-color: #087df9; color: var(--blue); display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span>Processando cobrança com segurança na operadora do cartão...</span>
+          </div>
+        `;
+        feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
-      const btnSubmitCard = document.getElementById("btnSubmitCard");
-      const feedback = document.getElementById("cardProcessingFeedback");
-      btnSubmitCard.disabled = true;
-      feedback.style.display = "block";
-
-      const txidCard = "CARD" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      const ultimosDigitos = cardRaw.slice(-4);
-      let bandeira = "Mastercard";
-      if (/^4/.test(cardRaw)) bandeira = "Visa";
-      if (/^3[47]/.test(cardRaw)) bandeira = "Amex";
+      const isManual = (activePixConfig.cardInstallmentMode === "manual");
+      const parcelasFinal = isManual ? selectedManualInstallment : (cardFormData.installments || 1);
 
       try {
         const response = await fetch("/api/checkout-process", {
@@ -2132,67 +2365,84 @@
           body: JSON.stringify({
             metodo: "credit_card",
             tipo: tipoCheckout,
-            valor: valorTotal,
-            nome: nomeFinal || holder,
+            valor: amountCharged,
+            token: cardFormData.token,
+            issuer_id: cardFormData.issuer_id,
+            payment_method_id: cardFormData.payment_method_id,
+            installments: parcelasFinal,
+            nome: nomeFinal,
             email: emailFinal,
-            whatsapp: wppInput.value.trim() || wppParam || null,
+            whatsapp: wppFinal,
             sub: subSelecionado,
             inscricao_id: inscricaoIdParam || null,
-            parcelas: installments,
-            cartao_ultimos_digitos: ultimosDigitos,
-            cartao_bandeira: bandeira,
-            cartao_titular: holder
+            payer: cardFormData.payer
           })
         });
 
-        let data = null;
-        if (response.ok) {
-          data = await response.json();
+        const data = await response.json();
+
+        if (response.ok && data.status === "approved") {
+          if (feedbackBox) feedbackBox.style.display = "none";
+          const pagamentoCard = {
+            txid: data.txid,
+            payment_id: data.payment_id,
+            order_id: data.order_id,
+            metodo: "credit_card",
+            valor: data.valor || amountCharged,
+            status: "approved",
+            nome: nomeFinal,
+            email: emailFinal,
+            sub: subSelecionado,
+            parcelas: parcelasFinal,
+            cartao_ultimos_digitos: data.cartao_ultimos_digitos || (data.detalhes?.card ? data.detalhes.card.last_four_digits : null),
+            cartao_bandeira: data.cartao_bandeira || (data.detalhes ? data.detalhes.payment_method_id : "Cartão"),
+            inscricao_id: inscricaoIdParam || null,
+            pago_em: new Date().toISOString()
+          };
+
+          registrarTransacaoLocal(pagamentoCard);
+          concluirPagamentoComSucesso(pagamentoCard);
+          return;
         }
 
-        const txidFinal = (data && data.txid) ? data.txid : txidCard;
-        const pagamentoCard = {
-          txid: txidFinal,
-          payment_id: (data && data.payment_id) ? data.payment_id : txidFinal,
-          order_id: (data && data.order_id) ? data.order_id : null,
-          metodo: "credit_card",
-          valor: (data && data.valor) ? data.valor : valorTotal,
-          status: "approved",
-          nome: nomeFinal || holder,
-          email: emailFinal,
-          sub: subSelecionado,
-          parcelas: installments,
-          cartao_ultimos_digitos: ultimosDigitos,
-          cartao_bandeira: bandeira,
-          inscricao_id: inscricaoIdParam || null
-        };
+        if (data.status === "in_process" || data.status === "pending") {
+          if (feedbackBox) {
+            feedbackBox.style.display = "block";
+            feedbackBox.innerHTML = `
+              <div class="alert-banner alert-warning" style="display: flex;">
+                <i class="fa-solid fa-clock-rotate-left" style="margin-top: 2px;"></i>
+                <div>
+                  <strong>Pagamento em Análise:</strong> ${data.mensagem_usuario || 'Seu pagamento está sendo verificado pela operadora do cartão. Assim que for confirmado, sua vaga será liberada automaticamente.'}
+                </div>
+              </div>
+            `;
+          }
+          return;
+        }
 
-        registrarTransacaoLocal(pagamentoCard);
-        concluirPagamentoComSucesso(pagamentoCard);
+        const msgErro = data.mensagem_usuario || data.message || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
+        exibirErroCartao(msgErro);
+
       } catch (err) {
-        console.warn("[Checkout] Falha na chamada da API, utilizando fallback local:", err);
-        const pagamentoCard = {
-          txid: txidCard,
-          payment_id: txidCard,
-          metodo: "credit_card",
-          valor: valorTotal,
-          status: "approved",
-          nome: nomeFinal || holder,
-          email: emailFinal,
-          sub: subSelecionado,
-          parcelas: installments,
-          cartao_ultimos_digitos: ultimosDigitos,
-          cartao_bandeira: bandeira,
-          inscricao_id: inscricaoIdParam || null
-        };
-
-        registrarTransacaoLocal(pagamentoCard);
-        concluirPagamentoComSucesso(pagamentoCard);
-      } finally {
-        btnSubmitCard.disabled = false;
-        feedback.style.display = "none";
+        console.error("[Checkout Card Error]", err);
+        exibirErroCartao("Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.");
       }
-    });
+    }
+
+    function exibirErroCartao(mensagem) {
+      const feedbackBox = document.getElementById("cardFeedbackMsg");
+      if (!feedbackBox) return;
+      feedbackBox.style.display = "block";
+      feedbackBox.innerHTML = `
+        <div class="alert-banner alert-danger" style="display: flex;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+          <div>
+            <strong>Não foi possível concluir o pagamento:</strong> ${mensagem}
+          </div>
+        </div>
+      `;
+      feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
 
     // ==============================================================================
     // CONCLUSÃO E TELA DE CHECK-IN CONFIRMADO (CARD VERDE)

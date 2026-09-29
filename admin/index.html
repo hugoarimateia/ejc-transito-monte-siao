@@ -545,6 +545,155 @@
             </div>
           </div>
 
+          <!-- BLOCO A: CARTÃO DE CRÉDITO / TAXAS E PARCELAMENTO -->
+          <div class="form-card" id="blocoCartaoCredito" style="grid-column: 1 / -1;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                <div>
+                  <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.15rem; color: var(--blue-dark);">
+                    <i class="fa-solid fa-credit-card" style="color: #0284c7;"></i> Bloco A: Cartão de Crédito / Taxas e Parcelamento
+                  </h4>
+                  <p style="color: var(--muted); font-size: .84rem; margin: 4px 0 0;">
+                    Defina se as condições de parcelamento utilizam as taxas automáticas do Mercado Pago ou a configuração comercial manual do EJC.
+                  </p>
+                </div>
+                <div>
+                  <span id="badgeModoCartaoAtivo" class="status-badge" style="background: #e0f2fe; color: #0284c7; font-weight: 700; padding: 6px 14px; font-size: .84rem; border-radius: 999px;">
+                    ● Condições automáticas do Mercado Pago
+                  </span>
+                </div>
+              </div>
+
+              <!-- SELEÇÃO DA FONTE DAS CONDIÇÕES -->
+              <div class="form-field" style="background: var(--bg-surface, #f8fafc); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); margin-bottom: 20px;">
+                <label style="font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: .92rem;">
+                  <i class="fa-solid fa-sliders"></i> Fonte das condições do cartão:
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                  <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-color, #e2e8f0); background: var(--bg-card, #ffffff); transition: all .2s ease;" id="labelCardModeMp">
+                    <input type="radio" name="radioCardInstallmentMode" id="radioCardModeMp" value="mercado_pago" checked style="margin-top: 3px;">
+                    <div>
+                      <strong style="color: var(--text-main);">AUTOMÁTICO — MERCADO PAGO</strong>
+                      <div style="font-size: .78rem; color: var(--muted); margin-top: 3px; line-height: 1.4;">
+                        Usar condições disponibilizadas pelo Mercado Pago. O Card Payment Brick obtém taxas e parcelas diretamente do emissor do cartão.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-color, #e2e8f0); background: var(--bg-card, #ffffff); transition: all .2s ease;" id="labelCardModeManual">
+                    <input type="radio" name="radioCardInstallmentMode" id="radioCardModeManual" value="manual" style="margin-top: 3px;">
+                    <div>
+                      <strong style="color: var(--text-main);">MANUAL — CONFIGURAÇÃO DO EJC</strong>
+                      <div style="font-size: .78rem; color: var(--muted); margin-top: 3px; line-height: 1.4;">
+                        Usar configuração manual de taxas e parcelas. O checkout apresentará com transparência o "Acréscimo do parcelamento" definido pela coordenação.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- BANNER MODO AUTOMÁTICO -->
+              <div id="cardMpAutoBanner" style="padding: 14px 18px; border-radius: 10px; background: #f0f9ff; border: 1px solid #bae6fd; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px; color: #0369a1; font-weight: 700; font-size: .9rem;">
+                  <i class="fa-solid fa-circle-info" style="color: #0284c7; font-size: 1.1rem;"></i>
+                  <span>Modo Automático: Condições Oficiais do Mercado Pago</span>
+                </div>
+                <p style="margin: 6px 0 0; font-size: .82rem; color: #0284c7; line-height: 1.45;">
+                  No modo automático, o <strong>Card Payment Brick</strong> consulta as opções de parcelamento e acréscimos diretamente na API do Mercado Pago conforme o número do cartão inserido. O limite de parcelas respeita o valor máximo selecionado abaixo.
+                </p>
+              </div>
+
+              <!-- CONTROLES COMUNS & MÁXIMO DE PARCELAS -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <div class="form-field">
+                  <label for="cardMaxInstallmentsSelect" style="font-weight: 700;">Máximo de parcelas no cartão:</label>
+                  <select id="cardMaxInstallmentsSelect" style="font-weight: 600;">
+                    <option value="1">1x (Apenas à vista)</option>
+                    <option value="2">Até 2x</option>
+                    <option value="3">Até 3x</option>
+                    <option value="4">Até 4x</option>
+                    <option value="5">Até 5x</option>
+                    <option value="6" selected>Até 6x (Recomendado)</option>
+                    <option value="7">Até 7x</option>
+                    <option value="8">Até 8x</option>
+                    <option value="9">Até 9x</option>
+                    <option value="10">Até 10x</option>
+                    <option value="11">Até 11x</option>
+                    <option value="12">Até 12x</option>
+                  </select>
+                  <small>Define o teto de parcelas oferecido aos participantes no checkout.</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="cardBasePricePreview" style="font-weight: 700;">Valor Base de Referência (R$):</label>
+                  <input type="text" id="cardBasePricePreview" readonly style="background: var(--bg-surface, #f1f5f9); font-weight: 700; cursor: not-allowed;" value="R$ 100,00">
+                  <small>Valor obtido automaticamente do Preço Oficial da Inscrição vigente.</small>
+                </div>
+              </div>
+
+              <!-- CONTAINER DA TABELA DE PARCELAMENTO MANUAL -->
+              <div id="cardManualSettingsWrap">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <h5 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1rem; color: var(--blue-dark);">
+                      <i class="fa-solid fa-table-list" style="color: var(--blue);"></i> Configuração das Parcelas (Modo Manual)
+                    </h5>
+                    <p style="margin: 2px 0 0; font-size: .8rem; color: var(--muted);">
+                      Defina a porcentagem de acréscimo comercial para cada número de parcelas. O valor da parcela e total são calculados dinamicamente.
+                    </p>
+                  </div>
+                </div>
+
+                <div style="overflow-x: auto; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; margin-bottom: 20px;">
+                  <table class="data-table" id="cardTableParcelas" style="margin: 0;">
+                    <thead style="background: var(--bg-surface, #f8fafc);">
+                      <tr>
+                        <th style="width: 90px; text-align: center;">Parcela</th>
+                        <th style="min-width: 140px;">Acréscimo Comercial (%)</th>
+                        <th style="min-width: 130px; text-align: right;">Valor da Parcela</th>
+                        <th style="min-width: 130px; text-align: right;">Total da Cobrança</th>
+                        <th style="width: 100px; text-align: center;">Habilitada</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cardTableParcelasBody">
+                      <!-- Renderizado dinamicamente via JS (1x a 12x) -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- PRÉ-VISUALIZAÇÃO ADMINISTRATIVA NO CHECKOUT -->
+              <div style="background: var(--bg-surface, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                  <div style="font-weight: 800; font-size: .88rem; color: var(--blue-dark); text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-eye" style="color: #0284c7;"></i> PRÉ-VISUALIZAÇÃO NO CHECKOUT
+                  </div>
+                  <span id="previewModeIndicator" style="font-size: .78rem; font-weight: 700; color: var(--muted);">
+                    Simulação baseada na configuração atual
+                  </span>
+                </div>
+
+                <div id="cardCheckoutPreviewList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                  <!-- Renderizado dinamicamente via JS -->
+                </div>
+              </div>
+
+              <!-- BOTÕES DE AÇÃO DO BLOCO A -->
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--border-color, #e2e8f0);">
+                <button type="button" class="button button-primary" id="btnSalvarCartaoConfig" style="min-height: 44px; font-size: .88rem; display: inline-flex; align-items: center; gap: 8px; background: #0284c7; border-color: #0284c7;">
+                  <i class="fa-solid fa-floppy-disk"></i> Salvar Configuração de Cartão
+                </button>
+
+                <button type="button" class="button button-secondary" id="btnRestaurarModoMp" style="min-height: 44px; font-size: .88rem; display: inline-flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-rotate-left"></i> Restaurar Modo Automático (Mercado Pago)
+                </button>
+
+                <div id="cardStatusMsg" style="font-size: .85rem; font-weight: 600; margin-left: auto;"></div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
 
         <!-- BLOCO C: HISTÓRICO DE AUDITORIA FINANCEIRA -->
@@ -917,6 +1066,45 @@
       </button>
       <button type="button" class="button button-primary" id="btnConfirmarSalvarPix" style="min-height: 40px; font-size: .85rem; background: #0d9488; border-color: #0d9488;">
         <i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX
+      </button>
+    </div>
+  </dialog>
+
+  <!-- MODAL DE CONFIRMAÇÃO: CONFIGURAÇÃO DE CARTÃO E PARCELAMENTO -->
+  <dialog class="modal-detail" id="modalConfirmarCartao" style="max-width: 580px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+      <div>
+        <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; color: #0284c7; font-size: 1.25rem;">
+          <i class="fa-solid fa-credit-card"></i> Confirmar Alteração de Parcelamento
+        </h3>
+        <span style="color: var(--muted); font-size: .84rem;">Revise as condições comerciais antes de aplicar ao checkout</span>
+      </div>
+      <button type="button" onclick="document.getElementById('modalConfirmarCartao').close()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer;">×</button>
+    </div>
+
+    <div class="alert-banner alert-warning">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+      <div>
+        <strong>Atenção:</strong> Você está alterando as condições de parcelamento no cartão. As novas regras serão aplicadas imediatamente no checkout. O valor cobrado na operadora corresponderá exatamente ao valor exibido ao participante.
+      </div>
+    </div>
+
+    <div class="diff-box" id="diffCartaoContent">
+      <!-- Inserido dinamicamente via JS -->
+    </div>
+
+    <div class="form-field" style="margin-top: 14px;">
+      <label for="motivoAlteracaoCartao">Motivo / Justificativa da Alteração:</label>
+      <input type="text" id="motivoAlteracaoCartao" placeholder="Ex: Definição da política comercial de parcelamento">
+      <small>Este motivo será registrado permanentemente no histórico de auditoria.</small>
+    </div>
+
+    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="button button-secondary" onclick="document.getElementById('modalConfirmarCartao').close()" style="min-height: 40px; font-size: .85rem;">
+        Cancelar
+      </button>
+      <button type="button" class="button button-primary" id="btnConfirmarSalvarCartao" style="min-height: 40px; font-size: .85rem; background: #0284c7; border-color: #0284c7;">
+        <i class="fa-solid fa-check"></i> Confirmar e Salvar Configuração
       </button>
     </div>
   </dialog>
@@ -1851,6 +2039,8 @@
       const readOnlyNotice = document.getElementById("readOnlyNotice");
       const btnSalvarPrecos = document.getElementById("btnSalvarPrecos");
       const btnSalvarPix = document.getElementById("btnSalvarPix");
+      const btnSalvarCartao = document.getElementById("btnSalvarCartaoConfig");
+      const btnRestaurarMp = document.getElementById("btnRestaurarModoMp");
 
       // Aplica restrições de permissão para finanças
       if (!canUserEditFinance) {
@@ -1868,7 +2058,19 @@
           btnSalvarPix.style.cursor = "not-allowed";
           btnSalvarPix.title = "Acesso financeiro somente leitura";
         }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+        if (btnSalvarCartao) {
+          btnSalvarCartao.disabled = true;
+          btnSalvarCartao.style.opacity = "0.6";
+          btnSalvarCartao.style.cursor = "not-allowed";
+          btnSalvarCartao.title = "Acesso financeiro somente leitura";
+        }
+        if (btnRestaurarMp) {
+          btnRestaurarMp.disabled = true;
+          btnRestaurarMp.style.opacity = "0.6";
+          btnRestaurarMp.style.cursor = "not-allowed";
+          btnRestaurarMp.title = "Acesso financeiro somente leitura";
+        }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #blocoCartaoCredito input, #blocoCartaoCredito select").forEach(el => {
           el.disabled = true;
         });
       } else {
@@ -1876,7 +2078,9 @@
         if (readOnlyNotice) readOnlyNotice.style.display = "none";
         if (btnSalvarPrecos) { btnSalvarPrecos.disabled = false; btnSalvarPrecos.style.opacity = "1"; btnSalvarPrecos.style.cursor = "pointer"; }
         if (btnSalvarPix) { btnSalvarPix.disabled = false; btnSalvarPix.style.opacity = "1"; btnSalvarPix.style.cursor = "pointer"; }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+        if (btnSalvarCartao) { btnSalvarCartao.disabled = false; btnSalvarCartao.style.opacity = "1"; btnSalvarCartao.style.cursor = "pointer"; btnSalvarCartao.title = ""; }
+        if (btnRestaurarMp) { btnRestaurarMp.disabled = false; btnRestaurarMp.style.opacity = "1"; btnRestaurarMp.style.cursor = "pointer"; btnRestaurarMp.title = ""; }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #blocoCartaoCredito input, #blocoCartaoCredito select").forEach(el => {
           el.disabled = false;
         });
       }
@@ -2036,6 +2240,11 @@
       document.getElementById("inputPixBeneficiario").value = configFinanceiraAtiva.pix_beneficiario || "EJC TRANSITO MONTE SIAO";
       document.getElementById("inputPixDocumento").value = configFinanceiraAtiva.pix_documento || "";
       document.getElementById("inputPixCidade").value = configFinanceiraAtiva.pix_cidade || "CAMPINA GRANDE";
+
+      // Sincroniza Bloco A: Cartão de Crédito / Taxas e Parcelamento
+      if (typeof preencherConfiguracoesCartao === "function") {
+        preencherConfiguracoesCartao();
+      }
     }
 
     // Toggle visual de modalidade Pix na interface
@@ -2118,6 +2327,8 @@
         let acaoBadge = "";
         if (h.tipo_alteracao === "PRICE_UPDATED") {
           acaoBadge = `<span class="status-badge" style="background: #eef2ff; color: #4338ca;"><i class="fa-solid fa-tags"></i> Preço Atualizado</span>`;
+        } else if (h.tipo_alteracao === "CARD_SETTINGS_UPDATED") {
+          acaoBadge = `<span class="status-badge" style="background: #e0f2fe; color: #0284c7;"><i class="fa-solid fa-credit-card"></i> Cartão & Taxas</span>`;
         } else if (h.tipo_alteracao === "PIX_KEY_UPDATED") {
           acaoBadge = `<span class="status-badge" style="background: #f0fdfa; color: #0f766e;"><i class="fa-brands fa-pix"></i> Chave PIX</span>`;
         } else if (h.tipo_alteracao === "PIX_RECIPIENT_UPDATED") {
@@ -2138,6 +2349,11 @@
         if (h.tipo_alteracao === "PRICE_UPDATED") {
           textoAntes = `<strong>${antes.lote_atual || '1º Lote'}</strong>: R$ ${Number(antes.valor_inscricao || 0).toFixed(2).replace('.', ',')}`;
           textoNovos = `<strong>${novos.lote_atual || '1º Lote'}</strong>: R$ ${Number(novos.valor_inscricao || 0).toFixed(2).replace('.', ',')}`;
+        } else if (h.tipo_alteracao === "CARD_SETTINGS_UPDATED") {
+          const modoAntes = antes.card_installment_mode === "manual" ? "Manual EJC" : "Automático MP";
+          const modoNovos = novos.card_installment_mode === "manual" ? "Manual EJC" : "Automático MP";
+          textoAntes = `Modo: ${modoAntes} (máx. ${antes.card_max_installments || 6}x)`;
+          textoNovos = `Modo: ${modoNovos} (máx. ${novos.card_max_installments || 6}x)`;
         } else if (h.tipo_alteracao === "PIX_KEY_UPDATED" || h.tipo_alteracao === "PIX_RECIPIENT_UPDATED") {
           textoAntes = `${antes.pix_chave || '-'} (${antes.pix_beneficiario || '-'})`;
           textoNovos = `${novos.pix_chave || '-'} (${novos.pix_beneficiario || '-'})`;
@@ -2454,6 +2670,448 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Atualizar Chave PIX`;
+      }
+    });
+
+    // ==============================================================================
+    // BLOCO A: CARTÃO DE CRÉDITO / TAXAS E PARCELAMENTO
+    // ==============================================================================
+    const DEFAULT_CARD_RATES = [
+      { installment: 1, rate: 0.00, enabled: true },
+      { installment: 2, rate: 4.50, enabled: true },
+      { installment: 3, rate: 5.50, enabled: true },
+      { installment: 4, rate: 7.00, enabled: true },
+      { installment: 5, rate: 8.50, enabled: true },
+      { installment: 6, rate: 10.00, enabled: true },
+      { installment: 7, rate: 11.50, enabled: false },
+      { installment: 8, rate: 13.00, enabled: false },
+      { installment: 9, rate: 14.50, enabled: false },
+      { installment: 10, rate: 16.00, enabled: false },
+      { installment: 11, rate: 17.50, enabled: false },
+      { installment: 12, rate: 19.00, enabled: false }
+    ];
+
+    let currentCardRates = JSON.parse(JSON.stringify(DEFAULT_CARD_RATES));
+    let pendingCardPayload = null;
+
+    function aplicarVisibilidadeModoCartao(modo) {
+      const isManual = (modo === "manual");
+      const mpBanner = document.getElementById("cardMpAutoBanner");
+      const wrapManual = document.getElementById("cardManualSettingsWrap");
+      const badge = document.getElementById("badgeModoCartaoAtivo");
+      const prevIndicator = document.getElementById("previewModeIndicator");
+
+      if (mpBanner) mpBanner.style.display = isManual ? "none" : "block";
+      if (wrapManual) wrapManual.style.display = isManual ? "block" : "none";
+
+      const labelMp = document.getElementById("labelCardModeMp");
+      const labelManual = document.getElementById("labelCardModeManual");
+      if (labelMp) {
+        labelMp.style.borderColor = isManual ? "var(--border-color, #e2e8f0)" : "#0284c7";
+        labelMp.style.background = isManual ? "var(--bg-card, #ffffff)" : "rgba(2, 132, 199, 0.05)";
+      }
+      if (labelManual) {
+        labelManual.style.borderColor = isManual ? "#0284c7" : "var(--border-color, #e2e8f0)";
+        labelManual.style.background = isManual ? "rgba(2, 132, 199, 0.05)" : "var(--bg-card, #ffffff)";
+      }
+
+      if (badge) {
+        if (isManual) {
+          badge.textContent = "● Configuração comercial manual do EJC";
+          badge.style.background = "#fef3c7";
+          badge.style.color = "#b45309";
+        } else {
+          badge.textContent = "● Condições automáticas do Mercado Pago";
+          badge.style.background = "#e0f2fe";
+          badge.style.color = "#0284c7";
+        }
+      }
+
+      if (prevIndicator) {
+        prevIndicator.textContent = isManual
+          ? "Simulação com Acréscimo Comercial Manual do EJC"
+          : "Simulação do Card Payment Brick com condições Mercado Pago";
+      }
+
+      atualizarPreviaCartao();
+    }
+
+    function preencherConfiguracoesCartao() {
+      const mode = configFinanceiraAtiva.card_installment_mode || "mercado_pago";
+      const maxInstallments = parseInt(configFinanceiraAtiva.card_max_installments || configFinanceiraAtiva.max_parcelas || 6, 10);
+
+      const radioMp = document.getElementById("radioCardModeMp");
+      const radioManual = document.getElementById("radioCardModeManual");
+      if (mode === "manual") {
+        if (radioManual) radioManual.checked = true;
+      } else {
+        if (radioMp) radioMp.checked = true;
+      }
+
+      const selectMax = document.getElementById("cardMaxInstallmentsSelect");
+      if (selectMax) selectMax.value = String(maxInstallments);
+
+      // Sincroniza taxas
+      if (Array.isArray(configFinanceiraAtiva.card_installment_rates) && configFinanceiraAtiva.card_installment_rates.length > 0) {
+        currentCardRates = JSON.parse(JSON.stringify(DEFAULT_CARD_RATES)).map(def => {
+          const found = configFinanceiraAtiva.card_installment_rates.find(r => Number(r.installment) === def.installment);
+          if (found) {
+            return {
+              installment: def.installment,
+              rate: typeof found.rate === "number" ? found.rate : (parseFloat(found.rate) || 0),
+              enabled: found.enabled !== false
+            };
+          }
+          return def;
+        });
+      } else {
+        currentCardRates = JSON.parse(JSON.stringify(DEFAULT_CARD_RATES));
+      }
+
+      renderizarTabelaParcelas();
+      aplicarVisibilidadeModoCartao(mode);
+    }
+
+    function obterPrecoInscricaoBase() {
+      const inputVal = parseFloat(document.getElementById("inputValorInscricao")?.value);
+      if (!isNaN(inputVal) && inputVal > 0) return inputVal;
+      const cfgVal = parseFloat(configFinanceiraAtiva.valor_inscricao);
+      if (!isNaN(cfgVal) && cfgVal > 0) return cfgVal;
+      return 100.00;
+    }
+
+    function renderizarTabelaParcelas() {
+      const tbody = document.getElementById("cardTableParcelasBody");
+      if (!tbody) return;
+
+      const baseAmount = obterPrecoInscricaoBase();
+      const maxInst = parseInt(document.getElementById("cardMaxInstallmentsSelect")?.value || 6, 10);
+
+      const basePreviewInput = document.getElementById("cardBasePricePreview");
+      if (basePreviewInput) {
+        basePreviewInput.value = `R$ ${baseAmount.toFixed(2).replace('.', ',')}`;
+      }
+
+      tbody.innerHTML = currentCardRates.map(item => {
+        const n = item.installment;
+        const rate = typeof item.rate === "number" ? item.rate : 0;
+        const enabled = item.enabled !== false && n <= maxInst;
+        const isBeyondMax = n > maxInst;
+
+        const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+        const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
+
+        return `
+          <tr style="${isBeyondMax ? 'opacity: 0.5; background: rgba(0,0,0,0.02);' : ''}">
+            <td style="text-align: center; font-weight: 700;">
+              ${n}x
+              ${isBeyondMax ? '<br><small style="color: var(--muted); font-size: .68rem;">(acima do máx.)</small>' : ''}
+            </td>
+            <td>
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <input type="number" 
+                  class="card-rate-input" 
+                  data-installment="${n}" 
+                  value="${rate.toFixed(2)}" 
+                  step="0.01" 
+                  min="0" 
+                  max="100" 
+                  ${!canUserEditFinance ? 'disabled' : ''}
+                  style="width: 86px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 700; text-align: right;">
+                <span style="font-weight: 700; color: var(--muted);">%</span>
+              </div>
+            </td>
+            <td style="text-align: right; font-weight: 700; color: var(--blue-dark);">
+              R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}
+            </td>
+            <td style="text-align: right; font-weight: 800; color: ${rate > 0 ? '#b45309' : '#059669'};">
+              R$ ${totalCalculado.toFixed(2).replace('.', ',')}
+            </td>
+            <td style="text-align: center;">
+              <input type="checkbox" 
+                class="card-enable-checkbox" 
+                data-installment="${n}" 
+                ${item.enabled !== false ? 'checked' : ''} 
+                ${isBeyondMax || !canUserEditFinance ? 'disabled' : ''}
+                title="${isBeyondMax ? 'Desabilitado por estar acima do máximo de parcelas' : 'Ativar/desativar parcela'}">
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.querySelectorAll(".card-rate-input").forEach(input => {
+        input.addEventListener("input", function() {
+          const instNum = parseInt(this.dataset.installment, 10);
+          const val = parseFloat(this.value);
+          const idx = currentCardRates.findIndex(r => r.installment === instNum);
+          if (idx !== -1) {
+            currentCardRates[idx].rate = isNaN(val) ? 0 : Math.max(0, val);
+          }
+          atualizarPreviaCartao();
+        });
+      });
+
+      tbody.querySelectorAll(".card-enable-checkbox").forEach(chk => {
+        chk.addEventListener("change", function() {
+          const instNum = parseInt(this.dataset.installment, 10);
+          const idx = currentCardRates.findIndex(r => r.installment === instNum);
+          if (idx !== -1) {
+            currentCardRates[idx].enabled = this.checked;
+          }
+          atualizarPreviaCartao();
+        });
+      });
+
+      atualizarPreviaCartao();
+    }
+
+    function atualizarPreviaCartao() {
+      const container = document.getElementById("cardCheckoutPreviewList");
+      if (!container) return;
+
+      const baseAmount = obterPrecoInscricaoBase();
+      const maxInst = parseInt(document.getElementById("cardMaxInstallmentsSelect")?.value || 6, 10);
+      const isManual = document.getElementById("radioCardModeManual")?.checked;
+
+      const basePreviewInput = document.getElementById("cardBasePricePreview");
+      if (basePreviewInput) {
+        basePreviewInput.value = `R$ ${baseAmount.toFixed(2).replace('.', ',')}`;
+      }
+
+      if (!isManual) {
+        // Modo Automático (Mercado Pago)
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; background: var(--bg-card, #ffffff); border: 1px dashed #0284c7; border-radius: 10px; padding: 16px; text-align: center;">
+            <div style="color: #0284c7; font-weight: 700; font-size: .92rem; margin-bottom: 6px;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Condições Nativas do Mercado Pago Ativas
+            </div>
+            <p style="margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.5;">
+              O <strong>Card Payment Brick</strong> exibirá diretamente no checkout as parcelas de <strong>1x até ${maxInst}x</strong> com a tabela oficial de taxas do emissor do cartão.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // Modo Manual (EJC)
+      const visibleRates = currentCardRates.filter(r => r.installment <= maxInst && r.enabled !== false);
+      if (visibleRates.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; color: var(--muted); text-align: center; padding: 14px; font-size: .84rem;">
+            Nenhuma parcela habilitada para o limite de até ${maxInst}x.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = visibleRates.map(item => {
+        const n = item.installment;
+        const rate = typeof item.rate === "number" ? item.rate : 0;
+        const totalCalculado = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
+        const parcelaCalculada = Math.round((totalCalculado / n) * 100) / 100;
+        const diferenca = Math.round((totalCalculado - baseAmount) * 100) / 100;
+
+        return `
+          <div style="background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="color: var(--blue-dark); font-size: .92rem;">${n}x de R$ ${parcelaCalculada.toFixed(2).replace('.', ',')}</strong>
+              ${rate === 0 
+                ? '<span style="background: #ecfdf5; color: #047857; font-size: .72rem; font-weight: 800; padding: 2px 6px; border-radius: 4px;">SEM ACRÉSCIMO</span>'
+                : `<span style="background: #fef3c7; color: #b45309; font-size: .72rem; font-weight: 800; padding: 2px 6px; border-radius: 4px;">+${rate.toFixed(2)}%</span>`
+              }
+            </div>
+            <div style="font-size: .8rem; color: var(--muted);">
+              Total: <strong>R$ ${totalCalculado.toFixed(2).replace('.', ',')}</strong>
+              ${diferenca > 0 ? ` <small>(Acréscimo: R$ ${diferenca.toFixed(2).replace('.', ',')})</small>` : ''}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Ouvintes dos rádios de modo
+    document.getElementById("radioCardModeMp")?.addEventListener("change", () => {
+      aplicarVisibilidadeModoCartao("mercado_pago");
+    });
+    document.getElementById("radioCardModeManual")?.addEventListener("change", () => {
+      aplicarVisibilidadeModoCartao("manual");
+    });
+
+    // Ouvinte do seletor de máximo de parcelas
+    document.getElementById("cardMaxInstallmentsSelect")?.addEventListener("change", function() {
+      const maxPrecos = document.getElementById("inputMaxParcelas");
+      if (maxPrecos) maxPrecos.value = this.value;
+      renderizarTabelaParcelas();
+    });
+
+    // Ouvinte para atualizar preview do cartão se o preço de inscrição mudar no input
+    document.getElementById("inputValorInscricao")?.addEventListener("input", () => {
+      renderizarTabelaParcelas();
+    });
+
+    // Botão Restaurar Modo Automático (Mercado Pago)
+    document.getElementById("btnRestaurarModoMp")?.addEventListener("click", async () => {
+      if (!canUserEditFinance) {
+        alert("Acesso somente leitura. Você não tem permissão para alterar as configurações do cartão.");
+        return;
+      }
+
+      if (!confirm("Deseja ativar o Modo Automático do Mercado Pago? Sua configuração manual de parcelas permanecerá salva para reativação futura a qualquer momento.")) {
+        return;
+      }
+
+      const btn = document.getElementById("btnRestaurarModoMp");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ativando Modo Automático...`;
+
+      try {
+        const maxInst = parseInt(document.getElementById("cardMaxInstallmentsSelect")?.value || 6, 10);
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify({
+            action: "update_card_settings",
+            card_installment_mode: "mercado_pago",
+            card_max_installments: maxInst,
+            card_installment_rates: currentCardRates,
+            motivo: "Restauração do Modo Automático (Mercado Pago)",
+            usuario: currentUserRole,
+            admin_pass: currentAdminPass
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success && data.persisted) {
+          alert("✓ Modo Automático ativado com sucesso! As condições oficiais do Mercado Pago já estão em vigor no checkout.");
+          await carregarConfiguracoesFinanceiras();
+        } else {
+          alert(`Erro ao restaurar modo automático: ${data.error || data.message || 'Falha na comunicação'}`);
+        }
+      } catch (err) {
+        console.error("[Admin Cartão] Erro ao restaurar modo automático:", err);
+        alert(`Erro na requisição: ${err.message || 'Falha de comunicação com o servidor'}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Restaurar Modo Automático (Mercado Pago)`;
+      }
+    });
+
+    // Botão Salvar Configuração de Cartão (Abre modal com resumo detalhado)
+    document.getElementById("btnSalvarCartaoConfig")?.addEventListener("click", () => {
+      if (!canUserEditFinance) {
+        alert("Acesso somente leitura. Você não tem permissão para alterar as configurações do cartão.");
+        return;
+      }
+
+      const modoSelecionado = document.querySelector('input[name="radioCardInstallmentMode"]:checked')?.value || "mercado_pago";
+      const maxInst = parseInt(document.getElementById("cardMaxInstallmentsSelect")?.value || 6, 10);
+      const baseAmount = obterPrecoInscricaoBase();
+
+      if (isNaN(maxInst) || maxInst < 1 || maxInst > 12) {
+        alert("O máximo de parcelas deve ser um número inteiro entre 1 e 12.");
+        return;
+      }
+
+      for (const item of currentCardRates) {
+        if (typeof item.rate !== "number" || isNaN(item.rate) || item.rate < 0) {
+          alert(`A taxa da parcela ${item.installment}x deve ser um número válido maior ou igual a 0.`);
+          return;
+        }
+      }
+
+      const diffBox = document.getElementById("diffCartaoContent");
+      const modoDesc = modoSelecionado === "manual" ? "MANUAL — CONFIGURAÇÃO DO EJC" : "AUTOMÁTICO — MERCADO PAGO";
+
+      let parcelasHtml = "";
+      if (modoSelecionado === "manual") {
+        const ativas = currentCardRates.filter(r => r.installment <= maxInst && r.enabled !== false);
+        parcelasHtml = `
+          <div style="margin-top: 10px; font-size: .84rem;">
+            <strong>Condições comerciais que serão apresentadas aos participantes:</strong>
+            <div style="margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              ${ativas.map(a => {
+                const total = Math.round((baseAmount * (1 + a.rate / 100)) * 100) / 100;
+                const parc = Math.round((total / a.installment) * 100) / 100;
+                return `<div>• <strong>${a.installment}x</strong>: ${a.installment}x de R$ ${parc.toFixed(2).replace('.', ',')} (Total: R$ ${total.toFixed(2).replace('.', ',')}${a.rate > 0 ? ' — Acréscimo: ' + a.rate.toFixed(2) + '%' : ''})</div>`;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      } else {
+        parcelasHtml = `
+          <div style="margin-top: 8px; font-size: .84rem; color: #0284c7;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> As parcelas de 1x até ${maxInst}x serão geradas com as taxas oficiais do Mercado Pago diretamente no Card Payment Brick.
+          </div>
+        `;
+      }
+
+      diffBox.innerHTML = `
+        <div class="diff-row">
+          <span>Modo de Parcelamento:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.card_installment_mode === 'manual' ? 'Manual EJC' : 'Automático MP'}</span> → <span class="diff-new">${modoDesc}</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Máximo de Parcelas:</span>
+          <span><span class="diff-old">${configFinanceiraAtiva.card_max_installments || 6}x</span> → <span class="diff-new">${maxInst}x</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Valor Base de Inscrição:</span>
+          <span><strong>R$ ${baseAmount.toFixed(2).replace('.', ',')}</strong></span>
+        </div>
+        ${parcelasHtml}
+      `;
+
+      pendingCardPayload = {
+        action: "update_card_settings",
+        card_installment_mode: modoSelecionado,
+        card_max_installments: maxInst,
+        card_installment_rates: currentCardRates,
+        usuario: currentUserRole,
+        admin_pass: currentAdminPass
+      };
+
+      document.getElementById("motivoAlteracaoCartao").value = "";
+      document.getElementById("modalConfirmarCartao").showModal();
+    });
+
+    document.getElementById("btnConfirmarSalvarCartao")?.addEventListener("click", async () => {
+      if (!pendingCardPayload) return;
+      const motivo = document.getElementById("motivoAlteracaoCartao").value.trim();
+      pendingCardPayload.motivo = motivo || "Atualização da configuração comercial de cartão e parcelamento";
+
+      const btn = document.getElementById("btnConfirmarSalvarCartao");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+
+      try {
+        const res = await fetch("/api/payment-settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          },
+          body: JSON.stringify(pendingCardPayload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success && data.persisted) {
+          document.getElementById("modalConfirmarCartao").close();
+          alert("✓ Configuração de cartão atualizada com sucesso! As novas condições de parcelamento já estão ativas no checkout.");
+          await carregarConfiguracoesFinanceiras();
+        } else {
+          alert(`Não foi possível salvar a configuração: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
+        }
+      } catch (err) {
+        console.error("[Admin Cartão] Erro na requisição:", err);
+        alert(`Não foi possível salvar a configuração: ${err.message || 'Erro de conexão com o servidor'}. Os valores digitados foram preservados para nova tentativa.`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmar e Salvar Configuração`;
       }
     });
 

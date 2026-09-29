@@ -57,6 +57,23 @@ function sanitizePixAscii(str, maxLen) {
     .slice(0, maxLen);
 }
 
+function getFriendlyCardErrorMessage(statusDetail) {
+  const map = {
+    cc_rejected_bad_filled_security_code: "Código de segurança (CVV) inválido. Verifique os dígitos no verso do cartão.",
+    cc_rejected_bad_filled_date: "Data de validade do cartão incorreta ou expirada.",
+    cc_rejected_bad_filled_other: "Dados do cartão incorretos. Por favor, revise as informações preenchidas.",
+    cc_rejected_insufficient_amount: "Limite ou saldo insuficiente no cartão de crédito.",
+    cc_rejected_call_for_authorize: "Pagamento não autorizado pelo banco emissor. Por favor, entre em contato com a operadora do seu cartão.",
+    cc_rejected_card_disabled: "Cartão desabilitado ou bloqueado para compras na internet.",
+    cc_rejected_duplicated_payment: "Pagamento duplicado detectado. Aguarde alguns minutos antes de tentar novamente.",
+    cc_rejected_high_risk: "Transação recusada por políticas de segurança da operadora do cartão.",
+    cc_rejected_max_attempts: "Limite de tentativas excedido. Tente novamente mais tarde ou use outro cartão.",
+    cc_rejected_invalid_installments: "Quantidade de parcelas não permitida para este cartão.",
+    cc_rejected_card_type_not_allowed: "Este tipo de cartão não é aceito para esta transação."
+  };
+  return map[statusDetail] || "Pagamento recusado pela operadora do cartão. Verifique os dados ou utilize outra forma de pagamento.";
+}
+
 function parseTLVBytes(buf) {
   let idx = 0;
   const fields = [];
@@ -676,7 +693,11 @@ module.exports = async (req, res) => {
       sub,
       inscricao_id,
       // Dados para cartão (PCI-DSS: nunca registrar número completo ou CVV)
+      token,
       cartao_token,
+      issuer_id,
+      payment_method_id,
+      installments,
       cartao_ultimos_digitos,
       cartao_bandeira,
       cartao_titular,
@@ -1301,17 +1322,91 @@ module.exports = async (req, res) => {
     }
 
     // --------------------------------------------------------------------------
-    // PROCESSAMENTO CARTÃO DE CRÉDITO
+    // PROCESSAMENTO CARTÃO DE CRÉDITO REAL COM MERCADO PAGO
     // --------------------------------------------------------------------------
     if (metodoFinal === "credit_card") {
-      const ultimosDigitos = cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : "0000";
-      const bandeira = cartao_bandeira || "Cartão";
-      const totalParcelas = Math.min(maxParcelasAllowed, Math.max(1, Number(parcelas || 1)));
-      const statusFinal = "approved";
+      const activeCardToken = cartao_token || token;
+      const activeSettings = (activeData && activeData.settings) ? activeData.settings : (activeData || {});
+      const cardMode = activeSettings.card_installment_mode || "mercado_pago";
+      const cardMaxInst = Number(activeSettings.card_max_installments || activeSettings.max_parcelas || 6);
+      const totalParcelas = Math.min(cardMaxInst, Math.max(1, Number(parcelas || installments || 1)));
 
+      // 1. Cálculo protegido e transparente do valor final a ser cobrado
+      let valorFinalCobranca = valorNumerico; // base oficial já validada com lote/desconto
+      let markupPercentual = 0;
+
+      if (cardMode === "manual") {
+        const rates = Array.isArray(activeSettings.card_installment_rates) && activeSettings.card_installment_rates.length > 0
+          ? activeSettings.card_installment_rates
+          : (settingsStore.getDefaultCardRates ? settingsStore.getDefaultCardRates() : []);
+        const rateObj = rates.find(r => Number(r.installment) === totalParcelas);
+        if (rateObj && rateObj.rate > 0) {
+          markupPercentual = Number(rateObj.rate);
+          valorFinalCobranca = Number((valorNumerico * (1 + markupPercentual / 100)).toFixed(2));
+        }
+      }
+
+      let paymentId = txid;
+      let orderId = null;
+      let externalReference = txid;
+      let statusFinal = "pending";
+      let statusDetail = "";
+      let ultimosDigitos = cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : "0000";
+      let bandeira = cartao_bandeira || "Cartão";
+
+      // 2. Execução da cobrança oficial no Mercado Pago
+      if (activeCardToken && mercadoPago.isConfigured()) {
+        try {
+          console.log(`[Checkout Card] Processando cobrança Mercado Pago: TXID ${txid}, ${totalParcelas}x de R$ ${(valorFinalCobranca / totalParcelas).toFixed(2)}, Total: R$ ${valorFinalCobranca.toFixed(2)} (Modo: ${cardMode})`);
+          const mpResult = await mercadoPago.criarPagamentoCartao({
+            token: activeCardToken,
+            transaction_amount: valorFinalCobranca,
+            installments: totalParcelas,
+            payment_method_id: payment_method_id || cartao_bandeira || "visa",
+            issuer_id: issuer_id || null,
+            payer: {
+              email: email.trim().toLowerCase(),
+              identification: cpf ? { type: "CPF", number: cpf } : undefined,
+              first_name: nome ? nome.split(" ")[0] : undefined,
+              last_name: nome ? nome.split(" ").slice(1).join(" ") : undefined
+            },
+            txid: txid,
+            description: `Inscrição EJC - ${totalParcelas}x (R$ ${valorFinalCobranca.toFixed(2)})`,
+            notification_url: `${getPublicBaseUrl()}/api/pix-webhook`
+          });
+
+          paymentId = String(mpResult.id);
+          statusFinal = mpResult.status || "pending"; // 'approved', 'in_process', 'pending', 'rejected'
+          statusDetail = mpResult.status_detail || "";
+          if (mpResult.card?.last_four_digits) ultimosDigitos = mpResult.card.last_four_digits;
+          if (mpResult.payment_method_id) bandeira = mpResult.payment_method_id;
+        } catch (mpErr) {
+          console.error("[Checkout Card] Falha na API Mercado Pago:", mpErr.message);
+          return res.status(400).json({
+            success: false,
+            error: mpErr.message || "Erro ao processar pagamento com cartão no Mercado Pago.",
+            status: "rejected",
+            status_detail: "card_rejected",
+            message: "Não foi possível autorizar a transação no cartão informado."
+          });
+        }
+      } else if (!activeCardToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados do cartão não informados ou tokenização inválida. Por favor, utilize o Card Payment Brick do Mercado Pago."
+        });
+      } else {
+        // Fallback para ambiente local de testes onde MERCADOPAGO_ACCESS_TOKEN não está definido
+        statusFinal = "approved";
+        statusDetail = "accredited_local_test";
+      }
+
+      const isApproved = statusFinal === "approved";
+
+      // 3. Persistência no Supabase
       if (supabaseUrl && supabaseKey) {
         try {
-          // 1. Cria transação
+          // Cria transação com status retornado pelo Mercado Pago
           await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/criar_transacao_checkout`, {
             method: "POST",
             headers: {
@@ -1325,7 +1420,7 @@ module.exports = async (req, res) => {
               p_email: email.trim().toLowerCase(),
               p_whatsapp_pagador: whatsapp || null,
               p_cpf_pagador: cpf || null,
-              p_valor: valorNumerico,
+              p_valor: valorFinalCobranca,
               p_metodo: "credit_card",
               p_parcelas: totalParcelas,
               p_cartao_ultimos_digitos: ultimosDigitos,
@@ -1342,52 +1437,65 @@ module.exports = async (req, res) => {
                 external_reference: externalReference,
                 sub: subFinal,
                 titular: cartao_titular || null,
-                token: cartao_token ? "tokenizado" : "direto",
+                token: "tokenizado_brick",
                 lote: loteAtual,
+                status_detail: statusDetail,
+                modo_parcelamento: cardMode,
+                acrescimo_percentual: markupPercentual,
                 inscricao_id: inscricao_id || null
               }
             })
           });
 
-          // 2. Confirmação imediata com conciliação na inscrição
-          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
-            method: "POST",
-            headers: {
-              "apikey": supabaseKey,
-              "Authorization": `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              p_txid: txid,
-              p_gateway: "checkout_transparente_card",
-              p_executado_por: "checkout_api",
-              p_payload: { parcelas: totalParcelas, bandeira: bandeira, ultimos_digitos: ultimosDigitos }
-            })
-          });
+          // Se e somente se o pagamento foi APROVADO, concilia e confirma a inscrição
+          if (isApproved) {
+            await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+              method: "POST",
+              headers: {
+                "apikey": supabaseKey,
+                "Authorization": `Bearer ${supabaseKey}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                p_txid: txid,
+                p_gateway: "mercadopago_credit_card",
+                p_executado_por: "checkout_api",
+                p_payload: {
+                  parcelas: totalParcelas,
+                  bandeira: bandeira,
+                  ultimos_digitos: ultimosDigitos,
+                  payment_id: paymentId,
+                  status_detail: statusDetail
+                }
+              })
+            });
+          }
         } catch (dbErr) {
           console.warn("[Checkout Process] Erro ao persistir Cartão no Supabase:", dbErr.message);
         }
       }
 
-      // 3. Disparo do comprovante por e-mail COM AWAIT no mesmo ciclo de vida
+      // 4. Disparo do comprovante por e-mail (apenas se aprovado)
       let emailResult = { success: false };
-      try {
-        emailResult = await sendPaymentReceiptEmail({
-          txid: txid,
-          payment_id: paymentId,
-          order_id: orderId,
-          nome: nome || cartao_titular || "Participante",
-          email: email.trim().toLowerCase(),
-          valor: valorNumerico,
-          metodo: "credit_card",
-          sub: subFinal || "Geral",
-          executado_por: "checkout_card"
-        });
-      } catch (emailErr) {
-        console.warn("[Checkout Process] Falha ao despachar e-mail do cartão:", emailErr.message);
+      if (isApproved) {
+        try {
+          emailResult = await sendPaymentReceiptEmail({
+            txid: txid,
+            payment_id: paymentId,
+            order_id: orderId,
+            nome: nome || cartao_titular || "Participante",
+            email: email.trim().toLowerCase(),
+            valor: valorFinalCobranca,
+            metodo: "credit_card",
+            sub: subFinal || "Geral",
+            executado_por: "checkout_card"
+          });
+        } catch (emailErr) {
+          console.warn("[Checkout Process] Falha ao despachar e-mail do cartão:", emailErr.message);
+        }
       }
 
-      // 4. Grava no store local
+      // 5. Grava no store local
       try {
         const localData = settingsStore.loadLocalStore();
         if (!Array.isArray(localData.pagamentos)) localData.pagamentos = [];
@@ -1400,9 +1508,10 @@ module.exports = async (req, res) => {
           nome_pagador: nome || cartao_titular || "Titular do Cartão",
           email: email.trim().toLowerCase(),
           whatsapp_pagador: whatsapp || null,
-          valor: valorNumerico,
+          valor: valorFinalCobranca,
           metodo: "credit_card",
           status: statusFinal,
+          status_detail: statusDetail,
           tipo: tipo || "inscricao",
           parcelas: totalParcelas,
           cartao_ultimos_digitos: ultimosDigitos,
@@ -1414,10 +1523,12 @@ module.exports = async (req, res) => {
             payment_id: paymentId,
             external_reference: externalReference,
             sub: subFinal,
-            lote: loteAtual
+            lote: loteAtual,
+            status_detail: statusDetail,
+            modo_parcelamento: cardMode
           },
           comprovante_email_enviado: emailResult.success,
-          pago_em: new Date().toISOString(),
+          pago_em: isApproved ? new Date().toISOString() : null,
           criado_em: new Date().toISOString()
         });
         if (localData.pagamentos.length > 200) localData.pagamentos.pop();
@@ -1426,20 +1537,49 @@ module.exports = async (req, res) => {
         console.warn("[Checkout Process] Erro ao salvar Cartão localmente:", localErr.message);
       }
 
-      return res.status(200).json({
-        success: true,
-        metodo: "credit_card",
-        txid: txid,
-        payment_id: paymentId,
-        order_id: orderId,
-        external_reference: externalReference,
-        valor: valorNumerico,
-        status: statusFinal,
-        parcelas: totalParcelas,
-        cartao_bandeira: bandeira,
-        cartao_ultimos_digitos: ultimosDigitos,
-        email_enviado: Boolean(emailResult.success)
-      });
+      // 6. Resposta estruturada
+      if (isApproved) {
+        return res.status(200).json({
+          success: true,
+          metodo: "credit_card",
+          txid: txid,
+          payment_id: paymentId,
+          order_id: orderId,
+          external_reference: externalReference,
+          valor: valorFinalCobranca,
+          status: "approved",
+          status_detail: statusDetail,
+          parcelas: totalParcelas,
+          cartao_bandeira: bandeira,
+          cartao_ultimos_digitos: ultimosDigitos,
+          email_enviado: Boolean(emailResult.success)
+        });
+      } else if (statusFinal === "in_process" || statusFinal === "pending") {
+        return res.status(200).json({
+          success: true,
+          metodo: "credit_card",
+          txid: txid,
+          payment_id: paymentId,
+          valor: valorFinalCobranca,
+          status: statusFinal,
+          status_detail: statusDetail,
+          parcelas: totalParcelas,
+          cartao_bandeira: bandeira,
+          cartao_ultimos_digitos: ultimosDigitos,
+          message: "Pagamento em análise pelo Mercado Pago. Você receberá a confirmação assim que for concluído."
+        });
+      } else {
+        // rejected
+        return res.status(400).json({
+          success: false,
+          metodo: "credit_card",
+          txid: txid,
+          payment_id: paymentId,
+          status: "rejected",
+          status_detail: statusDetail,
+          error: getFriendlyCardErrorMessage(statusDetail)
+        });
+      }
     }
 
     return res.status(400).json({ error: "Método de pagamento inválido. Use 'pix' ou 'credit_card'." });
