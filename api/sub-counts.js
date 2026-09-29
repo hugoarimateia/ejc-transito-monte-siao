@@ -5,6 +5,7 @@
 // Anti-cache estrito e deduplicação garantida (Zero Descompasso)
 // ==============================================================================
 
+const crypto = require("crypto");
 const settingsStore = require("./_settings-store");
 const { applyCors } = require("./_cors");
 
@@ -189,9 +190,13 @@ module.exports = async (req, res) => {
       localStore.inscricoes = [];
     }
 
-    // Verifica se já existe inscrição com este WhatsApp
-    const existingIndex = localStore.inscricoes.findIndex(i => normalizarTelefone(i.whatsapp) === whatsapp);
-    const id = body.id || (existingIndex >= 0 ? localStore.inscricoes[existingIndex].id : `insc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+    // Gera UUID válido para conformidade com a coluna id (type UUID) do PostgreSQL no Supabase
+    const isUuid = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(str || ""));
+    const id = (body.id && isUuid(body.id)) 
+      ? body.id 
+      : ((existingIndex >= 0 && isUuid(localStore.inscricoes[existingIndex].id)) 
+          ? localStore.inscricoes[existingIndex].id 
+          : crypto.randomUUID());
 
     const registroInscricao = {
       id,
@@ -233,6 +238,20 @@ module.exports = async (req, res) => {
     const { url, key } = getSupabaseCredentials();
     if (url && key) {
       try {
+        const payloadSupabase = {
+          nome_completo: registroInscricao.nome_completo,
+          whatsapp: registroInscricao.whatsapp,
+          email: registroInscricao.email,
+          sub: registroInscricao.sub,
+          tamanho_camisa: registroInscricao.tamanho_camisa,
+          forma_pagamento: registroInscricao.forma_pagamento,
+          pagamento_status: registroInscricao.pagamento_status,
+          arquivado: false
+        };
+        if (isUuid(registroInscricao.id)) {
+          payloadSupabase.id = registroInscricao.id;
+        }
+
         const sbInsertRes = await fetch(`${url}/rest/v1/inscricoes`, {
           method: "POST",
           headers: {
@@ -241,21 +260,15 @@ module.exports = async (req, res) => {
             "Content-Type": "application/json",
             "Prefer": "return=representation"
           },
-          body: JSON.stringify({
-            id: registroInscricao.id,
-            nome_completo: registroInscricao.nome_completo,
-            whatsapp: registroInscricao.whatsapp,
-            email: registroInscricao.email,
-            sub: registroInscricao.sub,
-            tamanho_camisa: registroInscricao.tamanho_camisa,
-            forma_pagamento: registroInscricao.forma_pagamento,
-            pagamento_status: registroInscricao.pagamento_status,
-            arquivado: false
-          }),
+          body: JSON.stringify(payloadSupabase),
           signal: AbortSignal.timeout(5000)
         });
 
         if (sbInsertRes.ok) {
+          const insertedRows = await sbInsertRes.json().catch(() => []);
+          if (Array.isArray(insertedRows) && insertedRows[0] && insertedRows[0].id) {
+            registroInscricao.id = insertedRows[0].id;
+          }
           // Atualiza contagens oficiais imediatamente via RPC
           const sbCountRes = await fetch(`${url}/rest/v1/rpc/contagem_inscricoes_por_sub`, {
             method: "POST",
