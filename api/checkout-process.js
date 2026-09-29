@@ -7,6 +7,8 @@
 const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
 const mercadoPago = require("./_mercadopago");
+const adminAuth = require("./_admin-auth");
+const { applyCors } = require("./_cors");
 
 function getPublicBaseUrl() {
   const custom = process.env.SITE_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
@@ -298,7 +300,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
 }
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  applyCors(req, res);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -320,17 +322,25 @@ module.exports = async (req, res) => {
     // --------------------------------------------------------------------------
     if (req.query.action === "buscar_inscricoes") {
       const termo = String(req.query.termo || req.query.email || req.query.whatsapp || req.query.busca || "").trim();
-      if (!termo || termo.length < 3) {
-        return res.status(400).json({ error: "Informe ao menos 3 caracteres (e-mail, WhatsApp ou nome) para localizar inscrições." });
+      const cleanTermo = termo.toLowerCase();
+      const digitos = termo.replace(/\D/g, "");
+      const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(cleanTermo);
+      const ehWhatsapp = !ehEmail && /^[\d\s()+\-]+$/.test(termo) && digitos.length >= 10;
+
+      // Busca pública restrita: exige o e-mail completo ou o WhatsApp completo do próprio inscrito.
+      // (Busca parcial por nome/ID permitiria vasculhar dados pessoais de outros participantes.)
+      if (!ehEmail && !ehWhatsapp) {
+        return res.status(400).json({ error: "Informe o e-mail completo ou o número de WhatsApp completo (com DDD) usado na inscrição." });
       }
 
-      const cleanTermo = termo.toLowerCase();
       const inscricoesEncontradas = [];
 
       // 1. Busca no Supabase (se configurado)
       if (supabaseUrl && supabaseKey) {
         try {
-          const query = `or=(email.ilike.%${encodeURIComponent(cleanTermo)}%,whatsapp.ilike.%${encodeURIComponent(cleanTermo)}%,nome_completo.ilike.%${encodeURIComponent(cleanTermo)}%,id.eq.${encodeURIComponent(termo)})&order=criado_em.desc&limit=10`;
+          const query = ehEmail
+            ? `email=ilike.${encodeURIComponent(cleanTermo)}&order=criado_em.desc&limit=10`
+            : `whatsapp=ilike.*${encodeURIComponent(digitos)}*&order=criado_em.desc&limit=10`;
           const sbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${query}`, {
             headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
             signal: AbortSignal.timeout(3500)
@@ -361,11 +371,9 @@ module.exports = async (req, res) => {
         const localStore = settingsStore.loadLocalStore();
         if (Array.isArray(localStore.pagamentos)) {
           localStore.pagamentos.forEach(p => {
-            const matchEmail = p.email && p.email.toLowerCase().includes(cleanTermo);
-            const matchWpp = p.whatsapp_pagador && p.whatsapp_pagador.includes(cleanTermo);
-            const matchNome = p.nome_pagador && p.nome_pagador.toLowerCase().includes(cleanTermo);
-            const matchTxid = p.txid && p.txid === termo;
-            if (matchEmail || matchWpp || matchNome || matchTxid) {
+            const matchEmail = ehEmail && p.email && p.email.toLowerCase() === cleanTermo;
+            const matchWpp = ehWhatsapp && p.whatsapp_pagador && String(p.whatsapp_pagador).replace(/\D/g, "").includes(digitos);
+            if (matchEmail || matchWpp) {
               const jaExiste = inscricoesEncontradas.some(i => i.id === p.inscricao_id || (i.email === p.email && i.sub === p.sub));
               if (!jaExiste) {
                 inscricoesEncontradas.push({
@@ -680,9 +688,10 @@ module.exports = async (req, res) => {
     } = req.body || {};
 
     // --------------------------------------------------------------------------
-    // AÇÃO 1: CONFIRMAÇÃO MANUAL / RECONCILIAÇÃO (ADMIN OU TESTES)
+    // AÇÃO 1: CONFIRMAÇÃO MANUAL / RECONCILIAÇÃO (EXIGE FINANCEIRO OU SUPERADMIN)
     // --------------------------------------------------------------------------
     if (action === "confirm_payment" || action === "verificar_pagamento" || action === "reconciliar") {
+      if (!adminAuth.requireRole(req, res, ["superadmin", "financeiro"])) return;
       const targetTxid = bodyTxid || req.body?.id || req.body?.payment_id || req.body?.order_id || req.body?.external_reference;
       if (!targetTxid) {
         return res.status(400).json({ error: "Identificador (TXID, Payment ID ou Order ID) obrigatório para confirmar pagamento." });
@@ -1029,30 +1038,20 @@ module.exports = async (req, res) => {
 
     // Busca configuração financeira ativa oficial garantida pelo settingsStore
     let officialPrice = process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO ? Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO) : null;
-    let chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
+    let chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "";
     let beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
     let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     let loteAtual = "Aguardando Coordenação";
     let maxParcelasAllowed = 12;
     let activeData = null;
 
-    const clientVersao = Number(req.body?.versao || req.headers["x-client-version"] || 0);
-    const clientChavePix = req.body?.chave_pix || req.body?.pix_chave || req.body?.chave;
-    const clientValor = Number(req.body?.valor !== undefined ? req.body?.valor : (valor || 0));
-
     try {
       activeData = await settingsStore.getActiveSettings();
       if (activeData && activeData.settings) {
         const conf = activeData.settings;
-        const currentVersao = Number(conf.versao || 0);
-
-        if (clientVersao > currentVersao) {
-          if (clientValor > 0) officialPrice = clientValor;
-          if (clientChavePix && clientChavePix.length > 3) chavePix = clientChavePix;
-        } else {
-          officialPrice = settingsStore.getEffectivePrice(conf);
-          chavePix = conf.pix_chave || chavePix;
-        }
+        // SEGURANÇA: Preço e chave PIX vêm SEMPRE da configuração persistente do servidor
+        officialPrice = settingsStore.getEffectivePrice(conf);
+        chavePix = conf.pix_chave || chavePix;
         beneficiario = conf.pix_beneficiario || beneficiario;
         cidade = conf.pix_cidade || cidade;
         loteAtual = conf.lote_atual || loteAtual;
@@ -1150,6 +1149,9 @@ module.exports = async (req, res) => {
       // MODO B: PIX MANUAL (CHAVE MANUAL + ENVIO DE COMPROVANTE NA MESMA TELA)
       // ----------------------------------------------------------------------
       if (modalidadePix === "manual") {
+        if (!chavePix) {
+          return res.status(400).json({ error: "A chave Pix ainda não foi configurada pela coordenação.", configurado: false });
+        }
         initialStatus = "aguardando_analise";
         payloadPix = chavePix;
         manualDetails = {

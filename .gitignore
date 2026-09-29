@@ -41,3 +41,9 @@ desktop.ini
 scratch/
 *token*.txt
 *.secret
+*.zip
+temp_zip_inspect/
+
+# Backups e dados sensíveis
+data/backup*.json
+data/*backup*

@@ -6,6 +6,7 @@
 // ==============================================================================
 
 const settingsStore = require("./_settings-store");
+const { applyCors } = require("./_cors");
 
 function getSupabaseCredentials() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co";
@@ -99,8 +100,8 @@ module.exports = async (req, res) => {
     };
   }
 
-  // CORS universal para chamadas de qualquer dispositivo
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // CORS universal restrito ao domínio autorizado
+  applyCors(req, res);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-client-version, Cache-Control");
   

@@ -4,10 +4,18 @@
 // Confirmação resiliente, conciliação unificada e envio de comprovante com await
 // ==============================================================================
 
+const crypto = require("crypto");
 const settingsStore = require("./_settings-store");
 const { sendPaymentReceiptEmail } = require("./email-comprovante");
 const { confirmarPagamentoResiliente } = require("./checkout-process");
 const mercadoPago = require("./_mercadopago");
+
+// Comparação em tempo constante do segredo do webhook
+function segredoValido(recebido, esperado) {
+  if (!recebido || !esperado) return false;
+  const h = (v) => crypto.createHash("sha256").update(String(v)).digest();
+  return crypto.timingSafeEqual(h(recebido), h(esperado));
+}
 
 // Lista de tokens de status indicando aprovação/liquidação efetiva
 const APPROVED_STATUS_TOKENS = new Set([
@@ -27,7 +35,6 @@ const APPROVED_STATUS_TOKENS = new Set([
 ]);
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-webhook-secret, x-signature");
 
@@ -43,13 +50,19 @@ module.exports = async (req, res) => {
     const payload = req.body || {};
     const webhookSecret = process.env.PIX_WEBHOOK_SECRET;
 
-    // Se configurado segredo de webhook, valida token recebido no header ou query
-    if (webhookSecret) {
-      const headerSecret = req.headers["x-webhook-secret"] || req.headers["x-signature"] || req.query.secret;
-      if (headerSecret !== webhookSecret) {
-        console.warn("[Webhook Security] Tentativa de webhook com assinatura inválida");
-        return res.status(401).json({ error: "Assinatura de webhook não autorizada" });
-      }
+    // O segredo é OBRIGATÓRIO: sem ele qualquer pessoa poderia simular confirmações de pagamento.
+    if (!webhookSecret) {
+      console.error("[Webhook Security] PIX_WEBHOOK_SECRET não configurado. Webhook recusado.");
+      return res.status(503).json({ error: "Webhook não configurado no servidor." });
+    }
+
+    // Aceita o segredo por header ou por ?secret= (necessário para gateways como Mercado Pago)
+    const bearer = String(req.headers["authorization"] || "").replace(/^Bearer\s+/i, "");
+    const candidatos = [req.headers["x-webhook-secret"], req.headers["x-signature"], bearer, req.query?.secret];
+    const autorizado = candidatos.map((c) => segredoValido(c, webhookSecret)).some(Boolean);
+    if (!autorizado) {
+      console.warn("[Webhook Security] Tentativa de webhook com assinatura inválida");
+      return res.status(401).json({ error: "Assinatura de webhook não autorizada" });
     }
 
     // 1. Identificação robusta do identificador da transação (Mercado Pago, Efí Pay, Asaas, PagBank, etc.)
@@ -75,65 +88,97 @@ module.exports = async (req, res) => {
 
     if (mpPaymentId && mercadoPago.isConfigured()) {
       try {
-        mpPayloadFetched = await mercadoPago.consultarPagamentoPorId(mpPaymentId);
-        if (mpPayloadFetched?.external_reference) {
-          txid = mpPayloadFetched.external_reference;
+        console.log(`[Webhook MP] Consultando status real do pagamento ${mpPaymentId} no Mercado Pago...`);
+        mpPayloadFetched = await mercadoPago.getPayment(mpPaymentId);
+        if (mpPayloadFetched) {
+          if (mpPayloadFetched.external_reference) {
+            txid = mpPayloadFetched.external_reference;
+          }
         }
-      } catch (eMp) {
-        console.warn("[Webhook MP Fetch Warning]", eMp.message);
+      } catch (mpErr) {
+        console.warn(`[Webhook MP] Falha ao consultar detalhes do pagamento ${mpPaymentId}:`, mpErr.message);
       }
+    }
+
+    if (isMercadoPagoEvent && mercadoPago.isConfigured() && !mpPayloadFetched) {
+      // Não foi possível confirmar o pagamento junto ao Mercado Pago: não aprovar com base no corpo recebido externamente.
+      // Responder 502 faz o gateway tentar novamente mais tarde.
+      return res.status(502).json({ error: "Não foi possível validar o pagamento no gateway. Tente novamente." });
     }
 
     if (!txid) {
       return res.status(400).json({ error: "Identificador da transação ausente no payload" });
     }
 
-    // 3. Avaliação de status enviada pelo gateway ou obtida na consulta ativa
-    const rawStatus = String(
-      mpPayloadFetched?.status ||
-      payload.status ||
-      payload.payment?.status ||
-      payload.event ||
-      payload.action ||
-      payload.data?.status ||
-      payload.pix?.[0]?.status ||
+    // 3. Normalização do status de pagamento
+    const effectivePayload = mpPayloadFetched || payload;
+    const rawStatus = (
+      effectivePayload.status ||
+      effectivePayload.payment?.status ||
+      effectivePayload.data?.status ||
+      effectivePayload.pix?.[0]?.status ||
+      effectivePayload.action ||
       ""
-    ).toLowerCase();
+    ).toLowerCase().trim();
 
-    // Se o evento não representar liquidação (ex.: criação pendente), apenas confirma recebimento
-    const isApprovedStatus = APPROVED_STATUS_TOKENS.has(rawStatus) ||
+    console.log(`[Webhook] Recebido evento para TXID/Ref: ${txid} | Status detectado: ${rawStatus}`);
+
+    const isApproved = APPROVED_STATUS_TOKENS.has(rawStatus) ||
       rawStatus.includes("approved") ||
-      rawStatus.includes("liquidado") ||
+      rawStatus.includes("confirmado") ||
       rawStatus.includes("paid") ||
-      rawStatus.includes("received") ||
-      rawStatus.includes("concluid") ||
-      !rawStatus; // Se gateway não enviou campo de status explícito, trata como notificação de crédito
+      rawStatus.includes("liquidado");
 
-    if (!isApprovedStatus) {
-      console.log(`[Webhook] Notificação recebida para txid ${txid} com status intermediário: "${rawStatus}". Sem alteração de aprovação.`);
-      return res.status(200).json({ success: true, processedTxid: txid, status: rawStatus, confirmed: false });
+    if (isApproved) {
+      console.log(`[Webhook] Liquidação confirmada para ${txid}. Acionando confirmação resiliente...`);
+
+      const confirmResult = await confirmarPagamentoResiliente({
+        txid: String(txid),
+        gateway: isMercadoPagoEvent ? "mercadopago" : "pix_webhook",
+        payload: effectivePayload
+      });
+
+      // Dispara envio do comprovante por e-mail com await estrito para garantir execução em ambiente serverless
+      try {
+        const emailParams = {
+          txid: String(txid),
+          nome: confirmResult.record?.nome_pagador || effectivePayload.payer?.first_name || effectivePayload.nome,
+          email: confirmResult.record?.email || effectivePayload.payer?.email || effectivePayload.email,
+          valor: confirmResult.record?.valor || effectivePayload.transaction_amount || effectivePayload.valor,
+          metodo: confirmResult.record?.metodo || "pix",
+          sub: confirmResult.record?.metadata?.sub || confirmResult.record?.sub || "Geral",
+          order_id: confirmResult.record?.order_id,
+          payment_id: confirmResult.record?.payment_id || mpPaymentId,
+          executado_por: "webhook"
+        };
+
+        if (emailParams.email) {
+          console.log(`[Webhook] Enviando comprovante de pagamento para ${emailParams.email}...`);
+          const emailRes = await sendPaymentReceiptEmail(emailParams);
+          console.log(`[Webhook] Resultado do envio de comprovante: ${emailRes?.success ? "Sucesso" : "Falha/Ignorado"}`);
+        } else {
+          console.log(`[Webhook] Pagamento ${txid} confirmado, mas sem e-mail do pagador associado para envio imediato.`);
+        }
+      } catch (emailErr) {
+        console.error(`[Webhook] Erro no fluxo de envio de e-mail para ${txid}:`, emailErr);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Pagamento processado e confirmado com sucesso",
+        txid: txid,
+        status: "aprovado"
+      });
     }
 
-    // 4. Executa conciliação unificada resiliente (RPC Supabase + Store Local + Comprovante com Await)
-    const result = await confirmarPagamentoResiliente({
-      txid: String(txid),
-      gateway: mpPayloadFetched ? "mercadopago_webhook" : "pix_webhook",
-      payload: mpPayloadFetched || payload,
-      executado_por: "gateway_webhook"
-    });
-
-    console.log(`[Webhook] Transação ${txid} processada com sucesso. Database: ${result.confirmedOnDatabase}, Email: ${result.emailEnviado}`);
     return res.status(200).json({
       success: true,
-      processedTxid: txid,
-      confirmed: true,
-      payment_id: result.payment_id || null,
-      order_id: result.order_id || null,
-      database_updated: result.confirmedOnDatabase,
-      email_dispatched: result.emailEnviado
+      message: `Webhook recebido para status '${rawStatus}', sem ação de liquidação necessária`,
+      txid: txid
     });
+
   } catch (err) {
-    console.error("[Webhook Exception]", err);
-    return res.status(500).json({ error: "Falha interna no processamento do webhook" });
+    console.error("[Webhook Error] Falha interna ao processar requisição:", err);
+    return res.status(500).json({ error: "Erro interno ao processar webhook" });
   }
 };

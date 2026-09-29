@@ -641,9 +641,10 @@
   <script>
     const ROLE_MAP = {};
 
-    let currentUserRole = "administrador";
+    let currentUserRole = "admin";
     let currentAdminPass = "";
     let canUserEditFinance = false;
+    let canUserEditWhatsapp = false;
 
     // Configuração ativa em memória (Sem fallback fixo para R$ 50 - Fonte da Verdade é o Banco)
     let configFinanceiraAtiva = {
@@ -686,65 +687,132 @@
 
     let activeModalTxid = null;
 
-    // Checa sessão existente
-    const savedPass = sessionStorage.getItem("ejc_admin_pass") || "";
-    if (savedPass) {
-      currentAdminPass = savedPass;
-      currentUserRole = "administrador";
-      canUserEditFinance = true;
-      showPanel();
+    // Validação de login estritamente no servidor (/api/admin)
+    async function loginNoServidor(pass) {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", password: pass })
+      });
+      if (!res.ok) {
+        let msg = "Senha incorreta ou acesso não autorizado.";
+        try {
+          const data = await res.json();
+          if (data.error) msg = data.error;
+        } catch (e) {}
+        throw new Error(msg);
+      }
+      return res.json();
     }
 
-    authForm.addEventListener("submit", (e) => {
+    function aplicarSessao(pass, info) {
+      currentAdminPass = pass;
+      currentUserRole = info.role || "admin";
+      canUserEditFinance = Boolean(info.canEditFinance);
+      canUserEditWhatsapp = Boolean(info.canEditWhatsapp);
+
+      sessionStorage.setItem("ejc_admin_auth", "true");
+      sessionStorage.setItem("ejc_admin_pass", pass);
+      sessionStorage.setItem("ejc_admin_token", pass);
+      sessionStorage.setItem("ejc_admin_role", currentUserRole);
+      sessionStorage.setItem("ejc_admin_label", info.label || "");
+
+      showPanel(info);
+    }
+
+    // Revalida sessão existente no servidor ao carregar a página
+    const savedToken = sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+    if (savedToken) {
+      loginNoServidor(savedToken).then(info => {
+        aplicarSessao(savedToken, info);
+      }).catch(() => {
+        sessionStorage.removeItem("ejc_admin_auth");
+        sessionStorage.removeItem("ejc_admin_pass");
+        sessionStorage.removeItem("ejc_admin_token");
+        sessionStorage.removeItem("ejc_admin_role");
+      });
+    }
+
+    authForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const pass = adminPassword.value.trim();
-      if (pass) {
-        currentAdminPass = pass;
-        currentUserRole = "administrador";
-        canUserEditFinance = true;
-        sessionStorage.setItem("ejc_admin_auth", "true");
-        sessionStorage.setItem("ejc_admin_pass", pass);
-        sessionStorage.setItem("ejc_admin_role", currentUserRole);
-        showPanel();
-      } else {
+      if (!pass) {
+        authError.textContent = "Informe a senha de acesso.";
         authError.style.display = "block";
+        return;
+      }
+      authError.style.display = "none";
+      const submitBtn = authForm.querySelector("button[type='submit']");
+      const originalText = submitBtn ? submitBtn.innerHTML : "Entrar no Painel";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Validando no servidor...';
+      }
+      try {
+        const info = await loginNoServidor(pass);
+        aplicarSessao(pass, info);
+      } catch (err) {
+        authError.textContent = err.message || "Senha incorreta ou acesso não autorizado.";
+        authError.style.display = "block";
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
       }
     });
 
     logoutBtn.addEventListener("click", () => {
       sessionStorage.removeItem("ejc_admin_auth");
       sessionStorage.removeItem("ejc_admin_pass");
+      sessionStorage.removeItem("ejc_admin_token");
       sessionStorage.removeItem("ejc_admin_role");
       location.reload();
     });
 
-    function showPanel() {
+    function showPanel(info) {
       authCard.style.display = "none";
       panelWrap.classList.add("active");
 
       // Atualiza badge de papel no cabeçalho
-      const roleInfo = ROLE_MAP[currentAdminPass] || { label: "Administrador", class: "role-superadmin", icon: "fa-shield-halved" };
       const badgeEl = document.getElementById("headerRoleBadge");
       if (badgeEl) {
-        badgeEl.className = `role-badge ${roleInfo.class}`;
-        badgeEl.innerHTML = `<i class="fa-solid ${roleInfo.icon}"></i> ${roleInfo.label}`;
+        const roleLabel = (info && info.label) || (currentUserRole === "superadmin" ? "Coordenação / Super Admin (Acesso Total)" : (currentUserRole === "financeiro" ? "Gestor Financeiro" : "Administrador Geral"));
+        let icon = "fa-shield-halved";
+        let badgeClass = "role-superadmin";
+        if (currentUserRole === "financeiro") {
+          icon = "fa-coins";
+          badgeClass = "role-financeiro";
+        } else if (currentUserRole === "admin") {
+          icon = "fa-user-check";
+          badgeClass = "role-comum";
+        }
+        badgeEl.className = `role-badge ${badgeClass}`;
+        badgeEl.innerHTML = `<i class="fa-solid ${icon}"></i> ${roleLabel}`;
       }
 
       // Atualiza alerta de modo somente leitura na aba WhatsApp
       const wppReadOnlyBanner = document.getElementById("wppReadOnlyBanner");
       if (wppReadOnlyBanner) {
-        wppReadOnlyBanner.style.display = canUserEditFinance ? "none" : "flex";
+        wppReadOnlyBanner.style.display = canUserEditWhatsapp ? "none" : "flex";
       }
       const btnSaveWpp = document.getElementById("btnSaveWppLinks");
-      if (btnSaveWpp && !canUserEditFinance) {
-        btnSaveWpp.title = "Acesso somente leitura. Faça login com ejc2026 ou financeiro2026 para alterar os links.";
-        btnSaveWpp.style.opacity = "0.7";
+      if (btnSaveWpp) {
+        if (!canUserEditWhatsapp) {
+          btnSaveWpp.title = "Acesso somente leitura para links de WhatsApp.";
+          btnSaveWpp.style.opacity = "0.6";
+          btnSaveWpp.style.cursor = "not-allowed";
+        } else {
+          btnSaveWpp.title = "";
+          btnSaveWpp.style.opacity = "1";
+          btnSaveWpp.style.cursor = "pointer";
+        }
       }
 
       // Configuração das Abas
       configurarAbas();
 
-      // Carregamento de dados
+      // Carregamento de dados seguro
       carregarDados();
       carregarConfiguracoesFinanceiras();
     }
@@ -846,52 +914,43 @@
 
       renderizarTudo();
 
-      // 2. Tenta buscar no Supabase se conectado
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
-        try {
-          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-          
-          // Inscrições (Apenas Ativas / Não Arquivadas - Fonte Oficial do Banco)
-          client.from("inscricoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
-            if (!error && Array.isArray(data)) {
-              inscricoesData = data.filter(i => i.arquivado !== true);
-              renderizarTudo();
+      // 2. Busca oficial autenticada no servidor via /api/admin (service_role)
+      if (currentAdminPass) {
+        fetch("/api/admin", {
+          headers: {
+            "Authorization": `Bearer ${currentAdminPass}`,
+            "x-admin-token": currentAdminPass
+          }
+        }).then(async (res) => {
+          if (!res.ok) {
+            if (res.status === 401) {
+              sessionStorage.clear();
+              location.reload();
             }
-          });
-
-          // Pagamentos Unificados
-          client.from("pagamentos").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
-            if (!error && Array.isArray(data)) {
-              pagamentosData = data;
-              renderizarTudo();
-            }
-          });
-
-          // Auditoria
-          client.from("auditoria_transacoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
-              auditoriaData = data;
-            }
-          });
-
-          // Links de WhatsApp (tenta configuracoes_whatsapp no Supabase)
-          client.from("configuracoes_whatsapp").select("*").eq("ativo", true).then(({ data, error }) => {
-            if (!error && Array.isArray(data) && data.length > 0) {
-              const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
-              data.forEach(item => {
-                if (item.sub) {
-                  const subCap = item.sub.charAt(0).toUpperCase() + item.sub.slice(1).toLowerCase();
-                  if (CANONICAL.includes(subCap)) {
-                    wppLinksData[subCap] = item.link_grupo || "";
-                  }
-                }
-              });
-              preencherPainelWhatsApp(wppLinksData);
-            }
-          });
-        } catch(e) {
-          console.warn("Supabase remoto indisponível, usando persistência resiliente.", e);
-        }
+            return;
+          }
+          const d = await res.json();
+          if (Array.isArray(d.inscricoes)) {
+            inscricoesData = d.inscricoes.filter(i => i.arquivado !== true);
+          }
+          if (Array.isArray(d.pagamentos)) {
+            pagamentosData = d.pagamentos;
+          }
+          if (Array.isArray(d.auditoria)) {
+            auditoriaData = d.auditoria;
+          }
+          if (d.whatsapp && typeof d.whatsapp === "object") {
+            const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+            CANONICAL.forEach(sub => {
+              if (d.whatsapp[sub] !== undefined) wppLinksData[sub] = d.whatsapp[sub];
+              else if (d.whatsapp[sub.toLowerCase()] !== undefined) wppLinksData[sub] = d.whatsapp[sub.toLowerCase()];
+            });
+            preencherPainelWhatsApp(wppLinksData);
+          }
+          renderizarTudo();
+        }).catch(err => {
+          console.warn("[Admin Data API]", err);
+        });
       }
     }
 
@@ -1089,8 +1148,8 @@
 
     // Salvar links de WhatsApp com persistência real no servidor e confirmação de sucesso
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
-      if (!canUserEditFinance) {
-        alert("Acesso Somente Leitura: Seu usuário atual está conectado com permissão apenas de visualização (coordenacao2026).\n\nPara alterar os links de WhatsApp, clique em 'Sair' no canto superior direito e faça login com a credencial de administrador ('ejc2026' ou 'financeiro2026').");
+      if (!canUserEditWhatsapp) {
+        alert("Acesso Somente Leitura: Seu perfil atual não possui permissão para alterar links de WhatsApp.\n\nPara alterar os links, faça login como Administrador Geral ou Coordenação / Super Admin.");
         return;
       }
 
@@ -1497,7 +1556,7 @@
       const btnSalvarPrecos = document.getElementById("btnSalvarPrecos");
       const btnSalvarPix = document.getElementById("btnSalvarPix");
 
-      // Aplica restrições de permissão do usuário
+      // Aplica restrições de permissão para finanças
       if (!canUserEditFinance) {
         if (readOnlyBanner) readOnlyBanner.style.display = "flex";
         if (readOnlyNotice) readOnlyNotice.style.display = "block";
@@ -1505,22 +1564,15 @@
           btnSalvarPrecos.disabled = true;
           btnSalvarPrecos.style.opacity = "0.6";
           btnSalvarPrecos.style.cursor = "not-allowed";
-          btnSalvarPrecos.title = "Acesso somente leitura";
+          btnSalvarPrecos.title = "Acesso financeiro somente leitura";
         }
         if (btnSalvarPix) {
           btnSalvarPix.disabled = true;
           btnSalvarPix.style.opacity = "0.6";
           btnSalvarPix.style.cursor = "not-allowed";
-          btnSalvarPix.title = "Acesso somente leitura";
+          btnSalvarPix.title = "Acesso financeiro somente leitura";
         }
-        const btnSaveWpp = document.getElementById("btnSaveWppLinks");
-        if (btnSaveWpp) {
-          btnSaveWpp.disabled = true;
-          btnSaveWpp.style.opacity = "0.6";
-          btnSaveWpp.style.cursor = "not-allowed";
-          btnSaveWpp.title = "Acesso somente leitura";
-        }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #wppSettingsGrid input").forEach(el => {
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
           el.disabled = true;
         });
       } else {
@@ -1528,14 +1580,31 @@
         if (readOnlyNotice) readOnlyNotice.style.display = "none";
         if (btnSalvarPrecos) { btnSalvarPrecos.disabled = false; btnSalvarPrecos.style.opacity = "1"; btnSalvarPrecos.style.cursor = "pointer"; }
         if (btnSalvarPix) { btnSalvarPix.disabled = false; btnSalvarPix.style.opacity = "1"; btnSalvarPix.style.cursor = "pointer"; }
-        const btnSaveWpp = document.getElementById("btnSaveWppLinks");
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+          el.disabled = false;
+        });
+      }
+
+      // Aplica restrições de permissão para WhatsApp
+      const btnSaveWpp = document.getElementById("btnSaveWppLinks");
+      if (!canUserEditWhatsapp) {
+        if (btnSaveWpp) {
+          btnSaveWpp.disabled = true;
+          btnSaveWpp.style.opacity = "0.6";
+          btnSaveWpp.style.cursor = "not-allowed";
+          btnSaveWpp.title = "Acesso somente leitura para links de WhatsApp";
+        }
+        document.querySelectorAll("#wppSettingsGrid input").forEach(el => {
+          el.disabled = true;
+        });
+      } else {
         if (btnSaveWpp) {
           btnSaveWpp.disabled = false;
           btnSaveWpp.style.opacity = "1";
           btnSaveWpp.style.cursor = "pointer";
           btnSaveWpp.title = "";
         }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #wppSettingsGrid input").forEach(el => {
+        document.querySelectorAll("#wppSettingsGrid input").forEach(el => {
           el.disabled = false;
         });
       }

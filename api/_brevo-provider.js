@@ -10,13 +10,13 @@ const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 // Configurações padrão do remetente institucional (alinhado com o remetente verificado na Brevo)
 function getSenderConfig() {
-  const email = process.env.BREVO_FROM_EMAIL || "hugogeeta.gamer@gmail.com";
+  const email = process.env.BREVO_FROM_EMAIL || "";
   const name = process.env.BREVO_FROM_NAME || "EJC — AD Monte Sião";
   return { email, name };
 }
 
 function getAdminEmail() {
-  return process.env.BREVO_ADMIN_EMAIL || "leoeuler03@gmail.com";
+  return process.env.BREVO_ADMIN_EMAIL || "";
 }
 
 function isConfigured() {
@@ -219,7 +219,7 @@ async function auditBrevo(customFilterEmail) {
 
   // 3. Histórico de E-mails Transacionais por destinatário e estatísticas
   try {
-    const filterEmail = customFilterEmail || "leoeuler03@gmail.com";
+    const filterEmail = customFilterEmail || getAdminEmail();
     const smtpRes = await fetch(`https://api.brevo.com/v3/smtp/emails?email=${encodeURIComponent(filterEmail)}&limit=10&sort=desc`, { headers, signal: AbortSignal.timeout(6000) });
     auditReport.smtp_history_status = smtpRes.status;
     auditReport.smtp_history = await smtpRes.json();

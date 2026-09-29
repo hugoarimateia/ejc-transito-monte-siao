@@ -6,9 +6,10 @@
 
 const settingsStore = require("./_settings-store");
 const emailService = require("./_email-service");
+const { applyCors } = require("./_cors");
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  applyCors(req, res);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Content-Type", "text/html; charset=utf-8");
 

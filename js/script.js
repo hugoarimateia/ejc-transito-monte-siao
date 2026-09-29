@@ -452,9 +452,13 @@ if (signupForm) {
           registrationSuccess = true;
           if (registrationResult?.token) userToken = registrationResult.token;
           if (registrationResult?.id) registeredId = registrationResult.id;
-          // Se tiver coluna email no Supabase inscricoes, atualiza
-          if (registrationResult?.id) {
-            supabaseClient.from("inscricoes").update({ email: emailValue }).eq("id", registrationResult.id).catch(() => {});
+          // Salva o e-mail da inscrição via RPC protegida pelo token secreto (a tabela não aceita mais UPDATE público)
+          if (registrationResult?.id && registrationResult?.token) {
+            Promise.resolve(supabaseClient.rpc("definir_email_inscricao", {
+              p_id: registrationResult.id,
+              p_token: registrationResult.token,
+              p_email: emailValue
+            })).catch(() => {});
           }
         }
       } catch (err) {

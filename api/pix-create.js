@@ -12,9 +12,10 @@ const {
   validarPayloadPix,
   gerarPayloadPixBACEN
 } = require("./checkout-process");
+const { applyCors } = require("./_cors");
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  applyCors(req, res);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -63,7 +64,10 @@ module.exports = async (req, res) => {
       }
     }
 
-    const chavePix = activeSettings.pix_chave || process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
+    const chavePix = activeSettings.pix_chave || process.env.NEXT_PUBLIC_PIX_CHAVE || "";
+    if (!chavePix) {
+      return res.status(400).json({ error: "A chave Pix ainda não foi configurada pela coordenação.", configurado: false });
+    }
     const beneficiario = activeSettings.pix_beneficiario || process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
     const cidade = activeSettings.pix_cidade || process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
     const tempoExpiracao = Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15);

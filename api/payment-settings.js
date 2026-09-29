@@ -6,6 +6,8 @@
 // ==============================================================================
 
 const settingsStore = require("./_settings-store");
+const adminAuth = require("./_admin-auth");
+const { applyCors } = require("./_cors");
 
 const VALID_KEY_TYPES = ["EMAIL", "CPF", "CNPJ", "TELEFONE", "ALEATORIA"];
 
@@ -69,7 +71,7 @@ function mascararChave(chave, tipo) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  applyCors(req, res);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-token, x-admin-role");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0");
@@ -81,7 +83,7 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  // Normalização e parsing robusto de body (caso venha como string ou buffer)
+  // Normalização de body
   let bodyData = req.body;
   if (typeof bodyData === "string") {
     try {
@@ -92,37 +94,20 @@ module.exports = async (req, res) => {
     bodyData = {};
   }
 
-  // Verificação de autenticação administrativa multi-canal (Headers, Body, Query, URL)
-  const authHeader = req.headers?.["authorization"] || req.headers?.["Authorization"] || "";
-  const tokenHeader = req.headers?.["x-admin-token"] || req.headers?.["X-Admin-Token"] || "";
-  const roleHeader = req.headers?.["x-admin-role"] || req.headers?.["X-Admin-Role"] || req.query?.role || "superadmin";
-
-  let queryPass = req.query?.admin_pass || req.query?.pass;
-  if (!queryPass && req.url) {
-    try {
-      const parsedUrl = new URL(req.url, "http://localhost");
-      queryPass = parsedUrl.searchParams.get("admin_pass") || parsedUrl.searchParams.get("pass");
-    } catch (e) {}
-  }
-
-  const providedPass = (bodyData.admin_pass ? String(bodyData.admin_pass).trim() : "")
-    || (tokenHeader ? String(tokenHeader).trim() : "")
-    || (authHeader ? String(authHeader).replace(/^Bearer\s+/i, "").trim() : "")
-    || (queryPass ? String(queryPass).trim() : "");
-
-  const validPasswords = Object.freeze({
-    [process.env.ADMIN_PASSWORD || "ejc2026"]: "superadmin",
-    [process.env.FINANCEIRO_PASSWORD || "financeiro2026"]: "financeiro",
-    [process.env.COORDENACAO_PASSWORD || "coordenacao2026"]: "comum"
+  // Verificação de autenticação administrativa server-side
+  const auth = adminAuth.authenticate({
+    headers: req.headers,
+    body: bodyData
   });
 
-  const isAuthorized = Boolean(validPasswords[providedPass]);
-
-  if (!isAuthorized && req.method !== "GET") {
+  if (!auth.ok && req.method !== "GET") {
     return res.status(401).json({ error: "Acesso não autorizado: credenciais administrativas necessárias." });
   }
 
-  const userRole = validPasswords[providedPass] || "comum";
+  const userRole = auth.ok ? auth.role : "comum";
+  const canEditFinance = Boolean(auth.ok && auth.canEditFinance);
+  const canEditWhatsapp = Boolean(auth.ok && auth.canEditWhatsapp);
+  const canApprove = Boolean(auth.ok && auth.canApprovePayments);
 
   // ==============================================================================
   // 1. CONSULTA DE CONFIGURAÇÕES (GET)
@@ -134,7 +119,6 @@ module.exports = async (req, res) => {
       if (settings && settings.pix_chave && settingsStore.normalizarChavePix) {
         settings.pix_chave = settingsStore.normalizarChavePix(settings.pix_chave, settings.pix_tipo_chave);
       }
-      const canEdit = ["superadmin", "financeiro"].includes(userRole);
       const maskedKey = mascararChave(settings.pix_chave, settings.pix_tipo_chave);
 
       const modalidadeEfetiva = settings.modalidade_pix || settings.pix_mode || "api_webhook";
@@ -145,18 +129,21 @@ module.exports = async (req, res) => {
           modalidade_pix: modalidadeEfetiva,
           pix_mode: modalidadeEfetiva,
           pix_chave_mascarada: maskedKey,
-          // Chave completa só enviada para papéis autorizados
-          pix_chave: canEdit ? settings.pix_chave : maskedKey
+          // Chave completa só enviada para papéis autorizados financeiramente
+          pix_chave: canEditFinance ? settings.pix_chave : maskedKey
         },
         lotes: activeData.lotes || [],
-        historico: activeData.historico || [],
+        historico: auth.ok ? (activeData.historico || []) : [],
         whatsapp: activeData.whatsapp || {},
         permissions: {
-          canEdit: canEdit,
+          canEdit: canEditFinance,
+          canEditFinance: canEditFinance,
+          canEditWhatsapp: canEditWhatsapp,
+          canApprovePayments: canApprove,
           role: userRole,
-          allowedActions: canEdit
+          allowedActions: canEditFinance
             ? ["finance.view", "finance.edit", "payment.settings.edit", "pix.settings.edit", "whatsapp.edit", "payments.approve"]
-            : ["finance.view"]
+            : (canEditWhatsapp ? ["finance.view", "whatsapp.edit"] : ["finance.view"])
         }
       });
     } catch (err) {
@@ -170,7 +157,7 @@ module.exports = async (req, res) => {
   // ==============================================================================
   if (req.method === "POST" || req.method === "PUT") {
     const {
-      action, // 'update_prices', 'update_pix', 'update_whatsapp', 'approve_payment'
+      action,
       usuario,
       motivo,
       // Dados para preços
@@ -200,11 +187,29 @@ module.exports = async (req, res) => {
     const adminUser = usuario || userRole || "admin";
     const clientIp = req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1";
 
-    // Validação de permissões para ações de modificação administrativa
-    if (["update_prices", "update_pix", "sync_full_settings", "update_whatsapp"].includes(action)) {
-      if (!["superadmin", "financeiro"].includes(userRole)) {
+    // Validação de permissões para ações financeiras estritas
+    if (["update_prices", "update_pix", "sync_full_settings"].includes(action)) {
+      if (!canEditFinance) {
         return res.status(403).json({
-          error: "Permissão insuficiente. Apenas administradores financeiros ou a coordenação geral (superadmin) podem alterar dados financeiros e links de WhatsApp."
+          error: "Permissão insuficiente. Apenas administradores financeiros ou a coordenação geral podem alterar dados financeiros."
+        });
+      }
+    }
+
+    // Validação de permissões para aprovação/rejeição de pagamentos
+    if (["approve_payment", "reject_payment"].includes(action)) {
+      if (!canApprove) {
+        return res.status(403).json({
+          error: "Permissão insuficiente. Apenas administradores financeiros ou a coordenação geral podem aprovar ou rejeitar pagamentos."
+        });
+      }
+    }
+
+    // Validação de permissões para WhatsApp
+    if (action === "update_whatsapp") {
+      if (!canEditWhatsapp) {
+        return res.status(403).json({
+          error: "Permissão insuficiente para alterar links de WhatsApp."
         });
       }
     }
@@ -228,92 +233,64 @@ module.exports = async (req, res) => {
           ip: String(clientIp)
         });
 
-        return res.status(200).json({
-          success: true,
-          persisted: true,
-          message: result.message,
-          novo_valor: result.settings.valor_inscricao,
-          lote_atual: result.settings.lote_atual,
-          versao: result.settings.versao,
-          settings: result.settings
-        });
+        return res.status(200).json(result);
       } catch (err) {
         console.error("[Update Prices Error]", err);
         return res.status(500).json({
           success: false,
-          error: err.message || "Falha ao persistir novos preços no servidor."
+          error: err.message || "Falha ao persistir alterações de preço no servidor."
         });
       }
     }
 
-    // Ação B: Atualizar Dados do Recebedor PIX
+    // Ação B: Atualizar Parâmetros PIX
     if (action === "update_pix") {
-      const rawModalidade = modalidade_pix !== undefined ? modalidade_pix : (pix_mode !== undefined ? pix_mode : undefined);
-      if (rawModalidade !== undefined && rawModalidade !== null && rawModalidade !== "") {
-        if (rawModalidade !== "api_webhook" && rawModalidade !== "manual") {
-          return res.status(400).json({ error: "Modalidade operacional do Pix inválida. Valores aceitos: 'api_webhook' ou 'manual'." });
-        }
+      const modalidadeEscolhida = modalidade_pix || pix_mode;
+      if (modalidadeEscolhida && !["api_webhook", "manual"].includes(modalidadeEscolhida)) {
+        return res.status(400).json({
+          error: "Modalidade PIX inválida. Escolha 'api_webhook' (Automático) ou 'manual' (Chave Fixa)."
+        });
       }
 
-      const activeData = await settingsStore.getActiveSettings();
-      const currentSettings = activeData?.settings || {};
-      const modalidadeFinal = rawModalidade || currentSettings.modalidade_pix || currentSettings.pix_mode || "api_webhook";
-
-      const tipoChave = String(pix_tipo_chave || currentSettings.pix_tipo_chave || "EMAIL").toUpperCase();
+      const tipoChave = pix_tipo_chave ? String(pix_tipo_chave).toUpperCase() : "ALEATORIA";
       if (!VALID_KEY_TYPES.includes(tipoChave)) {
-        return res.status(400).json({ error: `Tipo de chave PIX inválido. Tipos aceitos: ${VALID_KEY_TYPES.join(", ")}.` });
+        return res.status(400).json({
+          error: `Tipo de chave PIX inválido. Permitidos: ${VALID_KEY_TYPES.join(", ")}`
+        });
       }
 
-      const chaveInformada = pix_chave !== undefined ? String(pix_chave).trim() : (currentSettings.pix_chave || "");
-      const validacaoChave = validarFormatoChavePix(chaveInformada, tipoChave);
-      if (!validacaoChave.valido && modalidadeFinal === "manual") {
-        return res.status(400).json({ error: validacaoChave.erro });
-      }
-
-      const beneficiarioLimpo = pix_beneficiario !== undefined ? String(pix_beneficiario).trim() : (currentSettings.pix_beneficiario || "");
-      const cidadeLimpa = pix_cidade !== undefined ? String(pix_cidade).trim() : (currentSettings.pix_cidade || "");
-
-      if (modalidadeFinal === "manual") {
-        if (!beneficiarioLimpo) {
-          return res.status(400).json({ error: "O nome do favorecido/beneficiário é obrigatório no modo manual." });
-        }
-        if (!cidadeLimpa) {
-          return res.status(400).json({ error: "A cidade da conta é obrigatória para conformidade BACEN EMV no modo manual." });
+      if (pix_chave && !pix_chave.includes("***")) {
+        const validacao = validarFormatoChavePix(pix_chave, tipoChave);
+        if (!validacao.valido) {
+          return res.status(400).json({ error: validacao.erro });
         }
       }
 
       try {
-        const chaveParaSalvar = validacaoChave.chaveNormalizada || (settingsStore.normalizarChavePix ? settingsStore.normalizarChavePix(chaveInformada, tipoChave) : chaveInformada);
         const result = await settingsStore.updatePixSettings({
           usuario: adminUser,
-          modalidade_pix: modalidadeFinal,
-          pix_mode: modalidadeFinal,
-          pix_chave: chaveParaSalvar || currentSettings.pix_chave || "83996431326",
+          modalidade_pix: modalidadeEscolhida,
+          pix_chave: pix_chave,
           pix_tipo_chave: tipoChave,
-          pix_beneficiario: beneficiarioLimpo || currentSettings.pix_beneficiario || "EJC TRANSITO MONTE SIAO",
-          pix_documento: pix_documento !== undefined ? pix_documento : currentSettings.pix_documento,
-          pix_cidade: cidadeLimpa || currentSettings.pix_cidade || "CAMPINA GRANDE",
-          pix_instrucoes_manual: pix_instrucoes_manual !== undefined ? pix_instrucoes_manual : currentSettings.pix_instrucoes_manual,
-          pix_permite_comprovante: pix_permite_comprovante !== undefined ? pix_permite_comprovante : currentSettings.pix_permite_comprovante,
+          pix_beneficiario: pix_beneficiario,
+          pix_documento: pix_documento,
+          pix_cidade: pix_cidade,
+          pix_instrucoes_manual: pix_instrucoes_manual,
+          pix_permite_comprovante: pix_permite_comprovante !== false,
           motivo: motivo,
           ip: String(clientIp)
         });
 
-        return res.status(200).json({
-          success: true,
-          persisted: true,
-          message: result.message,
-          nova_chave_mascarada: mascararChave(result.settings.pix_chave, tipoChave),
-          versao: result.settings.versao,
-          modalidade_pix: result.settings.modalidade_pix,
-          pix_mode: result.settings.pix_mode,
-          settings: result.settings
-        });
+        if (result.settings && result.settings.pix_chave) {
+          result.settings.pix_chave = mascararChave(result.settings.pix_chave, result.settings.pix_tipo_chave);
+        }
+
+        return res.status(200).json(result);
       } catch (err) {
-        console.error("[Update Pix Error]", err);
+        console.error("[Update PIX Error]", err);
         return res.status(500).json({
           success: false,
-          error: err.message || "Falha ao persistir novos dados PIX no servidor."
+          error: err.message || "Falha ao persistir alterações do PIX no servidor."
         });
       }
     }
@@ -325,7 +302,6 @@ module.exports = async (req, res) => {
         const result = await settingsStore.syncFullSettings({
           settings: fullSettings,
           usuario: adminUser,
-          motivo: motivo || "Re-hidratação integral anti-downgrade",
           ip: String(clientIp)
         });
 
@@ -363,7 +339,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ação D: Aprovação Manual de Pagamento
+    // Ação E: Aprovação Manual de Pagamento
     if (action === "approve_payment") {
       try {
         const result = await settingsStore.approvePayment({
@@ -385,7 +361,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ação E: Rejeição Manual de Pagamento / Comprovante
+    // Ação F: Rejeição Manual de Pagamento / Comprovante
     if (action === "reject_payment") {
       try {
         const result = await settingsStore.rejectPayment({
