@@ -8,7 +8,7 @@
       var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       var t = s || (d ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", t);
-      var iconHref = t === "dark" ? "images/favicon-dark.png?v=2" : "images/favicon.png?v=2";
+      var iconHref = "images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3";
       var l = document.querySelector('link[rel="icon"]');
       if (l) { l.href = iconHref; }
     } catch(e) {}
@@ -19,8 +19,8 @@
   <meta name="theme-color" content="#023284">
   <meta name="description" content="Checkout Oficial do EJC - Equipe do Trânsito. Pagamento seguro de inscrição e contribuição via Pix e Cartão de Crédito.">
   <title>Checkout Seguro | EJC Equipe do Trânsito</title>
-  <link rel="icon" type="image/png" href="images/favicon.png?v=2" id="favicon-link">
-  <link rel="apple-touch-icon" href="images/favicon.png?v=2">
+  <link rel="icon" type="image/png" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3" id="favicon-link">
+  <link rel="apple-touch-icon" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -490,7 +490,7 @@
           <div class="price-breakdown">
             <div class="price-row">
               <span id="labelItemTaxa">Taxa de Inscrição</span>
-              <span id="valItemTaxa">-</span>
+              <span id="valItemTaxa"><i class="fa-solid fa-spinner fa-spin"></i> Carregando valor...</span>
             </div>
             <div class="price-row" id="rowExtraShirt" style="display: none;">
               <span id="labelExtraShirt">Camisa Adicional</span>
@@ -502,11 +502,11 @@
             </div>
             <div class="price-row">
               <span>Taxa de Processamento</span>
-              <span style="color: #34d399; font-weight: 700;">Grátis</span>
+              <span style="color: var(--text-muted); font-weight: 600;">R$ 0,00</span>
             </div>
             <div class="price-row total">
               <span>Total a Pagar</span>
-              <strong id="summaryTotalVal">-</strong>
+              <strong id="summaryTotalVal"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</strong>
             </div>
           </div>
 
@@ -587,7 +587,7 @@
               <div id="boxNewSubSelection" class="sub-flow-card" style="display: none;">
                 <div class="sub-flow-header-row">
                   <strong><i class="fa-solid fa-flag"></i> Qual Sub você deseja participar?</strong>
-                  <button type="button" class="btn-flow-change" id="btnBackToDecisionFromNew">Trocar opção</button>
+                  <button type="button" class="btn-flow-change" id="btnGoToSearchFromNew"><i class="fa-solid fa-magnifying-glass"></i> Já possui inscrição pendente?</button>
                 </div>
                 <p class="sub-flow-desc">
                   Selecione obrigatoriamente um dos Subs disponíveis abaixo para prosseguir:
@@ -982,11 +982,28 @@
 
     function atualizarValoresUI() {
       if (tipoCheckout === "inscricao") {
-        if (!activePixConfig.valorTaxaInscricao || activePixConfig.valorTaxaInscricao <= 0) {
+        if (activePixConfig.valorTaxaInscricao === null || activePixConfig.valorTaxaInscricao === undefined) {
+          // Estado: LOADING
+          document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual || 'Carregando...'})`;
+          document.getElementById("labelItemTaxa").textContent = "Taxa de Inscrição";
+          document.getElementById("valItemTaxa").innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Carregando valor...`;
+          document.getElementById("summaryTotalVal").innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Carregando...`;
+          const btnSubmit = document.getElementById("btnSubmitStep1");
+          if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Carregando valor da inscrição...`;
+            btnSubmit.style.opacity = "0.7";
+            btnSubmit.style.cursor = "wait";
+          }
+          return;
+        }
+
+        if (activePixConfig.valorTaxaInscricao <= 0) {
+          // Estado: NÃO CONFIGURADO / ERRO
           valorTotal = 0;
           document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual || 'Aguardando Coordenação'})`;
           document.getElementById("labelItemTaxa").textContent = "Taxa de Inscrição";
-          document.getElementById("valItemTaxa").textContent = "Aguardando Coordenação";
+          document.getElementById("valItemTaxa").textContent = "Não foi possível carregar o valor.";
           document.getElementById("summaryTotalVal").textContent = "Não configurado";
           const btnSubmit = document.getElementById("btnSubmitStep1");
           if (btnSubmit) {
@@ -997,6 +1014,7 @@
           }
           return;
         }
+
         const precoEfetivo = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
         valorTotal = precoEfetivo;
         document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
@@ -1014,11 +1032,20 @@
           }
         }
         document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        const btnSubmit = document.getElementById("btnSubmitStep1");
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `<span>Avançar para Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
+          btnSubmit.style.opacity = "1";
+          btnSubmit.style.cursor = "pointer";
+        }
       } else {
         document.getElementById("summaryEventTitle").textContent = "Contribuição da Equipe";
         document.getElementById("labelItemTaxa").textContent = "Valor Contribuído";
         document.getElementById("valItemTaxa").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         document.getElementById("summaryTotalVal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      }
+
       if (typeof renderizarSeletorParcelasManual === "function") {
         renderizarSeletorParcelasManual();
       }
@@ -1124,9 +1151,12 @@
           }
 
           if (boxSelectedSubBanner) boxSelectedSubBanner.style.display = "none";
+          if (boxQuestionExisting) boxQuestionExisting.style.display = "none";
 
-          if (boxQuestionExisting && (!boxPendingSearch || boxPendingSearch.style.display === "none") && (!boxNewSubSelection || boxNewSubSelection.style.display === "none")) {
-            boxQuestionExisting.style.display = "block";
+          if (boxPendingSearch && boxPendingSearch.style.display === "block") {
+            // Mantém painel de busca se o usuário estiver buscando
+          } else {
+            if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
           }
 
           document.querySelectorAll(".checkout-sub-btn").forEach(btn => {
@@ -1300,18 +1330,29 @@
       });
     }
 
+    const btnGoToSearchFromNew = document.getElementById("btnGoToSearchFromNew");
+    if (btnGoToSearchFromNew) {
+      btnGoToSearchFromNew.addEventListener("click", () => {
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+        if (boxPendingSearch) boxPendingSearch.style.display = "block";
+        const termoInicial = emailInput.value.trim() || wppInput.value.trim() || (inputSearchPending ? inputSearchPending.value.trim() : "");
+        if (inputSearchPending && termoInicial) {
+          inputSearchPending.value = termoInicial;
+        }
+        buscarInscricoesPendentes(termoInicial);
+      });
+    }
+
     if (btnBackToDecisionFromPending) {
       btnBackToDecisionFromPending.addEventListener("click", () => {
-        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
         if (boxPendingSearch) boxPendingSearch.style.display = "none";
-        if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
       });
     }
 
     if (btnBackToDecisionFromNew) {
       btnBackToDecisionFromNew.addEventListener("click", () => {
-        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
-        if (boxPendingSearch) boxPendingSearch.style.display = "none";
+        if (boxPendingSearch) boxPendingSearch.style.display = "block";
         if (boxNewSubSelection) boxNewSubSelection.style.display = "none";
       });
     }
@@ -1324,9 +1365,11 @@
           sessionStorage.removeItem("ejc_checkout_sub");
           sessionStorage.removeItem("ejc_checkout_inscricao_id");
         } catch (e) {}
+        if (boxSelectedSubBanner) boxSelectedSubBanner.style.display = "none";
+        if (boxPendingSearch) boxPendingSearch.style.display = "none";
+        if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
         atualizarValoresUI();
         atualizarSubUI();
-        if (boxQuestionExisting) boxQuestionExisting.style.display = "block";
       });
     }
 

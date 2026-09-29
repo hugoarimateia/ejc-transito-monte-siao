@@ -29,16 +29,15 @@ function normalizarSub(sub) {
   return null;
 }
 
-// Calcula as contagens oficiais deduplicadas
+// Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas
 function calcularContagensOficiais(localStore) {
   const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
   const capacities = { Verde: 50, Vermelho: 50, Amarelo: 50, Laranja: 50 };
   
   // Mapa de pessoas únicas: identificador único -> sub
-  // Identificador prioritário: whatsapp (dígitos) ou email ou ID
+  // Fonte Única: apenas inscrições não arquivadas (arquivado = false)
   const pessoasUnicas = new Map();
 
-  // 1. Processa inscrições do formulário registradas centralmente (ignora arquivados)
   if (Array.isArray(localStore.inscricoes)) {
     localStore.inscricoes.forEach(insc => {
       if (insc.arquivado) return;
@@ -49,33 +48,13 @@ function calcularContagensOficiais(localStore) {
       const id = insc.id || "";
       const key = tel || (email && email.includes("@") ? email : id);
       if (key) {
-        pessoasUnicas.set(key, { sub, origem: "inscricao" });
-      }
-    });
-  }
-
-  // 2. Processa pagamentos aprovados da base central (se não estiverem já em inscricoes e não forem arquivados)
-  if (Array.isArray(localStore.pagamentos)) {
-    localStore.pagamentos.forEach(pag => {
-      if (pag.status !== "approved" || pag.arquivado) return;
-      const sub = normalizarSub(pag.sub || pag.metadata?.sub);
-      if (!sub) return;
-      const tel = normalizarTelefone(pag.whatsapp_pagador || pag.whatsapp);
-      const email = String(pag.email || "").trim().toLowerCase();
-      const id = pag.inscricao_id || pag.txid || "";
-      const key = tel || (email && email.includes("@") ? email : id);
-      if (key && !pessoasUnicas.has(key)) {
-        // Não incluir testes automatizados de desenvolvimento
-        const isDevTest = email.endsWith("@test.com") || email.startsWith("teste.conf.");
-        if (!isDevTest) {
-          pessoasUnicas.set(key, { sub, origem: "pagamento" });
-        }
+        pessoasUnicas.set(key, sub);
       }
     });
   }
 
   // Agrega totais por Sub
-  pessoasUnicas.forEach(({ sub }) => {
+  pessoasUnicas.forEach((sub) => {
     if (counts[sub] !== undefined) {
       counts[sub]++;
     }

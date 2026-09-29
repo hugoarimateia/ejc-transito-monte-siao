@@ -75,12 +75,10 @@
   }
 
   function updateFavicon(theme) {
-    const isDark = theme === "dark";
     const isSubdir = window.location.pathname.includes("/admin");
     const prefix = isSubdir ? "../images/" : "images/";
-    const lightFavicon = prefix + "favicon.png?v=2";
-    const darkFavicon = prefix + "favicon-dark.png?v=2";
-    const targetFavicon = isDark ? darkFavicon : lightFavicon;
+    // Favicon unificado exclusivo: "10 EJC MONTE SIÃO.png" para ambos os temas (Light e Dark)
+    const targetFavicon = prefix + encodeURI("10 EJC MONTE SIÃO.png") + "?v=3";
 
     // 1. Atualiza ou cria favicon padrão <link rel="icon">
     let favicon = document.querySelector('link[rel="icon"]');
