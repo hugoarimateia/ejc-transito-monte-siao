@@ -60,7 +60,18 @@ const config = {
     process.env.MP_PUBLIC_KEY ||
     process.env.MP_KEY ||
     process.env.PUBLIC_KEY ||
-    ""
+    "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b"
+  ).trim(),
+  MP_PUBLIC_KEY: (
+    process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ||
+    process.env.MERCADO_PAGO_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ||
+    process.env.MERCADOPAGO_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
+    process.env.MP_PUBLIC_KEY ||
+    process.env.MP_KEY ||
+    process.env.PUBLIC_KEY ||
+    "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b"
   ).trim()
 };
 

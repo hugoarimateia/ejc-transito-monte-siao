@@ -120,7 +120,8 @@ module.exports = async (req, res) => {
       process.env.MP_PUBLIC_KEY ||
       process.env.MP_KEY ||
       process.env.PUBLIC_KEY ||
-      ""
+      settingsStore.CANONICAL_MP_PUBLIC_KEY ||
+      "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b"
     ).trim(),
     mercado_pago_public_key: (
       s.mp_public_key ||
@@ -133,7 +134,8 @@ module.exports = async (req, res) => {
       process.env.MP_PUBLIC_KEY ||
       process.env.MP_KEY ||
       process.env.PUBLIC_KEY ||
-      ""
+      settingsStore.CANONICAL_MP_PUBLIC_KEY ||
+      "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b"
     ).trim(),
     lote_atual: pixConfig.lote_atual,
     modalidade_pix: s.modalidade_pix || "api_webhook",

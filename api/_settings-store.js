@@ -14,6 +14,9 @@ const DATA_DIR = path.resolve(__dirname, "../data");
 const PRIMARY_FILE = path.join(DATA_DIR, "payment-settings.json");
 const TMP_FILE = path.join(os.tmpdir(), "ejc-payment-settings.json");
 
+// Chave pública oficial canônica do Mercado Pago para Checkout transparente
+const CANONICAL_MP_PUBLIC_KEY = "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b";
+
 // Cache em memória compartilhado durante o ciclo de vida da instância serverless
 let memoryStore = null;
 
@@ -131,7 +134,7 @@ function getDefaultSettings() {
       process.env.MP_PUBLIC_KEY ||
       process.env.MP_KEY ||
       process.env.PUBLIC_KEY ||
-      ""
+      CANONICAL_MP_PUBLIC_KEY
     ).trim(),
     modalidade_pix: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook", // "api_webhook" ou "manual"
     pix_mode: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook",
@@ -314,13 +317,25 @@ async function getActiveSettings() {
           const remoteSettings = rows[0];
           const rawRemotePrice = remoteSettings.valor_inscricao;
           const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
+          const remotePublicKey = (remoteSettings.mp_public_key || "").trim();
+          const effectivePublicKey = remotePublicKey || (localData.settings && localData.settings.mp_public_key) || CANONICAL_MP_PUBLIC_KEY;
+          const effectiveRates = (Array.isArray(remoteSettings.card_installment_rates) && remoteSettings.card_installment_rates.length > 0)
+            ? remoteSettings.card_installment_rates
+            : ((localData.settings && Array.isArray(localData.settings.card_installment_rates) && localData.settings.card_installment_rates.length > 0)
+                ? localData.settings.card_installment_rates
+                : getDefaultCardRates());
+
           localData.settings = {
             ...localData.settings,
             ...remoteSettings,
             valor_inscricao: parsedRemotePrice,
             configurado: Boolean(remoteSettings.configurado && parsedRemotePrice !== null && parsedRemotePrice > 0),
             taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
-            max_parcelas: Number(remoteSettings.max_parcelas || 12)
+            max_parcelas: Number(remoteSettings.max_parcelas || 12),
+            card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
+            card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),
+            card_installment_rates: effectiveRates,
+            mp_public_key: effectivePublicKey
           };
 
           // Sincroniza histórico recente do Supabase se disponível
@@ -490,79 +505,63 @@ async function updatePriceSettings({
 
   if (url && key) {
     try {
-      // 1.1 Tenta via RPC
-      const rpcRes = await fetch(`${url}/rest/v1/rpc/atualizar_configuracao_financeira`, {
-        method: "POST",
-        headers: {
-          "apikey": key,
-          "Authorization": `Bearer ${key}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          p_usuario: usuario || "admin",
-          p_lote_atual: novoSettings.lote_atual,
-          p_valor_inscricao: valorNum,
-          p_valor_promocional: novoSettings.valor_promocional,
-          p_taxa_adicional: novoSettings.taxa_adicional,
-          p_max_parcelas: novoSettings.max_parcelas,
-          p_pix_chave: currentSettings.pix_chave,
-          p_pix_tipo_chave: currentSettings.pix_tipo_chave,
-          p_pix_beneficiario: currentSettings.pix_beneficiario,
-          p_pix_documento: currentSettings.pix_documento,
-          p_pix_cidade: currentSettings.pix_cidade,
-          p_motivo: motivo || "Atualização de preço",
-          p_ip: ip || "127.0.0.1"
-        }),
-        signal: AbortSignal.timeout(4000)
+      // 1.1 Desativa versão ativa anterior
+      await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
+        method: "PATCH",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ ativo: false, atualizado_em: agora }),
+        signal: AbortSignal.timeout(5000)
       });
 
-      if (rpcRes.ok) {
+      // 1.2 Insere nova versão preservando integralmente parâmetros do cartão e PIX
+      const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+        method: "POST",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({
+          versao: novaVersao,
+          ativo: true,
+          lote_atual: novoSettings.lote_atual,
+          valor_inscricao: valorNum,
+          valor_promocional: novoSettings.valor_promocional,
+          taxa_adicional: novoSettings.taxa_adicional,
+          max_parcelas: novoSettings.max_parcelas,
+          card_installment_mode: currentSettings.card_installment_mode || "mercado_pago",
+          card_max_installments: Number(currentSettings.card_max_installments || currentSettings.max_parcelas || 6),
+          card_installment_rates: (Array.isArray(currentSettings.card_installment_rates) && currentSettings.card_installment_rates.length > 0)
+            ? currentSettings.card_installment_rates
+            : getDefaultCardRates(),
+          mp_public_key: (currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
+          modalidade_pix: currentSettings.modalidade_pix || "api_webhook",
+          pix_chave: currentSettings.pix_chave,
+          pix_tipo_chave: currentSettings.pix_tipo_chave,
+          pix_beneficiario: currentSettings.pix_beneficiario,
+          pix_documento: currentSettings.pix_documento,
+          pix_cidade: currentSettings.pix_cidade,
+          pix_instrucoes_manual: currentSettings.pix_instrucoes_manual,
+          pix_permite_comprovante: currentSettings.pix_permite_comprovante,
+          motivo_alteracao: motivo,
+          atualizado_por: usuario || "admin",
+          atualizado_em: agora
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (directRes.ok) {
         supabasePersisted = true;
-      } else {
-        // 1.2 Fallback: PostgREST direto nas tabelas
-        await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
-          method: "PATCH",
-          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ ativo: false, atualizado_em: agora })
-        });
-        const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+        await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
           method: "POST",
-          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
           body: JSON.stringify({
-            versao: novaVersao,
-            ativo: true,
-            lote_atual: novoSettings.lote_atual,
-            valor_inscricao: valorNum,
-            valor_promocional: novoSettings.valor_promocional,
-            taxa_adicional: novoSettings.taxa_adicional,
-            max_parcelas: novoSettings.max_parcelas,
-            pix_chave: currentSettings.pix_chave,
-            pix_tipo_chave: currentSettings.pix_tipo_chave,
-            pix_beneficiario: currentSettings.pix_beneficiario,
-            pix_documento: currentSettings.pix_documento,
-            pix_cidade: currentSettings.pix_cidade,
-            motivo_alteracao: motivo,
-            atualizado_por: usuario || "admin",
-            atualizado_em: agora
+            acao: "PRICE_UPDATED",
+            usuario: usuario || "admin",
+            campo_afetado: "valor_inscricao",
+            valor_anterior: String(valorAnterior),
+            valor_novo: String(valorNum),
+            motivo: motivo || "Atualização de preço",
+            ip_origem: ip || "127.0.0.1",
+            detalhes: { lote: novoSettings.lote_atual, versao: novaVersao }
           })
-        });
-        if (directRes.ok) {
-          supabasePersisted = true;
-          await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
-            method: "POST",
-            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              acao: "PRICE_UPDATED",
-              usuario: usuario || "admin",
-              campo_afetado: "valor_inscricao",
-              valor_anterior: String(valorAnterior),
-              valor_novo: String(valorNum),
-              motivo: motivo || "Atualização de preço via fallback",
-              ip_origem: ip || "127.0.0.1",
-              detalhes: { lote: novoSettings.lote_atual, versao: novaVersao }
-            })
-          }).catch(() => {});
-        }
+        }).catch(() => {});
       }
     } catch (err) {
       console.warn("[SettingsStore updatePriceSettings] Supabase indisponível no momento:", err.message);
@@ -726,82 +725,63 @@ async function updatePixSettings({
 
   if (url && key) {
     try {
-      // 1.1 Tenta via RPC passando o preço ativo para conformidade de schema
-      const rpcRes = await fetch(`${url}/rest/v1/rpc/atualizar_configuracao_financeira`, {
-        method: "POST",
-        headers: {
-          "apikey": key,
-          "Authorization": `Bearer ${key}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          p_usuario: usuario || "admin",
-          p_lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
-          p_valor_inscricao: currentSettings.valor_inscricao ?? null,
-          p_valor_promocional: currentSettings.valor_promocional || null,
-          p_taxa_adicional: currentSettings.taxa_adicional || 0.00,
-          p_max_parcelas: currentSettings.max_parcelas || 12,
-          p_pix_chave: chaveLimpa,
-          p_pix_tipo_chave: tipoChave,
-          p_pix_beneficiario: beneficiarioLimpo,
-          p_pix_documento: novoSettings.pix_documento,
-          p_pix_cidade: cidadeLimpa,
-          p_motivo: motivo || "Atualização de dados PIX",
-          p_ip: ip || "127.0.0.1"
-        }),
-        signal: AbortSignal.timeout(4000)
+      // 1.1 Desativa versão ativa anterior
+      await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
+        method: "PATCH",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ ativo: false, atualizado_em: agora }),
+        signal: AbortSignal.timeout(5000)
       });
 
-      if (rpcRes.ok) {
+      // 1.2 Insere nova versão preservando configurações de cartão de crédito e preços
+      const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+        method: "POST",
+        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({
+          versao: novaVersao,
+          ativo: true,
+          lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
+          valor_inscricao: currentSettings.valor_inscricao ?? null,
+          valor_promocional: currentSettings.valor_promocional,
+          taxa_adicional: currentSettings.taxa_adicional || 0.00,
+          max_parcelas: currentSettings.max_parcelas || 12,
+          card_installment_mode: currentSettings.card_installment_mode || "mercado_pago",
+          card_max_installments: Number(currentSettings.card_max_installments || currentSettings.max_parcelas || 6),
+          card_installment_rates: (Array.isArray(currentSettings.card_installment_rates) && currentSettings.card_installment_rates.length > 0)
+            ? currentSettings.card_installment_rates
+            : getDefaultCardRates(),
+          mp_public_key: (currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
+          modalidade_pix: novoSettings.modalidade_pix,
+          pix_chave: chaveLimpa,
+          pix_tipo_chave: tipoChave,
+          pix_beneficiario: beneficiarioLimpo,
+          pix_documento: novoSettings.pix_documento,
+          pix_cidade: cidadeLimpa,
+          pix_instrucoes_manual: novoSettings.pix_instrucoes_manual,
+          pix_permite_comprovante: novoSettings.pix_permite_comprovante,
+          motivo_alteracao: motivo,
+          atualizado_por: usuario || "admin",
+          atualizado_em: agora
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (directRes.ok) {
         supabasePersisted = true;
-      } else {
-        // 1.2 Fallback: PostgREST direto nas tabelas
-        await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true`, {
-          method: "PATCH",
-          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ ativo: false, atualizado_em: agora })
-        });
-        const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
+        await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
           method: "POST",
-          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
           body: JSON.stringify({
-            versao: novaVersao,
-            ativo: true,
-            lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
-            valor_inscricao: currentSettings.valor_inscricao ?? null,
-            valor_promocional: currentSettings.valor_promocional,
-            taxa_adicional: currentSettings.taxa_adicional || 0.00,
-            max_parcelas: currentSettings.max_parcelas || 12,
-            modalidade_pix: novoSettings.modalidade_pix,
-            pix_chave: chaveLimpa,
-            pix_tipo_chave: tipoChave,
-            pix_beneficiario: beneficiarioLimpo,
-            pix_documento: novoSettings.pix_documento,
-            pix_cidade: cidadeLimpa,
-            pix_instrucoes_manual: novoSettings.pix_instrucoes_manual,
-            pix_permite_comprovante: novoSettings.pix_permite_comprovante,
-            motivo_alteracao: motivo,
-            atualizado_por: usuario || "admin",
-            atualizado_em: agora
+            acao: "PIX_KEY_UPDATED",
+            usuario: usuario || "admin",
+            campo_afetado: "pix_chave",
+            valor_anterior: chaveAnterior,
+            valor_novo: chaveLimpa,
+            motivo: motivo || "Atualização de chave PIX",
+            ip_origem: ip || "127.0.0.1",
+            detalhes: { beneficiario: beneficiarioLimpo, versao: novaVersao }
           })
-        });
-        if (directRes.ok) {
-          supabasePersisted = true;
-          await fetch(`${url}/rest/v1/historico_configuracoes_financeiras`, {
-            method: "POST",
-            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              acao: "PIX_KEY_UPDATED",
-              usuario: usuario || "admin",
-              campo_afetado: "pix_chave",
-              valor_anterior: chaveAnterior,
-              valor_novo: chaveLimpa,
-              motivo: motivo || "Atualização de chave PIX via fallback",
-              ip_origem: ip || "127.0.0.1",
-              detalhes: { beneficiario: beneficiarioLimpo, versao: novaVersao }
-            })
-          }).catch(() => {});
-        }
+        }).catch(() => {});
       }
     } catch (err) {
       console.warn("[SettingsStore updatePixSettings] Supabase indisponível no momento:", err.message);
@@ -908,7 +888,9 @@ async function updateCardSettings({
     card_installment_mode: mode,
     card_max_installments: maxInst,
     card_installment_rates: rates,
-    mp_public_key: mp_public_key !== undefined ? String(mp_public_key).trim() : (currentSettings.mp_public_key || ""),
+    mp_public_key: (mp_public_key !== undefined && String(mp_public_key).trim() !== "")
+      ? String(mp_public_key).trim()
+      : (currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY),
     motivo_alteracao: motivo || `Atualização das condições de parcelamento (Modo: ${mode}, Máx: ${maxInst}x)`,
     atualizado_por: usuario,
     atualizado_em: new Date().toISOString()
@@ -974,7 +956,7 @@ async function updateCardSettings({
           card_installment_mode: mode,
           card_max_installments: maxInst,
           card_installment_rates: rates,
-          mp_public_key: novoSettings.mp_public_key || "",
+          mp_public_key: (novoSettings.mp_public_key || currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
           pix_chave: currentSettings.pix_chave || "leoeuler03@gmail.com",
           pix_tipo_chave: currentSettings.pix_tipo_chave || "EMAIL",
           pix_beneficiario: currentSettings.pix_beneficiario || "EJC TRANSITO MONTE SIAO",
@@ -1535,6 +1517,12 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
             valor_promocional: updatedSettings.valor_promocional,
             taxa_adicional: updatedSettings.taxa_adicional,
             max_parcelas: updatedSettings.max_parcelas,
+            card_installment_mode: updatedSettings.card_installment_mode || "mercado_pago",
+            card_max_installments: Number(updatedSettings.card_max_installments || 6),
+            card_installment_rates: (Array.isArray(updatedSettings.card_installment_rates) && updatedSettings.card_installment_rates.length > 0)
+              ? updatedSettings.card_installment_rates
+              : getDefaultCardRates(),
+            mp_public_key: (updatedSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
             modalidade_pix: updatedSettings.modalidade_pix || "api_webhook",
             pix_chave: updatedSettings.pix_chave,
             pix_tipo_chave: updatedSettings.pix_tipo_chave,
@@ -1569,6 +1557,7 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
 }
 
 module.exports = {
+  CANONICAL_MP_PUBLIC_KEY,
   getActiveSettings,
   getEffectivePrice,
   getNextMonotonicVersion,

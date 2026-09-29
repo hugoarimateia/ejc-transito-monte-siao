@@ -1,13 +1,13 @@
 {
   "settings": {
-    "versao": 18,
+    "versao": 26,
     "ativo": true,
     "configurado": true,
     "lote_atual": "1º Lote - Oficial",
     "valor_inscricao": 50,
-    "valor_promocional": 0.01,
+    "valor_promocional": null,
     "taxa_adicional": 0,
-    "max_parcelas": 12,
+    "max_parcelas": 6,
     "modalidade_pix": "api_webhook",
     "pix_mode": "api_webhook",
     "pix_chave": "leoeuler03@gmail.com",
@@ -18,12 +18,12 @@
     "pix_instituicao": "",
     "pix_instrucoes_manual": "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     "pix_permite_comprovante": true,
-    "motivo_alteracao": "teste 00:07",
-    "atualizado_por": "financeiro",
-    "atualizado_em": "2026-09-29T03:07:24.152047+00:00",
-    "id": "368976f1-b08d-43d4-8955-de6b6540d125",
-    "criado_em": "2026-09-29T03:07:24.152047+00:00",
-    "preco_efetivo": 0.01,
+    "motivo_alteracao": "teste preço",
+    "atualizado_por": "superadmin",
+    "atualizado_em": "2026-09-29T16:45:04.942104+00:00",
+    "id": "f9910886-d5a9-405d-b053-58627d2abb01",
+    "criado_em": "2026-09-29T16:45:04.942104+00:00",
+    "preco_efetivo": 50,
     "card_installment_mode": "mercado_pago",
     "card_max_installments": 6,
     "card_installment_rates": [
@@ -35,31 +35,67 @@
       },
       {
         "installment": 2,
-        "rate": 4,
+        "rate": 4.5,
         "rate_type": "percentage",
         "enabled": true
       },
       {
         "installment": 3,
-        "rate": 6,
+        "rate": 5.5,
         "rate_type": "percentage",
         "enabled": true
       },
       {
         "installment": 4,
-        "rate": 8,
+        "rate": 7,
         "rate_type": "percentage",
         "enabled": true
       },
       {
         "installment": 5,
+        "rate": 8.5,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 6,
         "rate": 10,
+        "rate_type": "percentage",
+        "enabled": true
+      },
+      {
+        "installment": 7,
+        "rate": 11.5,
         "rate_type": "percentage",
         "enabled": false
       },
       {
-        "installment": 6,
-        "rate": 12,
+        "installment": 8,
+        "rate": 13,
+        "rate_type": "percentage",
+        "enabled": false
+      },
+      {
+        "installment": 9,
+        "rate": 14.5,
+        "rate_type": "percentage",
+        "enabled": false
+      },
+      {
+        "installment": 10,
+        "rate": 16,
+        "rate_type": "percentage",
+        "enabled": false
+      },
+      {
+        "installment": 11,
+        "rate": 17.5,
+        "rate_type": "percentage",
+        "enabled": false
+      },
+      {
+        "installment": 12,
+        "rate": 19,
         "rate_type": "percentage",
         "enabled": false
       }
@@ -78,6 +114,111 @@
     }
   ],
   "historico": [
+    {
+      "id": "audit-1790700973263-tsvd",
+      "acao": "PRICE_UPDATED",
+      "usuario": "tester",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
+      "valor_novo": "R$ 50.00 (1º Lote - Oficial)",
+      "motivo": "Teste de não-regressão de cartão ao atualizar preço",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T16:56:13.263Z",
+      "detalhes": {
+        "versao": 27,
+        "lote": "1º Lote - Oficial",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1790700948155-ef1l",
+      "acao": "CARD_SETTINGS_UPDATED",
+      "usuario": "admin_restoration",
+      "campo_afetado": "card_installment_settings",
+      "valor_anterior": "{\"mode\":\"mercado_pago\",\"max\":6}",
+      "valor_novo": "{\"mode\":\"mercado_pago\",\"max\":6,\"ratesCount\":12}",
+      "motivo": "Restauração da Public Key oficial do Mercado Pago pós-regressão",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T16:55:48.155Z",
+      "detalhes": {
+        "mode": "mercado_pago",
+        "max_installments": 6,
+        "rates": [
+          {
+            "installment": 1,
+            "rate": 0,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 2,
+            "rate": 4.5,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 3,
+            "rate": 5.5,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 4,
+            "rate": 7,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 5,
+            "rate": 8.5,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 6,
+            "rate": 10,
+            "rate_type": "percentage",
+            "enabled": true
+          },
+          {
+            "installment": 7,
+            "rate": 11.5,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 8,
+            "rate": 13,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 9,
+            "rate": 14.5,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 10,
+            "rate": 16,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 11,
+            "rate": 17.5,
+            "rate_type": "percentage",
+            "enabled": false
+          },
+          {
+            "installment": 12,
+            "rate": 19,
+            "rate_type": "percentage",
+            "enabled": false
+          }
+        ]
+      }
+    },
     {
       "id": "audit-1790663505922-19ny",
       "acao": "CARD_SETTINGS_UPDATED",
