@@ -13,7 +13,7 @@ const { applyCors } = require("./_cors");
 function getPublicBaseUrl() {
   const custom = process.env.SITE_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
   if (custom) return custom.replace(/\/$/, "");
-  return "https://transitoejc.site";
+  return "https://www.transitoejc.site";
 }
 
 function getWebhookNotificationUrl() {

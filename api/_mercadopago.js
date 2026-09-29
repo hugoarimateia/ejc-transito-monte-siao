@@ -387,9 +387,9 @@ async function criarPreferenciaCheckoutPro({
       default_installments: 1
     },
     back_urls: {
-      success: backUrls.success || `https://transitoejc.site/checkout.html?retorno_mp=success&txid=${encodeURIComponent(txid)}`,
-      pending: backUrls.pending || `https://transitoejc.site/checkout.html?retorno_mp=pending&txid=${encodeURIComponent(txid)}`,
-      failure: backUrls.failure || `https://transitoejc.site/checkout.html?retorno_mp=failure&txid=${encodeURIComponent(txid)}`
+      success: backUrls.success || `https://www.transitoejc.site/checkout.html?retorno_mp=success&txid=${encodeURIComponent(txid)}`,
+      pending: backUrls.pending || `https://www.transitoejc.site/checkout.html?retorno_mp=pending&txid=${encodeURIComponent(txid)}`,
+      failure: backUrls.failure || `https://www.transitoejc.site/checkout.html?retorno_mp=failure&txid=${encodeURIComponent(txid)}`
     },
     auto_return: "approved",
     external_reference: String(txid),
