@@ -3,9 +3,9 @@
 // ==============================================================================
 
 // 1. Configuração do Supabase
-// Coloque aqui a URL do seu projeto Supabase e a chave pública (anon key).
-window.EJC_SUPABASE_URL = "https://guppedddwnuvluhiaaas.supabase.co";
-window.EJC_SUPABASE_ANON_KEY = "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
+// Os valores reais precisam ser configurados via variáveis de ambiente do servidor.
+window.EJC_SUPABASE_URL = "";
+window.EJC_SUPABASE_ANON_KEY = "";
 
 // 2. Configuração do Pix Dinâmico (Padrão Banco Central / BR Code)
 // Valores oficiais serão carregados dinamicamente em runtime a partir do Supabase

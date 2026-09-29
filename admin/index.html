@@ -237,7 +237,7 @@
         <div id="readOnlyBanner" class="alert-banner alert-warning" style="display: none;">
           <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
           <div>
-            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com permissão apenas de visualização. Para alterar valores de inscrição ou dados da chave PIX, realize login com uma senha com permissão financeira (<code>financeiro2026</code> ou <code>ejc2026</code>).
+            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com permissão apenas de visualização. Para alterar valores de inscrição ou dados da chave PIX, utilize uma senha configurada no ambiente do servidor.
           </div>
         </div>
 
@@ -632,16 +632,11 @@
   <script src="../js/env-config.js"></script>
   <script src="../js/supabase-config.js"></script>
   <script>
-    const AUTH_PASS = "ejc2026"; // Senha padrão superadmin
-    const ROLE_MAP = {
-      "ejc2026": { role: "superadmin", label: "Superadmin (Acesso Total)", class: "role-superadmin", icon: "fa-shield-halved", canEdit: true },
-      "financeiro2026": { role: "financeiro", label: "Gestor Financeiro", class: "role-financeiro", icon: "fa-coins", canEdit: true },
-      "coordenacao2026": { role: "comum", label: "Coordenação (Visualização)", class: "role-comum", icon: "fa-eye", canEdit: false }
-    };
+    const ROLE_MAP = {};
 
-    let currentUserRole = "superadmin";
-    let currentAdminPass = "ejc2026";
-    let canUserEditFinance = true;
+    let currentUserRole = "administrador";
+    let currentAdminPass = "";
+    let canUserEditFinance = false;
 
     // Configuração ativa em memória (Sem fallback fixo para R$ 50 - Fonte da Verdade é o Banco)
     let configFinanceiraAtiva = {
@@ -685,21 +680,21 @@
     let activeModalTxid = null;
 
     // Checa sessão existente
-    const savedPass = sessionStorage.getItem("ejc_admin_pass") || (sessionStorage.getItem("ejc_admin_auth") === "true" ? "ejc2026" : "");
-    if (savedPass && (ROLE_MAP[savedPass] || savedPass === "ejc2026")) {
+    const savedPass = sessionStorage.getItem("ejc_admin_pass") || "";
+    if (savedPass) {
       currentAdminPass = savedPass;
-      currentUserRole = ROLE_MAP[savedPass] ? ROLE_MAP[savedPass].role : "superadmin";
-      canUserEditFinance = ROLE_MAP[savedPass] ? ROLE_MAP[savedPass].canEdit : true;
+      currentUserRole = "administrador";
+      canUserEditFinance = true;
       showPanel();
     }
 
     authForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const pass = adminPassword.value.trim();
-      if (ROLE_MAP[pass] || pass === AUTH_PASS) {
+      if (pass) {
         currentAdminPass = pass;
-        currentUserRole = ROLE_MAP[pass] ? ROLE_MAP[pass].role : "superadmin";
-        canUserEditFinance = ROLE_MAP[pass] ? ROLE_MAP[pass].canEdit : true;
+        currentUserRole = "administrador";
+        canUserEditFinance = true;
         sessionStorage.setItem("ejc_admin_auth", "true");
         sessionStorage.setItem("ejc_admin_pass", pass);
         sessionStorage.setItem("ejc_admin_role", currentUserRole);
@@ -721,7 +716,7 @@
       panelWrap.classList.add("active");
 
       // Atualiza badge de papel no cabeçalho
-      const roleInfo = ROLE_MAP[currentAdminPass] || { label: "Superadmin", class: "role-superadmin", icon: "fa-shield-halved" };
+      const roleInfo = ROLE_MAP[currentAdminPass] || { label: "Administrador", class: "role-superadmin", icon: "fa-shield-halved" };
       const badgeEl = document.getElementById("headerRoleBadge");
       if (badgeEl) {
         badgeEl.className = `role-badge ${roleInfo.class}`;

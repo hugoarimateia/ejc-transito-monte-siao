@@ -110,8 +110,11 @@ const handler = async (req, res) => {
     const authHeader = req.headers?.["authorization"] || "";
     const tokenHeader = req.headers?.["x-admin-token"] || "";
     const providedPass = req.query?.pass || tokenHeader || authHeader.replace(/^Bearer\s+/i, "").trim();
-    const envAdminPass = process.env.ADMIN_PASSWORD || "ejc2026";
-    const isAuthorized = providedPass === envAdminPass || ["ejc2026", "financeiro2026"].includes(providedPass);
+    const validPasswords = Object.freeze({
+      ...(process.env.ADMIN_PASSWORD ? { [process.env.ADMIN_PASSWORD]: "superadmin" } : {}),
+      ...(process.env.FINANCEIRO_PASSWORD ? { [process.env.FINANCEIRO_PASSWORD]: "financeiro" } : {})
+    });
+    const isAuthorized = Boolean(validPasswords[providedPass]);
 
     if (!isAuthorized) {
       return res.status(401).json({ error: "Acesso não autorizado ao diagnóstico de e-mail." });
