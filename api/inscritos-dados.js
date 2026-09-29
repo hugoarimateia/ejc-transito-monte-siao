@@ -171,26 +171,68 @@ module.exports = async (req, res) => {
   }
 
   // ---------------------------------------------------------------------------
-  // PATCH / POST: ATUALIZAR DADOS COMPLEMENTARES (CAMISA, FOTO, OBSERVAÇÕES)
+  // PATCH / POST: ATUALIZAR DADOS COMPLEMENTARES (CAMISA, FOTO, SUB, OBSERVAÇÕES)
   // ---------------------------------------------------------------------------
   if (req.method === "PATCH" || req.method === "POST") {
-    const { inscricao_id, tamanho_camisa, foto_caminho, observacoes } = req.body || {};
+    const { inscricao_id, tamanho_camisa, foto_caminho, observacoes, sub, nova_sub } = req.body || {};
 
     if (!inscricao_id || typeof inscricao_id !== "string") {
       return res.status(400).json({ error: "ID da inscrição é obrigatório." });
     }
 
     try {
-      // 1. Verifica se a inscrição realmente existe
-      const existing = await sbFetch(baseUrl, key, `inscricoes?id=eq.${inscricao_id}&select=id,nome_completo,sub,tamanho_camisa,foto_caminho`);
-      if (!Array.isArray(existing) || existing.length === 0) {
-        return res.status(404).json({ error: "Inscrição não encontrada." });
+      // 1. Verifica se a inscrição realmente existe (Supabase ou LocalStore fallback)
+      let inscricaoBase = null;
+      try {
+        const existing = await sbFetch(baseUrl, key, `inscricoes?id=eq.${inscricao_id}&select=id,nome_completo,sub,tamanho_camisa,foto_caminho`);
+        if (Array.isArray(existing) && existing.length > 0) {
+          inscricaoBase = existing[0];
+        }
+      } catch (errDb) {
+        console.warn("[Inscritos Dados API] Busca direta Supabase restrita/indisponível:", errDb.message);
       }
 
-      const inscricaoBase = existing[0];
+      if (!inscricaoBase) {
+        try {
+          const local = settingsStore.loadLocalStore();
+          const found = (local.inscricoes || []).find(i => i.id === inscricao_id);
+          if (found) inscricaoBase = found;
+        } catch (eLoc) {}
+      }
+
+      if (!inscricaoBase) {
+        return res.status(404).json({ error: "Inscrição não encontrada." });
+      }
       const novoTamanho = tamanho_camisa !== undefined ? String(tamanho_camisa).trim() : inscricaoBase.tamanho_camisa;
       const novaFoto = foto_caminho !== undefined ? String(foto_caminho).trim() : inscricaoBase.foto_caminho;
       const statusCalculado = (novoTamanho && novaFoto) ? "completo" : "incompleto";
+
+      // 1.5 Tratamento e Normalização da Sub (Transferência ou Remoção de Sub)
+      const targetSubRaw = sub !== undefined ? sub : nova_sub;
+      let subFinal = inscricaoBase.sub;
+      let subAlterada = false;
+
+      if (targetSubRaw !== undefined) {
+        const sClean = String(targetSubRaw || "").trim().toLowerCase();
+        if (!sClean || sClean === "sem sub" || sClean === "none" || sClean === "null" || sClean === "-") {
+          subFinal = null;
+          subAlterada = (inscricaoBase.sub !== null);
+        } else if (sClean.includes("verd")) {
+          subFinal = "Verde";
+          subAlterada = (inscricaoBase.sub !== "Verde");
+        } else if (sClean.includes("verm")) {
+          subFinal = "Vermelho";
+          subAlterada = (inscricaoBase.sub !== "Vermelho");
+        } else if (sClean.includes("amar")) {
+          subFinal = "Amarelo";
+          subAlterada = (inscricaoBase.sub !== "Amarelo");
+        } else if (sClean.includes("laran") || sClean.includes("azul")) {
+          subFinal = "Laranja";
+          subAlterada = (inscricaoBase.sub !== "Laranja");
+        } else {
+          return res.status(400).json({ error: "Sub inválido. Subs permitidos: Verde, Vermelho, Amarelo, Laranja ou Sem Sub." });
+        }
+      }
 
       const payload = {
         inscricao_id,
@@ -215,16 +257,62 @@ module.exports = async (req, res) => {
         // Se a tabela ainda não existir, prossegue com atualização na tabela inscricoes
       }
 
-      // 3. Sincroniza tamanho_camisa na tabela inscricoes para evitar divergência
+      // 3. Atualiza campos sincronizados na tabela inscricoes (tamanho_camisa e sub)
+      const patchInscricaoBody = {};
       if (tamanho_camisa !== undefined) {
+        patchInscricaoBody.tamanho_camisa = novoTamanho || inscricaoBase.tamanho_camisa;
+      }
+      if (subAlterada) {
+        patchInscricaoBody.sub = subFinal;
+      }
+
+      if (Object.keys(patchInscricaoBody).length > 0) {
         try {
           await sbFetch(baseUrl, key, `inscricoes?id=eq.${inscricao_id}`, {
             method: "PATCH",
+            body: patchInscricaoBody
+          });
+        } catch (e) {
+          console.warn("[Inscritos Dados API] Erro ao atualizar inscricao:", e.message);
+        }
+      }
+
+      // 4. Sincroniza também no store local central
+      try {
+        const local = settingsStore.loadLocalStore();
+        if (Array.isArray(local.inscricoes)) {
+          const idx = local.inscricoes.findIndex(i => i.id === inscricao_id);
+          if (idx !== -1) {
+            if (tamanho_camisa !== undefined) local.inscricoes[idx].tamanho_camisa = novoTamanho;
+            if (subAlterada) local.inscricoes[idx].sub = subFinal;
+            if (novaFoto) local.inscricoes[idx].foto_caminho = novaFoto;
+            local.inscricoes[idx].atualizado_em = new Date().toISOString();
+            settingsStore.saveLocalStore(local);
+          }
+        }
+      } catch (eStore) {}
+
+      // 5. Trilha de auditoria administrativa caso a Sub tenha sido alterada
+      if (subAlterada) {
+        try {
+          await sbFetch(baseUrl, key, "auditoria_transacoes", {
+            method: "POST",
             body: {
-              tamanho_camisa: novoTamanho || inscricaoBase.tamanho_camisa
+              transacao_id: `sub-transfer-${Date.now()}`,
+              acao: "SUB_TRANSFERRED",
+              status_anterior: inscricaoBase.sub || "Sem Sub",
+              status_novo: subFinal || "Sem Sub",
+              executado_por: auth.label || "admin",
+              detalhes: {
+                inscricao_id,
+                nome_completo: inscricaoBase.nome_completo,
+                sub_anterior: inscricaoBase.sub || "Sem Sub",
+                sub_novo: subFinal || "Sem Sub",
+                data: new Date().toISOString()
+              }
             }
           });
-        } catch (e) {}
+        } catch (eAud) {}
       }
 
       return res.status(200).json({
@@ -232,6 +320,8 @@ module.exports = async (req, res) => {
         message: "Dados do inscrito atualizados com sucesso.",
         item: {
           inscricao_id,
+          sub: subFinal,
+          sub_alterada: subAlterada,
           tamanho_camisa: novoTamanho,
           foto_caminho: novaFoto,
           status_cadastro: statusCalculado,
@@ -243,6 +333,7 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: "Erro interno ao atualizar dados do inscrito." });
     }
   }
+
 
   return res.status(405).json({ error: "Método não permitido." });
 };

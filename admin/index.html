@@ -907,6 +907,18 @@
       <input type="hidden" id="editInscritoId">
 
       <div style="margin-bottom: 14px;">
+        <label for="editInscritoSub" style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Sub Equipe:</label>
+        <select id="editInscritoSub" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-weight: 600;">
+          <option value="Verde">Sub Verde</option>
+          <option value="Vermelho">Sub Vermelho</option>
+          <option value="Amarelo">Sub Amarelo</option>
+          <option value="Laranja">Sub Laranja</option>
+          <option value="">(Sem Sub / Desassociar)</option>
+        </select>
+        <small style="color: var(--muted); font-size: .75rem; display: block; margin-top: 4px;">Permite transferir o inscrito de Sub ou desassociar, com histórico preservado.</small>
+      </div>
+
+      <div style="margin-bottom: 14px;">
         <label for="editInscritoTamanhoCamisa" style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Tamanho da Camisa:</label>
         <select id="editInscritoTamanhoCamisa" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink);">
           <option value="">Selecione o tamanho...</option>
@@ -3369,7 +3381,7 @@
       const label = document.getElementById("modalFotoLabel");
       if (wrapper && label) {
         if (item.foto_url) {
-          wrapper.innerHTML = `<img src="${item.foto_url}" alt="${escapeHtml(item.nome_completo)}">`;
+          wrapper.innerHTML = `<img src="${item.foto_url}" alt="${escapeHtml(item.nome_completo)}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'font-size: 3rem; color: var(--muted);\\'></i>';">`;
           label.textContent = "Foto Cadastrada";
         } else {
           wrapper.innerHTML = `<i class="fa-solid fa-user" style="font-size: 3rem; color: var(--muted);"></i>`;
@@ -3379,6 +3391,8 @@
 
       // Preenche formulário de edição
       document.getElementById("editInscritoId").value = item.id;
+      const subSelect = document.getElementById("editInscritoSub");
+      if (subSelect) subSelect.value = item.sub || "";
       document.getElementById("editInscritoTamanhoCamisa").value = item.tamanho_camisa || "";
       document.getElementById("editInscritoObservacoes").value = item.observacoes || "";
 
@@ -3438,6 +3452,8 @@
       event.preventDefault();
 
       const inscricaoId = document.getElementById("editInscritoId").value;
+      const subEl = document.getElementById("editInscritoSub");
+      const novaSub = subEl ? subEl.value : undefined;
       const tamanhoCamisa = document.getElementById("editInscritoTamanhoCamisa").value;
       const observacoes = document.getElementById("editInscritoObservacoes").value;
 
@@ -3477,7 +3493,7 @@
           novaFotoCaminho = photoData.foto_caminho;
         }
 
-        // 2. Atualiza dados complementares (tamanho camisa, observações)
+        // 2. Atualiza dados complementares (sub, tamanho camisa, observações)
         const updateRes = await fetch("/api/admin/inscritos-dados", {
           method: "PATCH",
           headers: {
@@ -3487,6 +3503,7 @@
           },
           body: JSON.stringify({
             inscricao_id: inscricaoId,
+            sub: novaSub !== undefined ? (novaSub || null) : undefined,
             tamanho_camisa: tamanhoCamisa || null,
             foto_caminho: novaFotoCaminho,
             observacoes: observacoes || null
@@ -3504,10 +3521,11 @@
           fb.style.display = "block";
         }
 
-        // Recarrega o Sub ativo e fecha o modal
+        // Recarrega o Sub ativo, sincroniza contadores gerais e fecha o modal
         setTimeout(() => {
           fecharModalInscrito();
           carregarSubAtivo(true);
+          carregarDados();
         }, 800);
       } catch (err) {
         console.error("[Salvar Inscrito]", err);

@@ -307,36 +307,74 @@ async function getActiveSettings() {
 
   if (url && key) {
     try {
-      const res = await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
-        headers: { "apikey": key, "Authorization": `Bearer ${key}` },
-        signal: AbortSignal.timeout(3500)
-      });
-      if (res.ok) {
-        const rows = await res.json();
-        if (rows && rows.length > 0) {
-          const remoteSettings = rows[0];
-          const rawRemotePrice = remoteSettings.valor_inscricao;
-          const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
-          const remotePublicKey = (remoteSettings.mp_public_key || "").trim();
-          const effectivePublicKey = remotePublicKey || (localData.settings && localData.settings.mp_public_key) || CANONICAL_MP_PUBLIC_KEY;
-          const effectiveRates = (Array.isArray(remoteSettings.card_installment_rates) && remoteSettings.card_installment_rates.length > 0)
-            ? remoteSettings.card_installment_rates
-            : ((localData.settings && Array.isArray(localData.settings.card_installment_rates) && localData.settings.card_installment_rates.length > 0)
-                ? localData.settings.card_installment_rates
-                : getDefaultCardRates());
+      let remoteSettings = null;
 
-          localData.settings = {
-            ...localData.settings,
-            ...remoteSettings,
-            valor_inscricao: parsedRemotePrice,
-            configurado: Boolean(remoteSettings.configurado && parsedRemotePrice !== null && parsedRemotePrice > 0),
-            taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
-            max_parcelas: Number(remoteSettings.max_parcelas || 12),
-            card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
-            card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),
-            card_installment_rates: effectiveRates,
-            mp_public_key: effectivePublicKey
-          };
+      // 1. Tenta consultar a RPC oficial obter_configuracao_financeira_ativa (SECURITY DEFINER)
+      try {
+        const rpcRes = await fetch(`${url}/rest/v1/rpc/obter_configuracao_financeira_ativa`, {
+          method: "POST",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(3000)
+        });
+        if (rpcRes.ok) {
+          const rpcData = await rpcRes.json();
+          if (rpcData && rpcData.success && rpcData.valor_inscricao !== undefined) {
+            remoteSettings = rpcData;
+          }
+        }
+      } catch (eRpc) {}
+
+      // 2. Se a RPC não respondeu, consulta a tabela com fallback: busca por ativo=eq.true OU a mais recente por versao.desc
+      if (!remoteSettings) {
+        let res = await fetch(`${url}/rest/v1/configuracoes_financeiras?ativo=eq.true&order=versao.desc&limit=1`, {
+          headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+          signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) {
+          const rows = await res.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            remoteSettings = rows[0];
+          }
+        }
+        if (!remoteSettings) {
+          let resLatest = await fetch(`${url}/rest/v1/configuracoes_financeiras?order=versao.desc&limit=1`, {
+            headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+            signal: AbortSignal.timeout(3000)
+          });
+          if (resLatest.ok) {
+            const rowsLatest = await resLatest.json();
+            if (Array.isArray(rowsLatest) && rowsLatest.length > 0) {
+              remoteSettings = rowsLatest[0];
+            }
+          }
+        }
+      }
+
+      if (remoteSettings) {
+        const rawRemotePrice = remoteSettings.valor_inscricao;
+        const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
+        const remotePublicKey = (remoteSettings.mp_public_key || "").trim();
+        const effectivePublicKey = remotePublicKey || (localData.settings && localData.settings.mp_public_key) || CANONICAL_MP_PUBLIC_KEY;
+        const effectiveRates = (Array.isArray(remoteSettings.card_installment_rates) && remoteSettings.card_installment_rates.length > 0)
+          ? remoteSettings.card_installment_rates
+          : ((localData.settings && Array.isArray(localData.settings.card_installment_rates) && localData.settings.card_installment_rates.length > 0)
+              ? localData.settings.card_installment_rates
+              : getDefaultCardRates());
+
+        localData.settings = {
+          ...localData.settings,
+          ...remoteSettings,
+          valor_inscricao: parsedRemotePrice,
+          configurado: Boolean(parsedRemotePrice !== null && parsedRemotePrice > 0),
+          taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
+          max_parcelas: Number(remoteSettings.max_parcelas || 12),
+          card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
+          card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),
+          card_installment_rates: effectiveRates,
+          mp_public_key: effectivePublicKey
+        };
+      }
+
 
           // Sincroniza histórico recente do Supabase se disponível
           try {
@@ -421,12 +459,11 @@ async function getActiveSettings() {
           } catch (eLotes) {}
 
           saveLocalStore(localData);
-        }
-      }
     } catch (err) {
       console.warn("[SettingsStore GET] Supabase indisponível no momento, utilizando dados persistidos locais:", err.message);
     }
   }
+
 
   if (localData.settings && localData.settings.pix_chave) {
     localData.settings.pix_chave = normalizarChavePix(localData.settings.pix_chave, localData.settings.pix_tipo_chave);

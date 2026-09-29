@@ -30,18 +30,27 @@ function normalizarSub(sub) {
   return null;
 }
 
-// Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas
+// Helper centralizado: valida se o status de pagamento é efetivamente confirmado/aprovado
+function isPagamentoConfirmado(status) {
+  const s = String(status || "").trim().toLowerCase();
+  return ["approved", "confirmado", "pago"].includes(s);
+}
+
+// Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas e PAGAS
 function calcularContagensOficiais(localStore) {
   const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
   const capacities = { Verde: 50, Vermelho: 50, Amarelo: 50, Laranja: 50 };
   
   // Mapa de pessoas únicas: identificador único -> sub
-  // Fonte Única: apenas inscrições não arquivadas (arquivado = false)
+  // Fonte Única: apenas inscrições não arquivadas (arquivado = false) e com pagamento confirmado
   const pessoasUnicas = new Map();
 
   if (Array.isArray(localStore.inscricoes)) {
     localStore.inscricoes.forEach(insc => {
       if (insc.arquivado) return;
+      // REGRA OFICIAL EJC: inscrições pendentes, rejeitadas, canceladas ou estornadas NÃO são contabilizadas!
+      if (!isPagamentoConfirmado(insc.pagamento_status)) return;
+
       const sub = normalizarSub(insc.sub);
       if (!sub) return;
       const tel = normalizarTelefone(insc.whatsapp);
@@ -65,6 +74,7 @@ function calcularContagensOficiais(localStore) {
 
   return { counts, capacities, total };
 }
+
 
 module.exports = async (req, res) => {
   // Suporte universal para ambientes Vercel Serverless e Node HTTP puro
@@ -140,10 +150,21 @@ module.exports = async (req, res) => {
     }
 
     const { counts: calculatedCounts, capacities, total: calcTotal } = calcularContagensOficiais(localStore);
-    const finalCounts = remoteCounts || calculatedCounts;
-    const finalTotal = remoteCounts 
-      ? Object.values(remoteCounts).reduce((a, b) => a + b, 0)
-      : calcTotal;
+    let finalCounts = calculatedCounts;
+    let finalTotal = calcTotal;
+
+    if (remoteCounts) {
+      const remoteTotal = Object.values(remoteCounts).reduce((a, b) => a + b, 0);
+      // Proteção de integridade: se temos cadastros locais e nenhum deles está pago (calcTotal === 0),
+      // não permite que o contador público exiba registros pendentes/rejeitados
+      if (calcTotal === 0 && Array.isArray(localStore.inscricoes) && localStore.inscricoes.length > 0 && remoteTotal > 0) {
+        finalCounts = calculatedCounts;
+        finalTotal = calcTotal;
+      } else {
+        finalCounts = remoteCounts;
+        finalTotal = remoteTotal;
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -153,6 +174,7 @@ module.exports = async (req, res) => {
       total: finalTotal,
       timestamp: new Date().toISOString()
     });
+
   }
 
   // ----------------------------------------------------------------------------
@@ -302,10 +324,19 @@ module.exports = async (req, res) => {
 
     // Calcula novas contagens consolidadas imediatamente
     const { counts: calculatedCounts, capacities, total: calcTotal } = calcularContagensOficiais(localStore);
-    const finalCounts = remoteCounts || calculatedCounts;
-    const finalTotal = remoteCounts
-      ? Object.values(remoteCounts).reduce((a, b) => a + b, 0)
-      : calcTotal;
+    let finalCounts = calculatedCounts;
+    let finalTotal = calcTotal;
+    if (remoteCounts) {
+      const remoteTotal = Object.values(remoteCounts).reduce((a, b) => a + b, 0);
+      if (calcTotal === 0 && Array.isArray(localStore.inscricoes) && localStore.inscricoes.length > 0 && remoteTotal > 0) {
+        finalCounts = calculatedCounts;
+        finalTotal = calcTotal;
+      } else {
+        finalCounts = remoteCounts;
+        finalTotal = remoteTotal;
+      }
+    }
+
 
     return res.status(200).json({
       success: true,
@@ -320,3 +351,6 @@ module.exports = async (req, res) => {
 
   return res.status(405).json({ error: "Método não permitido." });
 };
+
+module.exports.isPagamentoConfirmado = isPagamentoConfirmado;
+

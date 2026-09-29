@@ -3,11 +3,11 @@
     "versao": 26,
     "ativo": true,
     "configurado": true,
-    "lote_atual": "1º Lote - Oficial",
+    "lote_atual": "1º Lote",
     "valor_inscricao": 50,
     "valor_promocional": null,
     "taxa_adicional": 0,
-    "max_parcelas": 6,
+    "max_parcelas": 12,
     "modalidade_pix": "api_webhook",
     "pix_mode": "api_webhook",
     "pix_chave": "leoeuler03@gmail.com",
@@ -100,7 +100,8 @@
         "enabled": false
       }
     ],
-    "mp_public_key": "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b"
+    "mp_public_key": "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b",
+    "success": true
   },
   "lotes": [
     {
@@ -479,6 +480,70 @@
   },
   "pagamentos": [
     {
+      "txid": "CARDMUMY5Y12OI0G",
+      "payment_id": "CARDMUMY5Y12OI0G",
+      "order_id": null,
+      "external_reference": "CARDMUMY5Y12OI0G",
+      "gateway_transaction_id": "CARDMUMY5Y12OI0G",
+      "nome_pagador": "Hugo Teste",
+      "email": "hugo.teste@ejc.site",
+      "whatsapp_pagador": "83988776655",
+      "valor": 1,
+      "metodo": "credit_card",
+      "status": "approved",
+      "status_detail": "accredited_local_test",
+      "tipo": "inscricao",
+      "parcelas": 1,
+      "cartao_ultimos_digitos": "0000",
+      "cartao_bandeira": "Cartão",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": null,
+        "payment_id": "CARDMUMY5Y12OI0G",
+        "external_reference": "CARDMUMY5Y12OI0G",
+        "sub": "Verde",
+        "lote": "1º Lote - Oficial",
+        "status_detail": "accredited_local_test",
+        "modo_parcelamento": "mercado_pago"
+      },
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-29T17:25:21.896Z",
+      "criado_em": "2026-09-29T17:25:21.896Z"
+    },
+    {
+      "txid": "CARDMUMXSLN4G56S",
+      "payment_id": "CARDMUMXSLN4G56S",
+      "order_id": null,
+      "external_reference": "CARDMUMXSLN4G56S",
+      "gateway_transaction_id": "CARDMUMXSLN4G56S",
+      "nome_pagador": "Teste Participante",
+      "email": "participante.teste.ejc@gmail.com",
+      "whatsapp_pagador": "83988776655",
+      "valor": 50,
+      "metodo": "credit_card",
+      "status": "approved",
+      "status_detail": "accredited_local_test",
+      "tipo": "inscricao",
+      "parcelas": 1,
+      "cartao_ultimos_digitos": "0000",
+      "cartao_bandeira": "Cartão",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": null,
+        "payment_id": "CARDMUMXSLN4G56S",
+        "external_reference": "CARDMUMXSLN4G56S",
+        "sub": "Verde",
+        "lote": "1º Lote - Oficial",
+        "status_detail": "accredited_local_test",
+        "modo_parcelamento": "mercado_pago"
+      },
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-29T17:14:58.589Z",
+      "criado_em": "2026-09-29T17:14:58.589Z"
+    },
+    {
       "txid": "PIXMUMATG9QL6PI",
       "payment_id": "PAY123456789",
       "order_id": "ORDMUMATG9QL6PI",
@@ -573,7 +638,14 @@
       "justificativa_pagamento": null,
       "token_acesso": null,
       "criado_em": "2026-09-29T15:09:14.437Z",
-      "atualizado_em": "2026-09-29T15:09:14.437Z"
+      "atualizado_em": "2026-09-29T23:14:10.462Z"
+    },
+    {
+      "id": "test-sub-management-uuid",
+      "nome_completo": "Teste Auditoria Sub",
+      "sub": "Amarelo",
+      "whatsapp": "83999999999",
+      "atualizado_em": "2026-09-29T23:16:35.450Z"
     }
   ]
 }

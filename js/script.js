@@ -281,10 +281,13 @@ async function updateSubCounts() {
     const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
     local.forEach(i => {
       if (i.arquivado) return;
+      const pagStatus = String(i.pagamento_status || "").trim().toLowerCase();
+      if (!["approved", "confirmado", "pago"].includes(pagStatus)) return;
       const subNorm = (i.sub === "Azul") ? "Laranja" : i.sub;
       if (counts[subNorm] !== undefined) counts[subNorm]++;
     });
   }
+
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;

@@ -825,9 +825,28 @@ module.exports = async (req, res) => {
                     console.log(`[CHECKOUT_PRO_PENDING] TXID=${approvedItem.external_reference || transactionFound.txid || queryTxid}, Status=${approvedItem.status}`);
                   } else if (approvedItem.status === "rejected" || approvedItem.status === "cancelled") {
                     console.log(`[CHECKOUT_PRO_REJECTED] TXID=${approvedItem.external_reference || transactionFound.txid || queryTxid}, Status=${approvedItem.status}`);
+                    // Atualiza persistência no banco e localStore para refletir a rejeição
+                    const targetTx = approvedItem.external_reference || transactionFound.txid || queryTxid;
+                    const statusInsc = (approvedItem.status === "rejected") ? "recusado" : "cancelado";
+                    const agoraIso = new Date().toISOString();
+                    if (supabaseUrl && supabaseKey) {
+                      Promise.all([
+                        fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(String(targetTx))}`, {
+                          method: "PATCH",
+                          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+                          body: JSON.stringify({ status: approvedItem.status, atualizado_em: agoraIso })
+                        }).catch(() => {}),
+                        fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?id=eq.${encodeURIComponent(transactionFound.inscricao_id || targetTx)}`, {
+                          method: "PATCH",
+                          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+                          body: JSON.stringify({ pagamento_status: statusInsc, atualizado_em: agoraIso })
+                        }).catch(() => {})
+                      ]).catch(() => {});
+                    }
                   }
                 }
               }
+
             }
           } catch (eGw) {
             console.warn("[Polling Reconciler] Aviso ao consultar API Mercado Pago:", eGw.message);
@@ -1299,29 +1318,28 @@ module.exports = async (req, res) => {
       console.warn("[Checkout Process] Usando configuração de fallback:", err.message);
     }
 
-    // SEGURANÇA: Para inscrições, valida o valor informado ou utiliza o preço oficial ativo
+    // SEGURANÇA & FONTE ÚNICA: Para inscrições, o valor da inscrição é DETERMINADO EXCLUSIVAMENTE pelo servidor!
+    // NUNCA aceita valor manipulado ou obsoleto do navegador (REGRA 10 e 25 DO PROMPT MESTRE).
     let valorNumerico;
-    const reqValorNum = (req.body && req.body.valor !== undefined && req.body.valor !== null && !isNaN(Number(req.body.valor)) && Number(req.body.valor) > 0)
-      ? Number(Number(req.body.valor).toFixed(2))
-      : null;
-
     if (tipo === "inscricao") {
-      if (reqValorNum && reqValorNum > 0) {
-        valorNumerico = reqValorNum;
-      } else if (officialPrice && !isNaN(officialPrice) && officialPrice > 0) {
-        valorNumerico = officialPrice;
-      } else {
+      if (!officialPrice || isNaN(officialPrice) || officialPrice <= 0) {
         return res.status(400).json({
           error: "A taxa de inscrição ainda não foi configurada pela coordenação. Aguarde a abertura do lote para realizar o pagamento.",
           configurado: false
         });
       }
+      valorNumerico = Number(officialPrice.toFixed(2));
     } else {
+      // Contribuição voluntária avulsa: valida se o valor informado é positivo
+      const reqValorNum = (req.body && req.body.valor !== undefined && req.body.valor !== null && !isNaN(Number(req.body.valor)) && Number(req.body.valor) > 0)
+        ? Number(Number(req.body.valor).toFixed(2))
+        : null;
       valorNumerico = reqValorNum || Number(officialPrice || 0);
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da contribuição inválido." });
       }
     }
+
 
     // --------------------------------------------------------------------------
     // PROCESSAMENTO PIX

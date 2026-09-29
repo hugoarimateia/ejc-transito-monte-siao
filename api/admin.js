@@ -343,11 +343,15 @@ module.exports = async (req, res) => {
 
     const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
     (result.inscricoes || []).forEach((item) => {
+      if (item.arquivado) return;
+      const statusPag = String(item.pagamento_status || "").trim().toLowerCase();
+      if (!["approved", "confirmado", "pago"].includes(statusPag)) return;
       const s = helperSub(item.sub);
       if (s && counts[s] !== undefined) counts[s]++;
     });
     result.counts = counts;
     result.total = Object.values(counts).reduce((a, b) => a + b, 0);
+
 
   } catch (err) {
     result.error = err.message;

@@ -48,47 +48,67 @@ module.exports = async (req, res) => {
   const baseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co").replace(/\/$/, "");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
 
+const FALLBACK_PHOTO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <rect width="160" height="160" rx="80" fill="#f1f5f9"/>
+  <circle cx="80" cy="62" r="30" fill="#94a3b8"/>
+  <path d="M35 138 c0-28 20-46 45-46 s45 18 45 46" fill="#94a3b8"/>
+</svg>`;
+
   // ---------------------------------------------------------------------------
   // GET: STREAMING SEGURO DA FOTO PRIVADA (HMAC TOKEN OU HEADER ADMIN)
   // ---------------------------------------------------------------------------
   if (req.method === "GET") {
-    const filePath = String(req.query.path || "").trim();
-    if (!filePath) {
+    const rawPath = String(req.query.path || "").trim();
+    if (!rawPath) {
       return res.status(400).json({ error: "Parâmetro 'path' é obrigatório." });
     }
 
+    // Normaliza caminho (remove barras iniciais/duplicadas e prefixos de bucket)
+    const cleanPath = rawPath.replace(/^[/\\]+/, "").replace(/^(inscritos-fotos|fotos)[/\\]/, "");
+
+    // Prevenção contra Directory Traversal (LFI)
+    if (cleanPath.includes("..") || cleanPath.includes("\\")) {
+      return res.status(400).json({ error: "Caminho de arquivo inválido." });
+    }
+
+    // Permite apenas prefixos controlados da aplicação
+    if (!cleanPath.startsWith("inscritos/") && !cleanPath.startsWith("participantes/") && !cleanPath.startsWith("comprovantes/")) {
+      return res.status(403).json({ error: "Acesso não permitido a este diretório." });
+    }
+
     // Validação de autenticação: aceita token assinado HMAC ou sessão administrativa
-    const hasValidSignedToken = req.query.token && verifySignedPhotoToken(filePath, String(req.query.token));
+    const token = String(req.query.token || "").trim();
+    const hasValidSignedToken = token && (
+      verifySignedPhotoToken(rawPath, token) ||
+      verifySignedPhotoToken(cleanPath, token)
+    );
     const auth = adminAuth.authenticate(req);
 
     if (!hasValidSignedToken && !auth.ok) {
       return res.status(401).json({ error: "Acesso não autorizado à foto do inscrito." });
     }
 
-    // Prevenção contra Directory Traversal (LFI)
-    if (filePath.includes("..") || filePath.startsWith("/") || filePath.includes("\\")) {
-      return res.status(400).json({ error: "Caminho de arquivo inválido." });
-    }
-
-    // Permite apenas prefixos controlados da aplicação
-    if (!filePath.startsWith("inscritos/") && !filePath.startsWith("participantes/") && !filePath.startsWith("comprovantes/")) {
-      return res.status(403).json({ error: "Acesso não permitido a este diretório." });
-    }
-
     try {
       // 1. Tenta buscar no bucket privado 'inscritos-fotos'
-      let storageRes = await fetch(`${baseUrl}/storage/v1/object/inscritos-fotos/${filePath}`, {
+      let storageRes = await fetch(`${baseUrl}/storage/v1/object/inscritos-fotos/${cleanPath}`, {
         headers: { apikey: key, Authorization: `Bearer ${key}` }
       });
 
       // 2. Se não encontrar, tenta buscar no bucket original 'fotos'
       if (!storageRes.ok) {
-        storageRes = await fetch(`${baseUrl}/storage/v1/object/fotos/${filePath}`, {
+        storageRes = await fetch(`${baseUrl}/storage/v1/object/fotos/${cleanPath}`, {
           headers: { apikey: key, Authorization: `Bearer ${key}` }
         });
       }
 
       if (!storageRes.ok) {
+        console.warn("[Inscritos Foto API] Foto não encontrada no Storage:", cleanPath);
+        const accept = String(req.headers["accept"] || "");
+        if (accept.includes("image") || !accept.includes("application/json")) {
+          res.setHeader("Content-Type", "image/svg+xml");
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          return res.status(200).send(Buffer.from(FALLBACK_PHOTO_SVG));
+        }
         return res.status(404).json({ error: "Foto não encontrada no armazenamento seguro." });
       }
 
@@ -97,7 +117,7 @@ module.exports = async (req, res) => {
 
       res.setHeader("Content-Type", contentType);
       res.setHeader("Cache-Control", "private, no-transform, max-age=3600");
-      res.setHeader("Content-Disposition", `inline; filename="foto-${filePath.split("/").pop()}"`);
+      res.setHeader("Content-Disposition", `inline; filename="foto-${cleanPath.split("/").pop()}"`);
       return res.status(200).send(Buffer.from(buffer));
     } catch (err) {
       console.error("[Inscritos Foto API] Erro ao recuperar foto:", err.message);

@@ -185,33 +185,100 @@ module.exports = async (req, res) => {
     // Não deixa o banco desatualizado! Atualiza status real e payload no Supabase e no localStore!
     if (txid) {
       console.log(`[Webhook] Evento não-liquidado ('${rawStatus}') para ${txid}. Atualizando registro no banco...`);
+      const agoraIso = new Date().toISOString();
+      let statusInscricao = "pendente";
+      if (rawStatus === "rejected" || rawStatus.includes("reject") || rawStatus.includes("recusad")) {
+        statusInscricao = "recusado";
+      } else if (rawStatus === "cancelled" || rawStatus.includes("cancel")) {
+        statusInscricao = "cancelado";
+      } else if (rawStatus === "refunded" || rawStatus.includes("reembols") || rawStatus.includes("chargeback")) {
+        statusInscricao = "reembolsado";
+      }
+
       try {
         const { url: sbUrl, key: sbKey } = (typeof settingsStore.getSupabaseCredentials === "function")
           ? settingsStore.getSupabaseCredentials()
           : { url: process.env.NEXT_PUBLIC_SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co", key: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i" };
 
         if (sbUrl && sbKey) {
-          await fetch(`${sbUrl}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(String(txid))}`, {
+          // 1. Atualiza na tabela pagamentos
+          const payPatchRes = await fetch(`${sbUrl}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(String(txid))}`, {
             method: "PATCH",
             headers: {
               "apikey": sbKey,
               "Authorization": `Bearer ${sbKey}`,
               "Content-Type": "application/json",
-              "Prefer": "return=minimal"
+              "Prefer": "return=representation"
             },
             body: JSON.stringify({
               status: rawStatus,
               gateway_transaction_id: String(mpPaymentId || txid),
               payload_webhook: effectivePayload,
-              atualizado_em: new Date().toISOString()
+              atualizado_em: agoraIso
             }),
             signal: AbortSignal.timeout(4000)
           });
+
+          let inscIdVinculada = null;
+          let whatsappPagador = null;
+          if (payPatchRes.ok) {
+            const patchedRows = await payPatchRes.json().catch(() => []);
+            if (Array.isArray(patchedRows) && patchedRows.length > 0) {
+              inscIdVinculada = patchedRows[0].inscricao_id;
+              whatsappPagador = patchedRows[0].whatsapp_pagador;
+            }
+          }
+
+          // 2. Atualiza status na tabela inscricoes se vinculado
+          const filterQueries = [];
+          if (inscIdVinculada) filterQueries.push(`id.eq.${encodeURIComponent(inscIdVinculada)}`);
+          if (whatsappPagador) filterQueries.push(`whatsapp.eq.${encodeURIComponent(whatsappPagador)}`);
+
+          if (filterQueries.length > 0) {
+            await fetch(`${sbUrl}/rest/v1/inscricoes?or=(${filterQueries.join(",")})`, {
+              method: "PATCH",
+              headers: {
+                "apikey": sbKey,
+                "Authorization": `Bearer ${sbKey}`,
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+              },
+              body: JSON.stringify({
+                pagamento_status: statusInscricao,
+                atualizado_em: agoraIso
+              }),
+              signal: AbortSignal.timeout(4000)
+            }).catch(e => console.warn("[Webhook] Aviso ao atualizar inscricao:", e.message));
+          }
         }
       } catch (ePatch) {
         console.warn("[Webhook] Aviso ao atualizar status não-aprovado no Supabase:", ePatch.message);
       }
+
+      // 3. Atualiza também no store local para consistência em memória
+      try {
+        const localData = settingsStore.loadLocalStore();
+        if (Array.isArray(localData.pagamentos)) {
+          const pIdx = localData.pagamentos.findIndex(p => p.txid === String(txid));
+          if (pIdx !== -1) {
+            localData.pagamentos[pIdx].status = rawStatus;
+            localData.pagamentos[pIdx].atualizado_em = agoraIso;
+          }
+        }
+        if (Array.isArray(localData.inscricoes)) {
+          const iIdx = localData.inscricoes.findIndex(i => 
+            i.id === txid || 
+            (localData.pagamentos && localData.pagamentos.find(p => p.txid === String(txid) && (p.inscricao_id === i.id || p.whatsapp_pagador === i.whatsapp)))
+          );
+          if (iIdx !== -1) {
+            localData.inscricoes[iIdx].pagamento_status = statusInscricao;
+            localData.inscricoes[iIdx].atualizado_em = agoraIso;
+          }
+        }
+        settingsStore.saveLocalStore(localData);
+      } catch (eLocal) {}
     }
+
 
     return res.status(200).json({
       success: true,
