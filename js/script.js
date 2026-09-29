@@ -830,14 +830,16 @@ document.querySelectorAll(".btn-open-pix-dinamico, .btn-open-checkout").forEach(
   btn.addEventListener("click", (e) => {
     e.preventDefault();
     const tipo = btn.dataset.tipo || "inscricao";
-    const valor = tipo === "inscricao" ? Number(window.EJC_ACTIVE_PRICE || 50) : Number(btn.dataset.valor || 50);
-    const lote = tipo === "inscricao" ? (window.EJC_ACTIVE_LOTE || "1º Lote") : "";
+    const activePrice = (window.EJC_ACTIVE_PRICE && Number(window.EJC_ACTIVE_PRICE) > 0) ? Number(window.EJC_ACTIVE_PRICE) : null;
+    const valor = tipo === "inscricao" ? activePrice : Number(btn.dataset.valor || 25);
+    const lote = tipo === "inscricao" ? (window.EJC_ACTIVE_LOTE || "") : "";
     const v = tipo === "inscricao" ? (window.EJC_ACTIVE_VERSION || 0) : 0;
     const nome = document.querySelector("#full-name")?.value || "";
     const email = document.querySelector("#email")?.value || "";
     const wpp = document.querySelector("#whatsapp")?.value || "";
     const sub = document.querySelector("#selected-sub")?.value || "";
-    let checkoutUrl = `/checkout?tipo=${tipo}&valor=${valor}`;
+    let checkoutUrl = `/checkout?tipo=${tipo}`;
+    if (valor !== null && valor !== undefined) checkoutUrl += `&valor=${valor}`;
     if (nome) checkoutUrl += `&nome=${encodeURIComponent(nome)}`;
     if (email) checkoutUrl += `&email=${encodeURIComponent(email)}`;
     if (wpp) checkoutUrl += `&whatsapp=${encodeURIComponent(wpp)}`;

@@ -1,10 +1,10 @@
 {
   "settings": {
-    "versao": 13,
+    "versao": 16,
     "ativo": true,
     "configurado": true,
-    "lote_atual": "Lote 1 - Oficial",
-    "valor_inscricao": 180,
+    "lote_atual": "1º Lote - Oficial",
+    "valor_inscricao": 190,
     "valor_promocional": null,
     "taxa_adicional": 0,
     "max_parcelas": 12,
@@ -18,12 +18,12 @@
     "pix_instituicao": "",
     "pix_instrucoes_manual": "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     "pix_permite_comprovante": true,
-    "motivo_alteracao": "Configuração auditada definitiva R$ 180",
+    "motivo_alteracao": "Auditoria Definitiva R$ 190",
     "atualizado_por": "superadmin",
-    "atualizado_em": "2026-09-29T02:21:24.936Z",
-    "id": "21d99679-2fb7-40ea-a82f-e5369962e78d",
-    "criado_em": "2026-09-29T02:05:18.257273+00:00",
-    "preco_efetivo": 180
+    "atualizado_em": "2026-09-29T03:02:14.879555+00:00",
+    "id": "13a7361e-00a4-4bdc-9d58-7eaffdc0b03c",
+    "criado_em": "2026-09-29T03:02:14.879555+00:00",
+    "preco_efetivo": 190
   },
   "lotes": [
     {
@@ -34,41 +34,67 @@
       "data_inicio": "2026-09-29T00:53:00.07571+00:00",
       "data_fim": null,
       "criado_em": "2026-09-29T00:53:00.07571+00:00"
-    },
-    {
-      "id": "lote-1790648485169",
-      "nome": "Lote 1 - Oficial",
-      "valor": 180,
-      "ativo": true,
-      "criado_em": "2026-09-29T02:21:24.936Z"
     }
   ],
   "historico": [
     {
-      "id": "audit-1790648485764-stbp",
-      "acao": "WHATSAPP_LINKS_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "configuracoes_whatsapp",
-      "valor_anterior": null,
-      "valor_novo": "{\"Geral\":\"https://chat.whatsapp.com/TESTE_PROD_GERAL\",\"geral\":\"https://chat.whatsapp.com/TESTE_PROD_GERAL\",\"Verde\":\"https://chat.whatsapp.com/TESTE_PROD_VERDE\",\"verde\":\"https://chat.whatsapp.com/TESTE_PROD_VERDE\",\"Vermelho\":\"https://chat.whatsapp.com/TESTE_PROD_VERMELHO\",\"vermelho\":\"https://chat.whatsapp.com/TESTE_PROD_VERMELHO\",\"Amarelo\":\"https://chat.whatsapp.com/TESTE_PROD_AMARELO\",\"amarelo\":\"https://chat.whatsapp.com/TESTE_PROD_AMARELO\",\"Laranja\":\"https://chat.whatsapp.com/TESTE_PROD_LARANJA\",\"laranja\":\"https://chat.whatsapp.com/TESTE_PROD_LARANJA\"}",
-      "motivo": "Atualização dos links dos grupos WhatsApp",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T02:21:25.763Z"
-    },
-    {
-      "id": "audit-1790648484936-eeej",
+      "id": "dc4b5b22-1472-4871-8609-89f0f215bc81",
       "acao": "PRICE_UPDATED",
       "usuario": "superadmin",
       "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (Lote Especial Produção)",
-      "valor_novo": "R$ 180.00 (Lote 1 - Oficial)",
+      "valor_anterior": "50.00",
+      "valor_novo": "190",
+      "motivo": "Auditoria Definitiva R$ 190",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T03:02:14.879555+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 16
+      }
+    },
+    {
+      "id": "0a9ecfd8-7ef4-49f8-8b49-d55cd55d1e32",
+      "acao": "PRICE_UPDATED",
+      "usuario": "financeiro",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "500.00",
+      "valor_novo": "50",
+      "motivo": "Atualização de preços no painel administrativo",
+      "ip_origem": "187.19.130.17",
+      "criado_em": "2026-09-29T02:33:15.339257+00:00",
+      "detalhes": {
+        "lote": "lote 1",
+        "versao": 15
+      }
+    },
+    {
+      "id": "697d2421-0eb8-4ba7-a8fe-9da654fe6f6f",
+      "acao": "PRICE_UPDATED",
+      "usuario": "financeiro",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "180.00",
+      "valor_novo": "500",
+      "motivo": "Atualização de preços no painel administrativo",
+      "ip_origem": "187.19.130.17",
+      "criado_em": "2026-09-29T02:31:09.063425+00:00",
+      "detalhes": {
+        "lote": "Lote 1 - Oficial",
+        "versao": 14
+      }
+    },
+    {
+      "id": "8f8e6cc6-032f-4854-ba3e-493a6fe5c4da",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50.00",
+      "valor_novo": "180",
       "motivo": "Configuração auditada definitiva R$ 180",
       "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T02:21:24.936Z",
+      "criado_em": "2026-09-29T02:21:25.196778+00:00",
       "detalhes": {
-        "versao": 13,
         "lote": "Lote 1 - Oficial",
-        "valor_promocional": null
+        "versao": 13
       }
     },
     {
@@ -103,15 +129,15 @@
     }
   ],
   "whatsapp": {
-    "Verde": "https://chat.whatsapp.com/TESTE_PROD_VERDE",
-    "Vermelho": "https://chat.whatsapp.com/TESTE_PROD_VERMELHO",
-    "Amarelo": "https://chat.whatsapp.com/TESTE_PROD_AMARELO",
-    "Laranja": "https://chat.whatsapp.com/TESTE_PROD_LARANJA",
-    "Geral": "https://chat.whatsapp.com/TESTE_PROD_GERAL",
-    "verde": "https://chat.whatsapp.com/TESTE_PROD_VERDE",
-    "vermelho": "https://chat.whatsapp.com/TESTE_PROD_VERMELHO",
-    "amarelo": "https://chat.whatsapp.com/TESTE_PROD_AMARELO",
-    "laranja": "https://chat.whatsapp.com/TESTE_PROD_LARANJA",
-    "geral": "https://chat.whatsapp.com/TESTE_PROD_GERAL"
+    "Verde": "https://chat.whatsapp.com/TESTE_AUDIT_VERDE",
+    "Vermelho": "https://chat.whatsapp.com/TESTE_AUDIT_VERMELHO",
+    "Amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
+    "Laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
+    "Geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL",
+    "verde": "https://chat.whatsapp.com/TESTE_AUDIT_VERDE",
+    "vermelho": "https://chat.whatsapp.com/TESTE_AUDIT_VERMELHO",
+    "amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
+    "laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
+    "geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL"
   }
 }

@@ -1053,14 +1053,14 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
       matchedValor = matchedValor || localData.pagamentos[idx].valor;
       matchedMetodo = matchedMetodo || localData.pagamentos[idx].metodo;
       matchedSub = matchedSub || localData.pagamentos[idx].sub;
-    } else {
+      const defaultRuntimePrice = Number(localData.settings?.preco_efetivo || localData.settings?.valor_inscricao || 0);
       localData.pagamentos.unshift({
         txid: String(identificador),
         payment_id: String(identificador),
         order_id: String(identificador),
         nome_pagador: matchedNome || "Participante",
         email: matchedEmail,
-        valor: matchedValor || 50,
+        valor: Number(matchedValor || defaultRuntimePrice),
         metodo: matchedMetodo || "pix",
         sub: matchedSub || "Geral",
         status: "approved",
@@ -1075,12 +1075,13 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
   if (matchedEmail && !alreadyApproved) {
     try {
       const emailService = require("./_email-service");
+      const defaultRuntimePrice = Number(localData.settings?.preco_efetivo || localData.settings?.valor_inscricao || 0);
       const emailResult = await emailService.sendPaymentApprovedEmail({
         paymentRecord: {
           txid: matchedTxid || identificador,
           nome_pagador: matchedNome || "Participante",
           email: matchedEmail,
-          valor: matchedValor || 50,
+          valor: Number(matchedValor || defaultRuntimePrice),
           metodo: matchedMetodo || "pix",
           sub: matchedSub || "Geral",
           pago_em: agora,

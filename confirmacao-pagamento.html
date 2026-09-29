@@ -731,7 +731,9 @@
       document.getElementById("pendNome").textContent = data.nome || inputNome.value || "Participante";
       document.getElementById("pendTxid").textContent = data.txid || "-";
       document.getElementById("pendLote").textContent = data.lote || `Sub ${data.sub || "Geral"}`;
-      document.getElementById("pendValor").textContent = Number(data.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      document.getElementById("pendValor").textContent = (data.valor !== null && data.valor !== undefined && !isNaN(Number(data.valor)))
+        ? Number(data.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+        : "-";
     }
 
     // ----------------------------------------------------------------------------

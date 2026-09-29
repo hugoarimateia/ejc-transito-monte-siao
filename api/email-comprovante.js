@@ -43,7 +43,7 @@ async function sendPaymentReceiptEmail({
     payment_id: payment_id || existingRecord?.payment_id || txid,
     nome_pagador: nome || existingRecord?.nome_pagador || "Participante",
     email: String(email || existingRecord?.email).trim().toLowerCase(),
-    valor: valor || existingRecord?.valor || 50,
+    valor: Number(valor || existingRecord?.valor || 0),
     metodo: metodo || existingRecord?.metodo || "pix",
     sub: sub || existingRecord?.sub || "Geral",
     pago_em: existingRecord?.pago_em || new Date().toISOString(),

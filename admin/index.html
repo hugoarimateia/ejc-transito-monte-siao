@@ -108,7 +108,7 @@
         </div>
         <div class="stat-box" style="border-left-color: #8b5cf6;">
           <span>Lote Vigente</span>
-          <strong id="statLoteAtual" style="font-size: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">1º Lote (R$ 50,00)</strong>
+          <strong id="statLoteAtual" style="font-size: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1rem;"></i> Carregando...</strong>
         </div>
       </div>
 
@@ -478,7 +478,41 @@
         </div>
 
         <div class="whatsapp-settings-grid" id="wppSettingsGrid">
-          <!-- Gerado dinamicamente via script -->
+          <div class="wpp-setting-card" style="border-left: 4px solid #16a34a;">
+            <label for="wppLink_Verde"><i class="fa-brands fa-whatsapp" style="color: #16a34a;"></i> Grupo Sub Verde:</label>
+            <input type="url" id="wppLink_Verde" placeholder="https://chat.whatsapp.com/...">
+            <div class="wpp-toggle-row">
+              <span class="status-badge status-approved" style="font-size: .72rem; padding: 2px 8px;">Sub Verde</span>
+            </div>
+          </div>
+          <div class="wpp-setting-card" style="border-left: 4px solid #dc2626;">
+            <label for="wppLink_Vermelho"><i class="fa-brands fa-whatsapp" style="color: #dc2626;"></i> Grupo Sub Vermelho:</label>
+            <input type="url" id="wppLink_Vermelho" placeholder="https://chat.whatsapp.com/...">
+            <div class="wpp-toggle-row">
+              <span class="status-badge status-recusado" style="font-size: .72rem; padding: 2px 8px;">Sub Vermelho</span>
+            </div>
+          </div>
+          <div class="wpp-setting-card" style="border-left: 4px solid #eab308;">
+            <label for="wppLink_Amarelo"><i class="fa-brands fa-whatsapp" style="color: #eab308;"></i> Grupo Sub Amarelo:</label>
+            <input type="url" id="wppLink_Amarelo" placeholder="https://chat.whatsapp.com/...">
+            <div class="wpp-toggle-row">
+              <span class="status-badge status-pendente" style="font-size: .72rem; padding: 2px 8px;">Sub Amarelo</span>
+            </div>
+          </div>
+          <div class="wpp-setting-card" style="border-left: 4px solid #f97316;">
+            <label for="wppLink_Laranja"><i class="fa-brands fa-whatsapp" style="color: #f97316;"></i> Grupo Sub Laranja:</label>
+            <input type="url" id="wppLink_Laranja" placeholder="https://chat.whatsapp.com/...">
+            <div class="wpp-toggle-row">
+              <span class="status-badge" style="background: rgba(249, 115, 22, 0.18); color: #ea580c; font-size: .72rem; padding: 2px 8px;">Sub Laranja</span>
+            </div>
+          </div>
+          <div class="wpp-setting-card" style="border-left: 4px solid var(--blue);">
+            <label for="wppLink_Geral"><i class="fa-brands fa-whatsapp" style="color: var(--blue);"></i> Grupo Geral da Equipe:</label>
+            <input type="url" id="wppLink_Geral" placeholder="https://chat.whatsapp.com/...">
+            <div class="wpp-toggle-row">
+              <span class="status-badge" style="background: rgba(8, 125, 249, 0.15); color: var(--blue); font-size: .72rem; padding: 2px 8px;">Grupo Geral</span>
+            </div>
+          </div>
         </div>
         <p id="wppSaveFeedback" style="display: none; margin-top: 14px; font-weight: 700; color: #10b981; font-size: .88rem;"></p>
       </div>
@@ -702,52 +736,68 @@
       carregarConfiguracoesFinanceiras();
     }
 
+    function ativarAba(targetTab) {
+      const tabBtns = document.querySelectorAll(".admin-tab-btn");
+      const secInsc = document.getElementById("sectionInscricoes");
+      const secPay = document.getElementById("sectionPagamentos");
+      const secFin = document.getElementById("sectionFinanceiro");
+      const secWpp = document.getElementById("sectionWhatsapp");
+
+      tabBtns.forEach(b => {
+        if (b.getAttribute("data-tab") === targetTab) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+
+      if (targetTab === "all") {
+        if (secInsc) secInsc.style.display = "block";
+        if (secPay) secPay.style.display = "block";
+        if (secFin) secFin.style.display = "block";
+        if (secWpp) secWpp.style.display = "block";
+      } else {
+        if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
+        if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
+        if (secFin) secFin.style.display = (targetTab === "financeiro") ? "block" : "none";
+        if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
+      }
+    }
+
     function configurarAbas() {
       const tabBtns = document.querySelectorAll(".admin-tab-btn");
       tabBtns.forEach(btn => {
         btn.addEventListener("click", () => {
-          tabBtns.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-
           const targetTab = btn.getAttribute("data-tab");
-          const secInsc = document.getElementById("sectionInscricoes");
-          const secPay = document.getElementById("sectionPagamentos");
-          const secFin = document.getElementById("sectionFinanceiro");
-          const secWpp = document.getElementById("sectionWhatsapp");
-
-          if (targetTab === "all") {
-            if (secInsc) secInsc.style.display = "block";
-            if (secPay) secPay.style.display = "block";
-            if (secFin) secFin.style.display = "block";
-            if (secWpp) secWpp.style.display = "block";
-            try { history.replaceState(null, "", window.location.pathname); } catch (e) {}
-          } else {
-            if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
-            if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
-            if (secFin) secFin.style.display = (targetTab === "financeiro") ? "block" : "none";
-            if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
-            try { history.replaceState(null, "", `#${targetTab}`); } catch (e) {}
-          }
+          ativarAba(targetTab);
+          try {
+            if (targetTab === "all") {
+              history.replaceState(null, "", window.location.pathname);
+            } else {
+              history.replaceState(null, "", `#${targetTab}`);
+            }
+          } catch (e) {}
         });
       });
 
-      // Auto-seleciona a aba caso acesse diretamente /admin/financeiro ou #financeiro
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase().replace("#", "");
-      let autoTab = null;
-      if (path.endsWith("/financeiro") || hash === "financeiro" || hash === "fin") {
-        autoTab = "financeiro";
-      } else if (path.endsWith("/pagamentos") || hash === "pagamentos") {
-        autoTab = "pagamentos";
-      } else if (path.endsWith("/inscricoes") || hash === "inscricoes") {
-        autoTab = "inscricoes";
-      } else if (path.endsWith("/whatsapp") || hash === "whatsapp") {
-        autoTab = "whatsapp";
+      function sincronizarComHash() {
+        const hash = window.location.hash.toLowerCase().replace("#", "");
+        const path = window.location.pathname.toLowerCase();
+        let autoTab = "all";
+        if (path.endsWith("/financeiro") || hash === "financeiro" || hash === "fin") {
+          autoTab = "financeiro";
+        } else if (path.endsWith("/pagamentos") || hash === "pagamentos") {
+          autoTab = "pagamentos";
+        } else if (path.endsWith("/inscricoes") || hash === "inscricoes") {
+          autoTab = "inscricoes";
+        } else if (path.endsWith("/whatsapp") || hash === "whatsapp" || hash === "wpp") {
+          autoTab = "whatsapp";
+        }
+        ativarAba(autoTab);
       }
-      if (autoTab) {
-        const btn = document.querySelector(`.admin-tab-btn[data-tab="${autoTab}"]`);
-        if (btn) btn.click();
-      }
+
+      window.addEventListener("hashchange", sincronizarComHash);
+      sincronizarComHash();
     }
 
     function carregarDados() {
@@ -811,7 +861,7 @@
             }
           });
 
-          // Links de WhatsApp (tenta configuracoes_whatsapp)
+          // Links de WhatsApp (tenta configuracoes_whatsapp no Supabase)
           client.from("configuracoes_whatsapp").select("*").eq("ativo", true).then(({ data, error }) => {
             if (!error && Array.isArray(data) && data.length > 0) {
               const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
@@ -823,36 +873,13 @@
                   }
                 }
               });
-              renderizarPainelWhatsApp();
+              preencherPainelWhatsApp(wppLinksData);
             }
           });
         } catch(e) {
           console.warn("Supabase remoto indisponível, usando persistência resiliente.", e);
         }
       }
-
-      // 3. Sincronização central via API /api/payment-settings (carrega links de WhatsApp oficiais e sincronizados)
-      fetch(`/api/payment-settings?_t=${Date.now()}`, {
-        headers: {
-          "Authorization": `Bearer ${currentAdminPass}`,
-          "x-admin-token": currentAdminPass
-        }
-      })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.whatsapp) {
-          const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
-          CANONICAL.forEach(sub => {
-            const val = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
-            wppLinksData[sub] = val;
-          });
-          try {
-            localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
-          } catch(e) {}
-          renderizarPainelWhatsApp();
-        }
-      })
-      .catch(() => {});
     }
 
     function renderizarTudo() {
@@ -1028,24 +1055,32 @@
       }).join("");
     }
 
-    function renderizarPainelWhatsApp() {
-      const grid = document.getElementById("wppSettingsGrid");
-      const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
-
-      grid.innerHTML = subs.map(sub => `
-        <div class="wpp-setting-card">
-          <label for="wppLink_${sub}">Grupo Sub ${sub}:</label>
-          <input type="url" id="wppLink_${sub}" value="${wppLinksData[sub] || ''}" placeholder="https://chat.whatsapp.com/...">
-          <div class="wpp-toggle-row">
-            <input type="checkbox" id="wppActive_${sub}" checked>
-            <label for="wppActive_${sub}" style="margin:0; font-size:.8rem;">Link ativo</label>
-          </div>
-        </div>
-      `).join("");
+    // Atualiza os inputs estáticos do WhatsApp em-place (idempotente, sem destruir DOM nem perder foco)
+    function preencherPainelWhatsApp(links) {
+      if (!links || typeof links !== "object") return;
+      const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
+      CANONICAL.forEach(sub => {
+        const val = links[sub] !== undefined ? links[sub] : (links[sub.toLowerCase()] || "");
+        wppLinksData[sub] = val;
+        const input = document.getElementById(`wppLink_${sub}`);
+        if (input && document.activeElement !== input) {
+          input.value = val;
+        }
+      });
     }
 
-    // Salvar links de WhatsApp com persistência real no servidor
+    // Alias para compatibilidade
+    function renderizarPainelWhatsApp() {
+      preencherPainelWhatsApp(wppLinksData);
+    }
+
+    // Salvar links de WhatsApp com persistência real no servidor e confirmação de sucesso
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
+      if (!canUserEditFinance) {
+        alert("Acesso somente leitura. Você não tem permissão para alterar links de WhatsApp.");
+        return;
+      }
+
       const subs = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
       const payloadSubs = {};
       subs.forEach(sub => {
@@ -1055,10 +1090,11 @@
         payloadSubs[sub] = val;
       });
 
+      const btn = document.getElementById("btnSaveWppLinks");
       const feedback = document.getElementById("wppSaveFeedback");
-      feedback.textContent = "Salvando links...";
-      feedback.style.color = "#023284";
-      feedback.style.display = "block";
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando links...`;
+      feedback.style.display = "none";
 
       try {
         const res = await fetch("/api/payment-settings", {
@@ -1078,26 +1114,28 @@
         const data = await res.json();
         if (res.ok && data.success) {
           if (data.whatsapp) {
-            subs.forEach(sub => {
-              wppLinksData[sub] = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
-            });
+            preencherPainelWhatsApp(data.whatsapp);
           }
           try {
             localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
           } catch (eStore) {}
-          renderizarPainelWhatsApp();
-          feedback.textContent = "✓ Links do WhatsApp atualizados e persistidos no servidor!";
+          feedback.textContent = "✓ Links do WhatsApp atualizados e persistidos no Supabase!";
           feedback.style.color = "#16a34a";
-          setTimeout(() => { feedback.style.display = "none"; }, 4000);
-          await carregarConfiguracoesFinanceiras();
+          feedback.style.display = "block";
+          setTimeout(() => { feedback.style.display = "none"; }, 5000);
         } else {
           feedback.textContent = `Erro: ${data.error || 'Falha ao salvar no servidor'}`;
           feedback.style.color = "#dc2626";
+          feedback.style.display = "block";
         }
       } catch(err) {
         console.error("Erro ao salvar links de WhatsApp:", err);
         feedback.textContent = `Erro de conexão: ${err.message || 'Falha ao salvar links.'}`;
         feedback.style.color = "#dc2626";
+        feedback.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `💾 Salvar Links do WhatsApp`;
       }
     });
 
@@ -1462,7 +1500,14 @@
           btnSalvarPix.style.cursor = "not-allowed";
           btnSalvarPix.title = "Acesso somente leitura";
         }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+        const btnSaveWpp = document.getElementById("btnSaveWppLinks");
+        if (btnSaveWpp) {
+          btnSaveWpp.disabled = true;
+          btnSaveWpp.style.opacity = "0.6";
+          btnSaveWpp.style.cursor = "not-allowed";
+          btnSaveWpp.title = "Acesso somente leitura";
+        }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #wppSettingsGrid input").forEach(el => {
           el.disabled = true;
         });
       } else {
@@ -1470,7 +1515,14 @@
         if (readOnlyNotice) readOnlyNotice.style.display = "none";
         if (btnSalvarPrecos) { btnSalvarPrecos.disabled = false; btnSalvarPrecos.style.opacity = "1"; btnSalvarPrecos.style.cursor = "pointer"; }
         if (btnSalvarPix) { btnSalvarPix.disabled = false; btnSalvarPix.style.opacity = "1"; btnSalvarPix.style.cursor = "pointer"; }
-        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select").forEach(el => {
+        const btnSaveWpp = document.getElementById("btnSaveWppLinks");
+        if (btnSaveWpp) {
+          btnSaveWpp.disabled = false;
+          btnSaveWpp.style.opacity = "1";
+          btnSaveWpp.style.cursor = "pointer";
+          btnSaveWpp.title = "";
+        }
+        document.querySelectorAll("#formPrecosInscricao input, #formPrecosInscricao select, #formPixConfig input, #formPixConfig select, #wppSettingsGrid input").forEach(el => {
           el.disabled = false;
         });
       }
@@ -1499,14 +1551,10 @@
             } catch (e) {}
           }
           if (data && data.whatsapp) {
-            const CANONICAL = ["Verde", "Vermelho", "Amarelo", "Laranja", "Geral"];
-            CANONICAL.forEach(sub => {
-              wppLinksData[sub] = data.whatsapp[sub] !== undefined ? data.whatsapp[sub] : (data.whatsapp[sub.toLowerCase()] || "");
-            });
+            preencherPainelWhatsApp(data.whatsapp);
             try {
               localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
             } catch (e) {}
-            renderizarPainelWhatsApp();
           }
           if (data && data.historico && Array.isArray(data.historico)) {
             historicoFinanceiroData = data.historico;

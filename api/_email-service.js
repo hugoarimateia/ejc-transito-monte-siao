@@ -107,7 +107,7 @@ function buildEJCReceiptHtml({
   const subNome = String(sub || "Geral").trim();
   const subStyle = SUB_COLORS[subNome] || SUB_COLORS["Geral"];
 
-  const valorNum = Number(valor || 50);
+  const valorNum = Number(valor || 0);
   const valorFormatado = valorNum.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const valorOrigNum = Number(valorOriginal || valorNum);
@@ -474,7 +474,7 @@ function buildEJCReceiptHtml({
  */
 function buildOrderCreatedHtml({ txid, orderId, nome, valor, payloadPix, lote, sub }) {
   const nomeLimpo = String(nome || "Participante").trim();
-  const valorFormatado = Number(valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorFormatado = Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return `
 <!DOCTYPE html>
@@ -530,7 +530,7 @@ function buildOrderCreatedHtml({ txid, orderId, nome, valor, payloadPix, lote, s
  */
 function buildPaymentRejectedHtml({ txid, nome, valor, motivo }) {
   const nomeLimpo = String(nome || "Participante").trim();
-  const valorFormatado = Number(valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorFormatado = Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return `
 <!DOCTYPE html>
@@ -572,7 +572,7 @@ function buildPaymentRejectedHtml({ txid, nome, valor, motivo }) {
  */
 function buildManualProofReceivedHtml({ txid, nome, valor, sub }) {
   const nomeLimpo = String(nome || "Participante").trim();
-  const valorFormatado = Number(valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorFormatado = Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return `
 <!DOCTYPE html>
@@ -615,7 +615,7 @@ function buildManualProofReceivedHtml({ txid, nome, valor, sub }) {
  * Evento 5: Alerta Administrativo de Novo Comprovante Manual para Análise
  */
 function buildAdminManualProofAlertHtml({ txid, nome, email, whatsapp, valor, sub, comprovanteUrl }) {
-  const valorFormatado = Number(valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const valorFormatado = Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return `
 <!DOCTYPE html>
