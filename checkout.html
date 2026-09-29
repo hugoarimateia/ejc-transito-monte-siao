@@ -980,6 +980,20 @@
     }
     let valorTotal = valorBase;
 
+    // ==============================================================================
+    // ESTADO CENTRALIZADO DO CARTÃO DE CRÉDITO E MERCADO PAGO BRICK (ANTI-TDZ)
+    // Inicializado no topo do escopo para garantir disponibilidade imediata em qualquer chamada
+    // ==============================================================================
+    const mpInstallmentsCache = {};
+    let mpInstance = null;
+    let cardBrickController = null;
+    let selectedManualInstallment = 1;
+    let cardBrickCurrentAmount = 0;
+    let isInitializingBrick = false;
+    let isProcessingCard = false;
+    let cardPollingInterval = null;
+    let configLoadingState = "LOADING"; // "LOADING" | "LOADED" | "ERROR"
+
     function atualizarValoresUI() {
       if (tipoCheckout === "inscricao") {
         if (activePixConfig.valorTaxaInscricao === null || activePixConfig.valorTaxaInscricao === undefined) {
@@ -1925,8 +1939,6 @@
       }
     }
 
-    let configLoadingState = "LOADING"; // "LOADING" | "LOADED" | "ERROR"
-
     async function carregarConfiguracaoAtiva() {
       configLoadingState = "LOADING";
       // Busca configuração ativa do servidor com versão do cliente
@@ -2144,11 +2156,6 @@
     // ==============================================================================
     // PAGAMENTO VIA CARTÃO DE CRÉDITO NA ETAPA 2 (CARD PAYMENT BRICK OFICIAL)
     // ==============================================================================
-    let mpInstance = null;
-    let cardBrickController = null;
-    let selectedManualInstallment = 1;
-    let cardBrickCurrentAmount = 0;
-    let isInitializingBrick = false;
 
     function getMercadoPagoPublicKey() {
       return String(
@@ -2169,27 +2176,31 @@
       return Math.min(configuredMax, maxPossibleByAmount);
     }
 
-    const mpInstallmentsCache = {};
-
     async function carregarCondicoesParcelamentoMP(amount, effectiveMax) {
+      if (!amount || Number(amount) <= 0) return null;
       const pubKey = getMercadoPagoPublicKey();
-      const cacheKey = `${amount.toFixed(2)}_${pubKey}`;
-      if (mpInstallmentsCache[cacheKey]) {
-        return mpInstallmentsCache[cacheKey];
-      }
-
-      if (!pubKey || pubKey === "sua_public_key_aqui") {
+      if (!pubKey || pubKey === "sua_public_key_aqui" || pubKey.length < 15) {
         return null;
       }
 
+      const cacheKey = `${Number(amount).toFixed(2)}_${pubKey}`;
+      if (mpInstallmentsCache && mpInstallmentsCache[cacheKey]) {
+        return mpInstallmentsCache[cacheKey];
+      }
+
       try {
-        const url = `https://api.mercadopago.com/v1/payment_methods/installments?public_key=${encodeURIComponent(pubKey)}&amount=${amount.toFixed(2)}&payment_method_id=visa`;
-        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        const url = `https://api.mercadopago.com/v1/payment_methods/installments?public_key=${encodeURIComponent(pubKey)}&amount=${Number(amount).toFixed(2)}&payment_method_id=visa`;
+        const res = await fetch(url, {
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(4500)
+        });
         if (!res.ok) return null;
         const data = await res.json();
         if (Array.isArray(data) && data[0]?.payer_costs) {
           const costs = data[0].payer_costs.filter(c => c.installments <= effectiveMax);
-          mpInstallmentsCache[cacheKey] = costs;
+          if (mpInstallmentsCache) {
+            mpInstallmentsCache[cacheKey] = costs;
+          }
           return costs;
         }
         return null;
@@ -2496,8 +2507,12 @@
       if (cardBrickController && typeof cardBrickController.unmount === "function") {
         try {
           await cardBrickController.unmount();
-        } catch (eUnmount) {}
+        } catch (eUnmount) {
+          console.warn("[Card Brick unmount warn]:", eUnmount.message);
+        }
         cardBrickController = null;
+        window.cardBrickController = null;
+        window.cardPaymentBrickController = null;
       }
 
       container.innerHTML = "";
@@ -2540,27 +2555,42 @@
               if (feedback) feedback.style.display = "none";
             },
             onSubmit: async (cardFormData) => {
-              const res = await processarPagamentoCartao(cardFormData, amountToCharge);
-              if (!res || !res.success) {
-                // SINALIZAÇÃO CRÍTICA PARA O CARD PAYMENT BRICK DO MERCADO PAGO:
-                // Quando onSubmit lança erro / rejeita Promise, o Brick encerra o spinner interno
-                // e reativa imediatamente o botão "Pagar" para que o usuário possa tentar novamente sem F5!
-                const err = new Error(res?.error || "Pagamento recusado pela operadora.");
-                err.status = res?.status || "rejected";
-                err.status_detail = res?.status_detail;
-                throw err;
+              try {
+                const res = await processarPagamentoCartao(cardFormData, amountToCharge);
+                if (!res || !res.success) {
+                  // SINALIZAÇÃO CRÍTICA PARA O CARD PAYMENT BRICK DO MERCADO PAGO:
+                  // Quando onSubmit lança erro / rejeita Promise, o Brick encerra o spinner interno
+                  // e reativa imediatamente o botão "Pagar" para que o usuário possa tentar novamente sem F5!
+                  const err = new Error(res?.error || "Pagamento recusado pela operadora.");
+                  err.status = res?.status || "rejected";
+                  err.status_detail = res?.status_detail;
+                  throw err;
+                }
+                return res;
+              } catch (submitErr) {
+                isProcessingCard = false;
+                throw submitErr;
               }
-              return res;
             },
             onError: (error) => {
-              console.error("[Card Payment Brick Error]", error);
+              console.warn("[Card Payment Brick Error Callback]", error);
               isInitializingBrick = false;
-              exibirErroCartao("Não foi possível carregar as opções deste cartão. Verifique os dados ou utilize outra forma de pagamento.");
+              // Filtro cirúrgico: Não interrompe o fluxo para erros não-críticos ou bloqueios de telemetria/adblockers
+              if (error && error.type === "non_critical") {
+                return;
+              }
+              const errStr = String(error?.message || error?.cause || "").toLowerCase();
+              if (errStr.includes("tracks") || errStr.includes("blocked_by_client") || errStr.includes("telemetry")) {
+                return;
+              }
+              exibirErroCartao("Não foi possível carregar as opções deste cartão. Verifique os dados digitados ou utilize o Pix Instantâneo ao lado.");
             }
           }
         };
 
         cardBrickController = await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", brickSettings);
+        window.cardBrickController = cardBrickController;
+        window.cardPaymentBrickController = cardBrickController;
       } catch (err) {
         console.error("[Card Brick Mount Error]", err);
         container.innerHTML = `
@@ -2575,8 +2605,6 @@
         isInitializingBrick = false;
       }
     }
-
-    let isProcessingCard = false;
 
     async function processarPagamentoCartao(cardFormData, amountCharged) {
       if (isProcessingCard) {
@@ -2733,8 +2761,6 @@
       await montarCardPaymentBrick(true);
     }
     window.reiniciarTentativaCartao = reiniciarTentativaCartao;
-
-    let cardPollingInterval = null;
 
     function exibirCardEmAnalise(data) {
       const feedbackBox = document.getElementById("cardFeedbackMsg");
