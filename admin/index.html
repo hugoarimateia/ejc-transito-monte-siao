@@ -37,10 +37,10 @@
         </button>
       </div>
       <img src="../images/10 EJC MONTE SIÃO2.png?v=2" alt="Logo EJC" data-logo-light="../images/10 EJC MONTE SIÃO2.png?v=2" data-logo-dark="../images/10 EJC MONTE SIÃO.png?v=2" style="width: 80px; margin: 0 auto; border-radius: 14px;">
-      <h2>Área da Coordenação</h2>
-      <p>Informe a senha de acesso para gerenciar as inscrições e o checkout de pagamentos.</p>
+      <h2>Área Administrativa</h2>
+      <p>Informe a senha de acesso para gerenciar as inscrições, financeiro e links do WhatsApp.</p>
       <form id="authForm">
-        <input type="password" id="adminPassword" placeholder="Senha da Coordenação" required autofocus>
+        <input type="password" id="adminPassword" placeholder="Senha de Acesso" required autofocus>
         <button type="submit" class="button button-primary" style="width: 100%;">Entrar no Painel</button>
       </form>
       <p id="authError" style="color: #c72532; margin-top: 14px; font-weight: 700; display: none;">Senha incorreta. Tente novamente.</p>
@@ -477,6 +477,13 @@
           </button>
         </div>
 
+        <div id="wppReadOnlyBanner" class="alert-banner alert-warning" style="display: none; margin-bottom: 16px;">
+          <i class="fa-solid fa-lock" style="margin-top: 2px;"></i>
+          <div>
+            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com perfil apenas de visualização (<code>coordenacao2026</code>). Para alterar os links dos grupos de WhatsApp, clique em <strong>Sair</strong> no topo da página e faça login com a credencial administrativa (<code>ejc2026</code> ou <code>financeiro2026</code>).
+          </div>
+        </div>
+
         <div class="whatsapp-settings-grid" id="wppSettingsGrid">
           <div class="wpp-setting-card" style="border-left: 4px solid #16a34a;">
             <label for="wppLink_Verde"><i class="fa-brands fa-whatsapp" style="color: #16a34a;"></i> Grupo Sub Verde:</label>
@@ -721,6 +728,17 @@
       if (badgeEl) {
         badgeEl.className = `role-badge ${roleInfo.class}`;
         badgeEl.innerHTML = `<i class="fa-solid ${roleInfo.icon}"></i> ${roleInfo.label}`;
+      }
+
+      // Atualiza alerta de modo somente leitura na aba WhatsApp
+      const wppReadOnlyBanner = document.getElementById("wppReadOnlyBanner");
+      if (wppReadOnlyBanner) {
+        wppReadOnlyBanner.style.display = canUserEditFinance ? "none" : "flex";
+      }
+      const btnSaveWpp = document.getElementById("btnSaveWppLinks");
+      if (btnSaveWpp && !canUserEditFinance) {
+        btnSaveWpp.title = "Acesso somente leitura. Faça login com ejc2026 ou financeiro2026 para alterar os links.";
+        btnSaveWpp.style.opacity = "0.7";
       }
 
       // Configuração das Abas
@@ -1072,7 +1090,7 @@
     // Salvar links de WhatsApp com persistência real no servidor e confirmação de sucesso
     document.getElementById("btnSaveWppLinks").addEventListener("click", async () => {
       if (!canUserEditFinance) {
-        alert("Acesso somente leitura. Você não tem permissão para alterar links de WhatsApp.");
+        alert("Acesso Somente Leitura: Seu usuário atual está conectado com permissão apenas de visualização (coordenacao2026).\n\nPara alterar os links de WhatsApp, clique em 'Sair' no canto superior direito e faça login com a credencial de administrador ('ejc2026' ou 'financeiro2026').");
         return;
       }
 

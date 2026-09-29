@@ -38,6 +38,39 @@
   ],
   "historico": [
     {
+      "id": "audit-1790652517578-hm3m",
+      "acao": "WHATSAPP_LINKS_UPDATED",
+      "usuario": "financeiro",
+      "campo_afetado": "configuracoes_whatsapp",
+      "valor_anterior": null,
+      "valor_novo": "{\"Vermelho\":\"https://chat.whatsapp.com/teste_vermelho\",\"vermelho\":\"https://chat.whatsapp.com/teste_vermelho\"}",
+      "motivo": "Atualização dos links dos grupos WhatsApp",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T03:28:37.564Z"
+    },
+    {
+      "id": "audit-1790652516123-x75h",
+      "acao": "WHATSAPP_LINKS_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "configuracoes_whatsapp",
+      "valor_anterior": null,
+      "valor_novo": "{\"Verde\":\"https://chat.whatsapp.com/teste_verde\",\"verde\":\"https://chat.whatsapp.com/teste_verde\"}",
+      "motivo": "Atualização dos links dos grupos WhatsApp",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T03:28:36.121Z"
+    },
+    {
+      "id": "audit-1790652319150-439o",
+      "acao": "WHATSAPP_LINKS_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "configuracoes_whatsapp",
+      "valor_anterior": null,
+      "valor_novo": "{\"Verde\":\"https://chat.whatsapp.com/test\",\"verde\":\"https://chat.whatsapp.com/test\"}",
+      "motivo": "Atualização dos links dos grupos WhatsApp",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T03:25:19.119Z"
+    },
+    {
       "id": "dc4b5b22-1472-4871-8609-89f0f215bc81",
       "acao": "PRICE_UPDATED",
       "usuario": "superadmin",
@@ -129,13 +162,13 @@
     }
   ],
   "whatsapp": {
-    "Verde": "https://chat.whatsapp.com/TESTE_AUDIT_VERDE",
-    "Vermelho": "https://chat.whatsapp.com/TESTE_AUDIT_VERMELHO",
+    "Verde": "https://chat.whatsapp.com/teste_verde",
+    "Vermelho": "https://chat.whatsapp.com/teste_vermelho",
     "Amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
     "Laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
     "Geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL",
-    "verde": "https://chat.whatsapp.com/TESTE_AUDIT_VERDE",
-    "vermelho": "https://chat.whatsapp.com/TESTE_AUDIT_VERMELHO",
+    "verde": "https://chat.whatsapp.com/teste_verde",
+    "vermelho": "https://chat.whatsapp.com/teste_vermelho",
     "amarelo": "https://chat.whatsapp.com/TESTE_AUDIT_AMARELO",
     "laranja": "https://chat.whatsapp.com/TESTE_AUDIT_LARANJA",
     "geral": "https://chat.whatsapp.com/TESTE_AUDIT_GERAL"
