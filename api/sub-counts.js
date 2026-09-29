@@ -190,6 +190,9 @@ module.exports = async (req, res) => {
       localStore.inscricoes = [];
     }
 
+    // Verifica se já existe inscrição com este WhatsApp
+    const existingIndex = localStore.inscricoes.findIndex(i => normalizarTelefone(i.whatsapp) === whatsapp);
+
     // Gera UUID válido para conformidade com a coluna id (type UUID) do PostgreSQL no Supabase
     const isUuid = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(str || ""));
     const id = (body.id && isUuid(body.id)) 
