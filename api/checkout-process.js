@@ -243,7 +243,9 @@ async function persistirTransacaoSupabase({
   const cleanExp = expiracao || new Date(Date.now() + 86400000).toISOString();
   const cleanValor = (valor !== null && valor !== undefined && !isNaN(Number(valor))) ? Number(Number(valor).toFixed(2)) : 0;
   const cleanMetodo = String(metodo || "pix").toLowerCase();
-  const cleanStatus = String(status || "pending").toLowerCase();
+  const rawStatus = String(status || "pending").toLowerCase();
+  const cleanStatus = (rawStatus === "400" || rawStatus === "500" || /^\d+$/.test(rawStatus)) ? "rejected" : rawStatus;
+  const cleanPixCopiaECola = pix_copia_e_cola || (cleanMetodo === "credit_card" ? "N/A - CARTAO" : "");
   let lastRpcErr = null;
   let lastDirectErr = null;
 
@@ -269,7 +271,7 @@ async function persistirTransacaoSupabase({
         p_cartao_bandeira: cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : null,
         p_status: cleanStatus,
         p_tipo: String(tipo || "inscricao"),
-        p_pix_copia_e_cola: pix_copia_e_cola || null,
+        p_pix_copia_e_cola: cleanPixCopiaECola,
         p_qr_code_base64: qr_code_base64 || null,
         p_expiracao: cleanExp,
         p_inscricao_id: safeInscId,
@@ -306,10 +308,11 @@ async function persistirTransacaoSupabase({
       cartao_bandeira: cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : null,
       status: cleanStatus,
       tipo: String(tipo || "inscricao"),
-      pix_copia_e_cola: pix_copia_e_cola || null,
+      pix_copia_e_cola: cleanPixCopiaECola,
       qr_code_base64: qr_code_base64 || null,
       expiracao: cleanExp,
       inscricao_id: safeInscId,
+      gateway: cleanMetodo === "credit_card" ? "mercadopago_credit_card" : "mercadopago_pix",
       gateway_transaction_id: metadata?.payment_id ? String(metadata.payment_id) : String(txid),
       metadata: metadata || {},
       atualizado_em: new Date().toISOString()
@@ -1607,7 +1610,8 @@ module.exports = async (req, res) => {
         } catch (mpErr) {
           console.error("[Checkout Card] Falha na API Mercado Pago:", mpErr.message, mpErr.mpData || "");
           paymentId = mpErr?.mpData?.id ? String(mpErr.mpData.id) : (paymentId || null);
-          statusFinal = mpErr?.mpData?.status || "rejected";
+          const rawErrStatus = mpErr?.mpData?.status;
+          statusFinal = (typeof rawErrStatus === "string" && !/^\d+$/.test(rawErrStatus)) ? rawErrStatus : "rejected";
           statusDetail = mpErr?.mpData?.status_detail || (Array.isArray(mpErr?.mpData?.cause) && mpErr.mpData.cause[0]?.code) || "card_rejected";
           if (mpErr?.mpData?.card?.last_four_digits) ultimosDigitos = mpErr.mpData.card.last_four_digits;
           if (mpErr?.mpData?.payment_method_id) bandeira = mpErr.mpData.payment_method_id;
