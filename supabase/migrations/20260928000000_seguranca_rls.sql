@@ -73,7 +73,7 @@ DECLARE
   tabela TEXT;
 BEGIN
   FOREACH tabela IN ARRAY ARRAY[
-    'inscricoes','pagamentos_pix','pagamentos','auditoria_transacoes',
+    'inscricoes','pagamentos','auditoria_transacoes',
     'configuracoes_whatsapp','configuracoes_financeiras','lotes_inscricao',
     'historico_configuracoes_financeiras'
   ] LOOP
