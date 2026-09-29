@@ -777,8 +777,8 @@
 
       renderizarTudo();
 
-      // 2. Tenta buscar no Supabase se conectado (apenas se não for o host offline de placeholder)
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI") && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
+      // 2. Tenta buscar no Supabase se conectado
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           
@@ -809,7 +809,7 @@
             }
           });
 
-          // Links de WhatsApp
+          // Links de WhatsApp (tenta configuracoes_whatsapp e subs)
           client.from("configuracoes_whatsapp").select("*").then(({ data, error }) => {
             if (!error && data && data.length > 0) {
               data.forEach(item => {
@@ -818,6 +818,17 @@
                 }
               });
               renderizarPainelWhatsApp();
+            } else {
+              client.from("subs").select("nome, link_whatsapp").then(({ data: subsData, error: subsErr }) => {
+                if (!subsErr && subsData && subsData.length > 0) {
+                  subsData.forEach(item => {
+                    if (item.nome && item.link_whatsapp) {
+                      wppLinksData[item.nome] = item.link_whatsapp;
+                    }
+                  });
+                  renderizarPainelWhatsApp();
+                }
+              });
             }
           });
         } catch(e) {
@@ -1318,7 +1329,7 @@
       } catch (errCheck) {}
 
       // Tenta RPC direta no Supabase como garantia adicional (apenas se online)
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           await client.rpc("confirmar_pagamento_unificado", {

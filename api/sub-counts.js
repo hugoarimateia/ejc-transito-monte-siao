@@ -121,7 +121,7 @@ module.exports = async (req, res) => {
 
     // Tenta consulta remota ao Supabase se credenciais estiverem disponíveis e ativas
     const { url, key } = getSupabaseCredentials();
-    if (url && key && !url.includes("yggikbshdvnouaoxafcr")) {
+    if (url && key) {
       try {
         const sbRes = await fetch(`${url}/rest/v1/rpc/contagem_inscricoes_por_sub`, {
           method: "POST",

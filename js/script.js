@@ -126,8 +126,7 @@ const hasSupabaseConfig = Boolean(
   window.EJC_SUPABASE_URL &&
   window.EJC_SUPABASE_ANON_KEY &&
   !window.EJC_SUPABASE_URL.includes("COLE_AQUI") &&
-  !window.EJC_SUPABASE_ANON_KEY.includes("COLE_AQUI") &&
-  !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr") // Evita ERR_NAME_NOT_RESOLVED para host offline
+  !window.EJC_SUPABASE_ANON_KEY.includes("COLE_AQUI")
 );
 
 const supabaseClient = (hasSupabaseConfig && window.supabase)

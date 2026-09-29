@@ -2282,13 +2282,31 @@
     }
 
     async function obterLinkWhatsAppSub(sub) {
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("yggikbshdvnouaoxafcr")) {
+      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-          const { data } = await client.from("configuracoes_whatsapp").select("link_grupo, ativo").eq("sub", sub).single();
-          if (data && data.ativo && data.link_grupo) return data.link_grupo;
+          // 1. Tenta tabela configuracoes_whatsapp
+          try {
+            const { data } = await client.from("configuracoes_whatsapp").select("link_grupo, ativo").eq("sub", sub).single();
+            if (data && data.ativo && data.link_grupo) return data.link_grupo;
+          } catch(e1) {}
+          // 2. Tenta tabela subs
+          try {
+            const { data: subData } = await client.from("subs").select("link_whatsapp").ilike("nome", sub).single();
+            if (subData && subData.link_whatsapp) return subData.link_whatsapp;
+          } catch(e2) {}
         } catch(e) {}
       }
+
+      // 3. Fallback na API central /api/config
+      try {
+        const cfgRes = await fetch(`/api/config?_t=${Date.now()}`);
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          const subKey = String(sub || "").toLowerCase();
+          if (cfg.whatsapp && cfg.whatsapp[subKey]) return cfg.whatsapp[subKey];
+        }
+      } catch(eApi) {}
 
       const adminLinks = JSON.parse(localStorage.getItem("ejc_whatsapp_links") || "{}");
       if (adminLinks[sub]) return adminLinks[sub];

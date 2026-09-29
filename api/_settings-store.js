@@ -266,8 +266,8 @@ function saveLocalStore(data) {
 
 // Helper para credenciais Supabase
 function getSupabaseCredentials() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://yggikbshdvnouaoxafcr.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_YiY0CCW6qw4r4G2GXgiD9g_2s7gO-R5";
   return { url: url ? url.replace(/\/$/, "") : null, key };
 }
 
@@ -310,8 +310,9 @@ async function getActiveSettings() {
             }
           } catch (eHist) {}
 
-          // Sincroniza WhatsApp do Supabase se disponível
+          // Sincroniza WhatsApp do Supabase (tabela configuracoes_whatsapp ou subs)
           try {
+            let loadedWpp = false;
             const wppRes = await fetch(`${url}/rest/v1/configuracoes_whatsapp?ativo=eq.true`, {
               headers: { "apikey": key, "Authorization": `Bearer ${key}` },
               signal: AbortSignal.timeout(2000)
@@ -326,6 +327,26 @@ async function getActiveSettings() {
                   }
                 });
                 localData.whatsapp = { ...localData.whatsapp, ...wppMap };
+                loadedWpp = true;
+              }
+            }
+
+            if (!loadedWpp) {
+              const subsRes = await fetch(`${url}/rest/v1/subs?select=nome,link_whatsapp`, {
+                headers: { "apikey": key, "Authorization": `Bearer ${key}` },
+                signal: AbortSignal.timeout(2000)
+              });
+              if (subsRes.ok) {
+                const subsRows = await subsRes.json();
+                if (Array.isArray(subsRows) && subsRows.length > 0) {
+                  const wppMap = {};
+                  subsRows.forEach(r => {
+                    if (r.nome && r.link_whatsapp) {
+                      wppMap[String(r.nome).toLowerCase()] = r.link_whatsapp;
+                    }
+                  });
+                  localData.whatsapp = { ...localData.whatsapp, ...wppMap };
+                }
               }
             }
           } catch (eWpp) {}
@@ -835,7 +856,11 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
     try {
       const subs = Object.keys(subsData);
       for (const sub of subs) {
-        await fetch(`${url}/rest/v1/configuracoes_whatsapp`, {
+        const link = subsData[sub];
+        if (!link) continue;
+
+        // 1. Tenta tabela configuracoes_whatsapp
+        fetch(`${url}/rest/v1/configuracoes_whatsapp`, {
           method: "POST",
           headers: {
             "apikey": key,
@@ -845,11 +870,22 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
           },
           body: JSON.stringify({
             sub: sub,
-            link_grupo: subsData[sub],
+            link_grupo: link,
             ativo: true,
             atualizado_em: agora
           })
-        });
+        }).catch(() => {});
+
+        // 2. Tenta tabela subs (coluna link_whatsapp)
+        fetch(`${url}/rest/v1/subs?nome=ilike.${encodeURIComponent(sub)}`, {
+          method: "PATCH",
+          headers: {
+            "apikey": key,
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ link_whatsapp: link })
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn("[SettingsStore updateWhatsAppSettings] Supabase sync falhou:", e.message);
