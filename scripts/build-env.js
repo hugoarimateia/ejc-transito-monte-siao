@@ -36,10 +36,10 @@ const rawPixTipo = process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "";
 const rawPixChave = process.env.NEXT_PUBLIC_PIX_CHAVE || "";
 const normPixChave = rawPixChave ? normalizarChavePix(rawPixChave, rawPixTipo) : null;
 
-// Lê variáveis da Vercel / process.env (somente infraestrutura técnica, sem forçar defaults de negócio)
+// Lê variáveis da Vercel / process.env. Sem valores fixos embutidos no código.
 const config = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co",
-  SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i",
+  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || null,
+  SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || null,
   PIX_CHAVE: normPixChave,
   PIX_TIPO_CHAVE: rawPixTipo || null,
   PIX_BENEFICIARIO: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || null,

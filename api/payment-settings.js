@@ -87,20 +87,24 @@ module.exports = async (req, res) => {
   const roleHeader = req.headers?.["x-admin-role"] || req.query?.role || "superadmin";
   const providedPass = req.body?.admin_pass || tokenHeader || authHeader.replace(/^Bearer\s+/i, "").trim();
 
-  const validPasswords = {
-    "ejc2026": "superadmin",
-    "financeiro2026": "financeiro",
-    "coordenacao2026": "comum"
-  };
+  const validPasswords = Object.freeze({
+    ...(process.env.ADMIN_PASSWORD ? { [process.env.ADMIN_PASSWORD]: "superadmin" } : {}),
+    ...(process.env.FINANCEIRO_PASSWORD ? { [process.env.FINANCEIRO_PASSWORD]: "financeiro" } : {}),
+    ...(process.env.COORDENACAO_PASSWORD ? { [process.env.COORDENACAO_PASSWORD]: "comum" } : {})
+  });
 
-  const envAdminPass = process.env.ADMIN_PASSWORD || "ejc2026";
-  const isAuthorized = providedPass === envAdminPass || Boolean(validPasswords[providedPass]);
+  const isAuthorized = Boolean(validPasswords[providedPass]);
+  const hasAdminCredentials = Boolean(providedPass);
+
+  if (hasAdminCredentials && !isAuthorized) {
+    return res.status(401).json({ error: "Acesso não autorizado: credenciais administrativas necessárias." });
+  }
 
   if (!isAuthorized && req.method !== "GET") {
     return res.status(401).json({ error: "Acesso não autorizado: credenciais administrativas necessárias." });
   }
 
-  const userRole = validPasswords[providedPass] || (providedPass === envAdminPass ? "superadmin" : "comum");
+  const userRole = validPasswords[providedPass] || "comum";
 
   // ==============================================================================
   // 1. CONSULTA DE CONFIGURAÇÕES (GET)
