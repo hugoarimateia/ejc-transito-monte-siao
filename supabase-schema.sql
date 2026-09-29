@@ -17,10 +17,9 @@ CREATE TABLE IF NOT EXISTS public.subs (
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Migra sub legada 'Azul' para 'Laranja' se existir
-UPDATE public.subs 
-SET nome = 'Laranja', cor = '#f97316', casal_coordenador = 'Alan e Kallyne', link_whatsapp = 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja'
-WHERE nome = 'Azul' AND NOT EXISTS (SELECT 1 FROM public.subs WHERE nome = 'Laranja');
+-- Migra sub legada 'Azul' para 'Laranja' e remove resquício
+UPDATE public.inscricoes SET sub = 'Laranja' WHERE sub = 'Azul';
+DELETE FROM public.subs WHERE nome = 'Azul';
 
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
