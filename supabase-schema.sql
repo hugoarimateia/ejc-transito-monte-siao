@@ -1021,7 +1021,8 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'pagamentos_pix') 
        OR EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'public' AND table_name = 'pagamentos_pix') THEN
-        EXECUTE 'GRANT ALL ON TABLE public.pagamentos_pix TO anon, authenticated, service_role';
+        EXECUTE 'REVOKE ALL ON TABLE public.pagamentos_pix FROM PUBLIC, anon, authenticated';
+        EXECUTE 'GRANT ALL ON TABLE public.pagamentos_pix TO service_role';
     END IF;
 END $$;
 

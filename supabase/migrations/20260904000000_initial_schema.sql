@@ -300,7 +300,16 @@ $$;
 -- 10. CONFIGURAÇÃO DE ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.subs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inscricoes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pagamentos_pix ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'pagamentos_pix' AND c.relkind = 'r'
+    ) THEN
+        ALTER TABLE public.pagamentos_pix ENABLE ROW LEVEL SECURITY;
+    END IF;
+END $$;
 
 DROP POLICY IF EXISTS "Leitura pública de subs" ON public.subs;
 CREATE POLICY "Leitura pública de subs" ON public.subs FOR SELECT USING (true);
@@ -314,14 +323,21 @@ CREATE POLICY "Leitura de inscrição via token" ON public.inscricoes FOR SELECT
 DROP POLICY IF EXISTS "Atualização controlada de inscrições" ON public.inscricoes;
 CREATE POLICY "Atualização controlada de inscrições" ON public.inscricoes FOR UPDATE USING (true);
 
-DROP POLICY IF EXISTS "Criação de pagamentos Pix" ON public.pagamentos_pix;
-CREATE POLICY "Criação de pagamentos Pix" ON public.pagamentos_pix FOR INSERT WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Leitura de pagamentos Pix" ON public.pagamentos_pix;
-CREATE POLICY "Leitura de pagamentos Pix" ON public.pagamentos_pix FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Atualização de pagamentos Pix" ON public.pagamentos_pix;
-CREATE POLICY "Atualização de pagamentos Pix" ON public.pagamentos_pix FOR UPDATE USING (true);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'pagamentos_pix' AND c.relkind = 'r'
+    ) THEN
+        DROP POLICY IF EXISTS "Criação de pagamentos Pix" ON public.pagamentos_pix;
+        CREATE POLICY "Criação de pagamentos Pix" ON public.pagamentos_pix FOR INSERT WITH CHECK (true);
+        DROP POLICY IF EXISTS "Leitura de pagamentos Pix" ON public.pagamentos_pix;
+        CREATE POLICY "Leitura de pagamentos Pix" ON public.pagamentos_pix FOR SELECT USING (true);
+        DROP POLICY IF EXISTS "Atualização de pagamentos Pix" ON public.pagamentos_pix;
+        CREATE POLICY "Atualização de pagamentos Pix" ON public.pagamentos_pix FOR UPDATE USING (true);
+    END IF;
+END $$;
 
 -- 11. STORAGE (BUCKET 'fotos')
 INSERT INTO storage.buckets (id, name, public)
