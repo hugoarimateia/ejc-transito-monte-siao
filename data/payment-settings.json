@@ -336,5 +336,103 @@
     "laranja": "https://chat.whatsapp.com/IeYqhFU7IcDLy6m4mHoAZ8?s=sh&p=i&mlu=0&ilr=4",
     "geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
   },
-  "pagamentos": []
+  "pagamentos": [
+    {
+      "txid": "PIXMUMATG9QL6PI",
+      "payment_id": "PAY123456789",
+      "order_id": "ORDMUMATG9QL6PI",
+      "external_reference": "PIXMUMATG9QL6PI",
+      "gateway_transaction_id": "PAY123456789",
+      "nome_pagador": "Maria Teste Pix",
+      "email": "maria.pix.1790663506332@teste.com",
+      "whatsapp_pagador": "83938132623",
+      "valor": 0.01,
+      "metodo": "pix",
+      "modalidade_pix": "api_webhook",
+      "status": "pending",
+      "status_analise_manual": null,
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126580014br.gov.bcb.pix0114+558399643132652040000530398654040.015802BR5923EJC TRANSITO MONTE SIAO6014CAMPINA GRANDE62070503***6304ABCD",
+      "qr_code_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "ticket_url": "https://mercadopago.com.br/ticket/test",
+      "provedor": "mercadopago",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "metadata": {
+        "order_id": "ORDMUMATG9QL6PI",
+        "payment_id": "PAY123456789",
+        "external_reference": "PIXMUMATG9QL6PI",
+        "modalidade_pix": "api_webhook",
+        "status_analise_manual": null,
+        "sub": "Vermelho",
+        "ticket_url": "https://mercadopago.com.br/ticket/test",
+        "lote": "1º Lote - Oficial",
+        "emails_enviados": [
+          {
+            "evento": "order_created",
+            "destinatario": "maria.pix.1790663506332@teste.com",
+            "sucesso": true,
+            "messageId": "simulated-1790663507134-gne3op",
+            "erro": null,
+            "data": "2026-09-29T06:31:47.136Z"
+          }
+        ]
+      },
+      "criado_em": "2026-09-29T06:31:47.123Z"
+    },
+    {
+      "txid": "CARDMUMATEMGPTP0",
+      "payment_id": "CARDMUMATEMGPTP0",
+      "order_id": null,
+      "external_reference": "CARDMUMATEMGPTP0",
+      "gateway_transaction_id": "CARDMUMATEMGPTP0",
+      "nome_pagador": "João Teste Cartão",
+      "email": "joao.cartao.1790663504191@teste.com",
+      "whatsapp_pagador": "83942584060",
+      "valor": 106,
+      "metodo": "credit_card",
+      "status": "approved",
+      "status_detail": "accredited_local_test",
+      "tipo": "contribuicao",
+      "parcelas": 3,
+      "cartao_ultimos_digitos": "0000",
+      "cartao_bandeira": "Cartão",
+      "inscricao_id": null,
+      "sub": "Verde",
+      "metadata": {
+        "order_id": null,
+        "payment_id": "CARDMUMATEMGPTP0",
+        "external_reference": "CARDMUMATEMGPTP0",
+        "sub": "Verde",
+        "lote": "1º Lote - Oficial",
+        "status_detail": "accredited_local_test",
+        "modo_parcelamento": "manual"
+      },
+      "comprovante_email_enviado": true,
+      "pago_em": "2026-09-29T06:31:45.117Z",
+      "criado_em": "2026-09-29T06:31:45.117Z"
+    }
+  ],
+  "inscricoes": [
+    {
+      "id": "152809ab-8be8-470e-9b24-099d801d9d20",
+      "nome_completo": "Teste",
+      "whatsapp": "83999998888",
+      "email": "",
+      "sub": "Verde",
+      "tamanho_camisa": null,
+      "quer_camisa_adicional": false,
+      "quantidade_camisas_adicionais": 0,
+      "modelo_camisa_adicional": null,
+      "tamanho_camisa_adicional": null,
+      "talento": null,
+      "forma_pagamento": "checkout",
+      "pagamento_informado": false,
+      "pagamento_status": "pendente",
+      "justificativa_pagamento": null,
+      "token_acesso": null,
+      "criado_em": "2026-09-29T15:09:14.437Z",
+      "atualizado_em": "2026-09-29T15:09:14.437Z"
+    }
+  ]
 }
