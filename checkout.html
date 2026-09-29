@@ -2485,6 +2485,8 @@
         amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
         maxInstToSet = Math.min(selectedManualInstallment, effectiveMax);
         minInstToSet = maxInstToSet;
+      }
+
       if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
         return;
       }
