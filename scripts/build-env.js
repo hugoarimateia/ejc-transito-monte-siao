@@ -32,26 +32,25 @@ function normalizarChavePix(chave, tipo) {
   return c;
 }
 
-const rawPixTipo = process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "EMAIL";
-const rawPixChave = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
-const normPixChave = normalizarChavePix(rawPixChave, rawPixTipo);
+const rawPixTipo = process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "";
+const rawPixChave = process.env.NEXT_PUBLIC_PIX_CHAVE || "";
+const normPixChave = rawPixChave ? normalizarChavePix(rawPixChave, rawPixTipo) : null;
 
-// Lê variáveis da Vercel / process.env com fallbacks seguros
+// Lê variáveis da Vercel / process.env (somente infraestrutura técnica, sem forçar defaults de negócio)
 const config = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co",
   SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i",
   PIX_CHAVE: normPixChave,
-  PIX_TIPO_CHAVE: rawPixTipo,
-  PIX_BENEFICIARIO: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO",
-  PIX_CIDADE: process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE",
-  PIX_VALOR_INSCRICAO: Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00),
+  PIX_TIPO_CHAVE: rawPixTipo || null,
+  PIX_BENEFICIARIO: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || null,
+  PIX_CIDADE: process.env.NEXT_PUBLIC_PIX_CIDADE || null,
+  PIX_VALOR_INSCRICAO: process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO ? Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO) : null,
   PIX_EXPIRACAO_MINUTOS: Number(process.env.NEXT_PUBLIC_PIX_EXPIRACAO_MINUTOS || 15),
-  WHATSAPP_VERDE: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-  WHATSAPP_VERMELHO: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-  WHATSAPP_AMARELO: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-  WHATSAPP_LARANJA: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  WHATSAPP_AZUL: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  WHATSAPP_GERAL: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+  WHATSAPP_VERDE: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "",
+  WHATSAPP_VERMELHO: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "",
+  WHATSAPP_AMARELO: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "",
+  WHATSAPP_LARANJA: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || "",
+  WHATSAPP_GERAL: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || ""
 };
 
 const outputContent = `// Arquivo gerado automaticamente durante o build da Vercel
@@ -62,23 +61,23 @@ window.EJC_ENV = ${JSON.stringify(config, null, 2)};
 if (window.EJC_ENV.SUPABASE_URL) window.EJC_SUPABASE_URL = window.EJC_ENV.SUPABASE_URL;
 if (window.EJC_ENV.SUPABASE_ANON_KEY) window.EJC_SUPABASE_ANON_KEY = window.EJC_ENV.SUPABASE_ANON_KEY;
 
-window.EJC_PIX_CONFIG = {
-  chave: window.EJC_ENV.PIX_CHAVE,
-  tipoChave: window.EJC_ENV.PIX_TIPO_CHAVE,
-  beneficiario: window.EJC_ENV.PIX_BENEFICIARIO,
-  cidade: window.EJC_ENV.PIX_CIDADE,
+// Inicializa estruturas runtime limpas (dados de negócio oficiais virão do Supabase)
+window.EJC_PIX_CONFIG = window.EJC_PIX_CONFIG || {
+  chave: window.EJC_ENV.PIX_CHAVE || null,
+  tipoChave: window.EJC_ENV.PIX_TIPO_CHAVE || null,
+  beneficiario: window.EJC_ENV.PIX_BENEFICIARIO || null,
+  cidade: window.EJC_ENV.PIX_CIDADE || null,
   identificadorPadrao: "EJCTRANSITO",
-  valorTaxaInscricao: window.EJC_ENV.PIX_VALOR_INSCRICAO,
-  tempoExpiracaoMinutos: window.EJC_ENV.PIX_EXPIRACAO_MINUTOS
+  valorTaxaInscricao: window.EJC_ENV.PIX_VALOR_INSCRICAO || null,
+  tempoExpiracaoMinutos: window.EJC_ENV.PIX_EXPIRACAO_MINUTOS || 15
 };
 
-window.EJC_WHATSAPP_SUBS = {
-  "Verde": window.EJC_ENV.WHATSAPP_VERDE,
-  "Vermelho": window.EJC_ENV.WHATSAPP_VERMELHO,
-  "Amarelo": window.EJC_ENV.WHATSAPP_AMARELO,
-  "Laranja": window.EJC_ENV.WHATSAPP_LARANJA,
-  "Azul": window.EJC_ENV.WHATSAPP_LARANJA,
-  "Geral": window.EJC_ENV.WHATSAPP_GERAL
+window.EJC_WHATSAPP_SUBS = window.EJC_WHATSAPP_SUBS || {
+  "Verde": window.EJC_ENV.WHATSAPP_VERDE || "",
+  "Vermelho": window.EJC_ENV.WHATSAPP_VERMELHO || "",
+  "Amarelo": window.EJC_ENV.WHATSAPP_AMARELO || "",
+  "Laranja": window.EJC_ENV.WHATSAPP_LARANJA || "",
+  "Geral": window.EJC_ENV.WHATSAPP_GERAL || ""
 };
 `;
 

@@ -24,10 +24,10 @@ DELETE FROM public.subs WHERE nome = 'Azul';
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
 VALUES
-    ('Verde', '#24a764', 'Abraão e Sara', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde'),
-    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho'),
-    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo'),
-    ('Laranja', '#f97316', 'Alan e Kallyne', 50, 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja')
+    ('Verde', '#24a764', 'Abraão e Sara', 50, NULL),
+    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 50, NULL),
+    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 50, NULL),
+    ('Laranja', '#f97316', 'Alan e Kallyne', 50, NULL)
 ON CONFLICT (nome) DO UPDATE 
 SET casal_coordenador = EXCLUDED.casal_coordenador,
     capacidade = EXCLUDED.capacidade;
@@ -54,13 +54,21 @@ CREATE TABLE IF NOT EXISTS public.inscricoes (
     justificativa_pagamento TEXT,
     observacao_pagamento TEXT,
     token_acesso TEXT UNIQUE DEFAULT encode(gen_random_bytes(24), 'hex'),
+    arquivado BOOLEAN NOT NULL DEFAULT false,
+    arquivado_em TIMESTAMPTZ,
+    motivo_arquivamento TEXT,
     
     CONSTRAINT inscricoes_whatsapp_unique UNIQUE (whatsapp),
     CONSTRAINT inscricao_unica_por_nome UNIQUE (nome_completo)
 );
 
+ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS arquivado BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS arquivado_em TIMESTAMPTZ;
+ALTER TABLE public.inscricoes ADD COLUMN IF NOT EXISTS motivo_arquivamento TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_inscricoes_sub ON public.inscricoes(sub);
 CREATE INDEX IF NOT EXISTS idx_inscricoes_pagamento_status ON public.inscricoes(pagamento_status);
+CREATE INDEX IF NOT EXISTS idx_inscricoes_arquivado ON public.inscricoes(arquivado);
 
 -- 3. TABELA DE PAGAMENTOS PIX (CONTRIBUIÇÕES E INSCRIÇÕES)
 CREATE TABLE IF NOT EXISTS public.pagamentos_pix (
@@ -104,7 +112,7 @@ SECURITY DEFINER
 AS $$
     SELECT s.nome AS sub, COUNT(i.id)::BIGINT AS total
     FROM public.subs s
-    LEFT JOIN public.inscricoes i ON i.sub = s.nome
+    LEFT JOIN public.inscricoes i ON i.sub = s.nome AND i.arquivado = false
     GROUP BY s.nome;
 $$;
 
@@ -462,14 +470,14 @@ CREATE TABLE IF NOT EXISTS public.configuracoes_whatsapp (
     atualizado_por TEXT DEFAULT 'coordenacao'
 );
 
--- Popula links padrão administráveis se não existirem
+-- Popula links administráveis (inicialmente vazios até configuração do Admin)
 INSERT INTO public.configuracoes_whatsapp (sub, link_grupo, ativo)
 VALUES
-    ('Verde', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde', true),
-    ('Vermelho', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho', true),
-    ('Amarelo', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo', true),
-    ('Laranja', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja', true),
-    ('Geral', 'https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?s=cl&p=i&mlu=0', true)
+    ('Verde', '', true),
+    ('Vermelho', '', true),
+    ('Amarelo', '', true),
+    ('Laranja', '', true),
+    ('Geral', '', true)
 ON CONFLICT (sub) DO NOTHING;
 
 -- Adiciona coluna de e-mail na tabela de inscrições se ausente
@@ -673,22 +681,29 @@ CREATE TABLE IF NOT EXISTS public.configuracoes_financeiras (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     versao INT NOT NULL DEFAULT 1,
     ativo BOOLEAN NOT NULL DEFAULT true,
-    lote_atual TEXT NOT NULL DEFAULT '1º Lote',
-    valor_inscricao NUMERIC(10,2) NOT NULL DEFAULT 50.00,
+    configurado BOOLEAN NOT NULL DEFAULT false,
+    lote_atual TEXT NOT NULL DEFAULT 'Aguardando Coordenação',
+    valor_inscricao NUMERIC(10,2),
     valor_promocional NUMERIC(10,2),
     taxa_adicional NUMERIC(10,2) NOT NULL DEFAULT 0.00,
     max_parcelas INT NOT NULL DEFAULT 12,
-    pix_chave TEXT NOT NULL DEFAULT 'leoeuler03@gmail.com',
-    pix_tipo_chave TEXT NOT NULL DEFAULT 'EMAIL', -- 'EMAIL', 'CPF', 'CNPJ', 'TELEFONE', 'ALEATORIA'
-    pix_beneficiario TEXT NOT NULL DEFAULT 'EJC TRANSITO MONTE SIAO',
+    pix_chave TEXT,
+    pix_tipo_chave TEXT,
+    pix_beneficiario TEXT,
     pix_documento TEXT DEFAULT '',
-    pix_cidade TEXT NOT NULL DEFAULT 'CAMPINA GRANDE',
+    pix_cidade TEXT,
     pix_instituicao TEXT DEFAULT '',
     motivo_alteracao TEXT,
     atualizado_por TEXT NOT NULL DEFAULT 'coordenacao',
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.configuracoes_financeiras ALTER COLUMN valor_inscricao DROP NOT NULL;
+ALTER TABLE public.configuracoes_financeiras ALTER COLUMN valor_inscricao DROP DEFAULT;
+ALTER TABLE public.configuracoes_financeiras ALTER COLUMN pix_chave DROP NOT NULL;
+ALTER TABLE public.configuracoes_financeiras ALTER COLUMN pix_chave DROP DEFAULT;
+ALTER TABLE public.configuracoes_financeiras ADD COLUMN IF NOT EXISTS configurado BOOLEAN NOT NULL DEFAULT false;
 
 -- Garante que apenas um registro seja ativo por vez
 CREATE UNIQUE INDEX IF NOT EXISTS idx_config_financeira_ativa 
@@ -706,38 +721,27 @@ CREATE TABLE IF NOT EXISTS public.lotes_inscricao (
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Popula lote inicial padrão caso não exista
-INSERT INTO public.lotes_inscricao (nome, valor, ativo)
-SELECT '1º Lote', 50.00, true
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.lotes_inscricao WHERE nome = '1º Lote'
-);
-
--- Popula configuração financeira padrão caso não exista nenhuma ativa
+-- Popula configuração financeira inicial no estado NOT_CONFIGURED se não existir
 INSERT INTO public.configuracoes_financeiras (
     versao,
     ativo,
+    configurado,
     lote_atual,
     valor_inscricao,
     taxa_adicional,
     max_parcelas,
-    pix_chave,
-    pix_tipo_chave,
-    pix_beneficiario,
-    pix_cidade,
+    motivo_alteracao,
     atualizado_por
 )
 SELECT 
     1,
     true,
-    '1º Lote',
-    50.00,
+    false,
+    'Aguardando Coordenação',
+    NULL,
     0.00,
     12,
-    'leoeuler03@gmail.com',
-    'EMAIL',
-    'EJC TRANSITO MONTE SIAO',
-    'CAMPINA GRANDE',
+    'Configuração inicial - Aguardando definição pelo Administrador',
     'sistema_inicial'
 WHERE NOT EXISTS (
     SELECT 1 FROM public.configuracoes_financeiras WHERE ativo = true
@@ -778,15 +782,16 @@ BEGIN
     IF NOT FOUND THEN
         RETURN json_build_object(
             'success', true,
-            'lote_atual', '1º Lote',
-            'valor_inscricao', 50.00,
+            'configurado', false,
+            'lote_atual', 'Aguardando Coordenação',
+            'valor_inscricao', NULL,
             'valor_promocional', NULL,
             'taxa_adicional', 0.00,
             'max_parcelas', 12,
-            'pix_chave', 'leoeuler03@gmail.com',
-            'pix_tipo_chave', 'EMAIL',
-            'pix_beneficiario', 'EJC TRANSITO MONTE SIAO',
-            'pix_cidade', 'CAMPINA GRANDE'
+            'pix_chave', NULL,
+            'pix_tipo_chave', NULL,
+            'pix_beneficiario', NULL,
+            'pix_cidade', NULL
         );
     END IF;
 
@@ -794,6 +799,7 @@ BEGIN
         'success', true,
         'id', v_config.id,
         'versao', v_config.versao,
+        'configurado', COALESCE(v_config.configurado, (v_config.valor_inscricao IS NOT NULL AND v_config.valor_inscricao > 0)),
         'lote_atual', v_config.lote_atual,
         'valor_inscricao', v_config.valor_inscricao,
         'valor_promocional', v_config.valor_promocional,
@@ -834,6 +840,7 @@ DECLARE
     v_atual RECORD;
     v_nova_versao INT := 1;
     v_novo_id UUID;
+    v_novo_valor NUMERIC;
 BEGIN
     IF p_valor_inscricao IS NOT NULL AND p_valor_inscricao <= 0 THEN
         RETURN json_build_object('success', false, 'message', 'O valor da inscrição deve ser positivo.');
@@ -856,10 +863,13 @@ BEGIN
     SET ativo = false, atualizado_em = now() 
     WHERE ativo = true;
 
+    v_novo_valor := COALESCE(p_valor_inscricao, v_atual.valor_inscricao);
+
     -- Insere a nova versão ativa
     INSERT INTO public.configuracoes_financeiras (
         versao,
         ativo,
+        configurado,
         lote_atual,
         valor_inscricao,
         valor_promocional,
@@ -876,16 +886,17 @@ BEGIN
     ) VALUES (
         v_nova_versao,
         true,
+        (v_novo_valor IS NOT NULL AND v_novo_valor > 0),
         COALESCE(p_lote_atual, v_atual.lote_atual, '1º Lote'),
-        COALESCE(p_valor_inscricao, v_atual.valor_inscricao, 50.00),
+        v_novo_valor,
         p_valor_promocional,
         COALESCE(p_taxa_adicional, v_atual.taxa_adicional, 0.00),
         COALESCE(p_max_parcelas, v_atual.max_parcelas, 12),
-        COALESCE(p_pix_chave, v_atual.pix_chave, 'leoeuler03@gmail.com'),
-        COALESCE(p_pix_tipo_chave, v_atual.pix_tipo_chave, 'EMAIL'),
-        COALESCE(p_pix_beneficiario, v_atual.pix_beneficiario, 'EJC TRANSITO MONTE SIAO'),
+        COALESCE(p_pix_chave, v_atual.pix_chave),
+        COALESCE(p_pix_tipo_chave, v_atual.pix_tipo_chave),
+        COALESCE(p_pix_beneficiario, v_atual.pix_beneficiario),
         COALESCE(p_pix_documento, v_atual.pix_documento, ''),
-        COALESCE(p_pix_cidade, v_atual.pix_cidade, 'CAMPINA GRANDE'),
+        COALESCE(p_pix_cidade, v_atual.pix_cidade),
         p_motivo,
         COALESCE(p_usuario, 'admin'),
         now()
@@ -900,7 +911,7 @@ BEGIN
             'PRICE_UPDATED',
             COALESCE(p_usuario, 'admin'),
             'valor_inscricao',
-            COALESCE(v_atual.valor_inscricao::TEXT, '50.00'),
+            COALESCE(v_atual.valor_inscricao::TEXT, 'Nao configurado'),
             p_valor_inscricao::TEXT,
             p_motivo,
             p_ip,
@@ -916,7 +927,7 @@ BEGIN
             'PIX_KEY_UPDATED',
             COALESCE(p_usuario, 'admin'),
             'pix_chave',
-            COALESCE(v_atual.pix_chave, 'leoeuler03@gmail.com'),
+            COALESCE(v_atual.pix_chave, 'Nao configurado'),
             p_pix_chave,
             p_motivo,
             p_ip,
@@ -944,8 +955,9 @@ BEGIN
         'success', true,
         'id', v_novo_id,
         'versao', v_nova_versao,
-        'valor_inscricao', COALESCE(p_valor_inscricao, v_atual.valor_inscricao, 50.00),
-        'pix_chave', COALESCE(p_pix_chave, v_atual.pix_chave, 'leoeuler03@gmail.com')
+        'configurado', (v_novo_valor IS NOT NULL AND v_novo_valor > 0),
+        'valor_inscricao', v_novo_valor,
+        'pix_chave', COALESCE(p_pix_chave, v_atual.pix_chave)
     );
 END;
 $$;

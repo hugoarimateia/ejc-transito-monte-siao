@@ -8,8 +8,8 @@
 const settingsStore = require("./_settings-store");
 
 function getSupabaseCredentials() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
   return { url: url ? url.replace(/\/$/, "") : null, key };
 }
 
@@ -37,9 +37,10 @@ function calcularContagensOficiais(localStore) {
   // Identificador prioritário: whatsapp (dígitos) ou email ou ID
   const pessoasUnicas = new Map();
 
-  // 1. Processa inscrições do formulário registradas centralmente
+  // 1. Processa inscrições do formulário registradas centralmente (ignora arquivados)
   if (Array.isArray(localStore.inscricoes)) {
     localStore.inscricoes.forEach(insc => {
+      if (insc.arquivado) return;
       const sub = normalizarSub(insc.sub);
       if (!sub) return;
       const tel = normalizarTelefone(insc.whatsapp);
@@ -52,10 +53,10 @@ function calcularContagensOficiais(localStore) {
     });
   }
 
-  // 2. Processa pagamentos aprovados da base central (se não estiverem já em inscricoes)
+  // 2. Processa pagamentos aprovados da base central (se não estiverem já em inscricoes e não forem arquivados)
   if (Array.isArray(localStore.pagamentos)) {
     localStore.pagamentos.forEach(pag => {
-      if (pag.status !== "approved") return;
+      if (pag.status !== "approved" || pag.arquivado) return;
       const sub = normalizarSub(pag.sub || pag.metadata?.sub);
       if (!sub) return;
       const tel = normalizarTelefone(pag.whatsapp_pagador || pag.whatsapp);

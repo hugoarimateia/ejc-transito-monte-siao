@@ -677,13 +677,16 @@
       document.getElementById("apprMetodo").textContent = data.metodo === "credit_card" ? "Cartão de Crédito" : "Pix Instantâneo";
       document.getElementById("apprPaymentId").textContent = data.payment_id || data.metadata?.payment_id || data.txid || "-";
       document.getElementById("apprTxid").textContent = data.txid || "-";
-      document.getElementById("apprData").textContent = data.pago_em ? new Date(data.pago_em).toLocaleString("pt-BR") : new Date().toLocaleString("pt-BR");
-      document.getElementById("apprValor").textContent = Number(data.valor || 50).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      document.getElementById("apprValor").textContent = Number(data.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
       if (data.whatsapp_link) {
         document.getElementById("btnWhatsAppGroup").href = data.whatsapp_link;
       } else {
-        document.getElementById("btnWhatsAppGroup").href = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+        const wppBtn = document.getElementById("btnWhatsAppGroup");
+        wppBtn.href = "#";
+        wppBtn.textContent = "Link do grupo será enviado pela coordenação";
+        wppBtn.style.opacity = "0.7";
+        wppBtn.style.pointerEvents = "none";
       }
 
       if (data.comprovante_email_enviado) {

@@ -280,6 +280,7 @@ async function updateSubCounts() {
   if (!remoteLoaded) {
     const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
     local.forEach(i => {
+      if (i.arquivado) return;
       const subNorm = (i.sub === "Azul") ? "Laranja" : i.sub;
       if (counts[subNorm] !== undefined) counts[subNorm]++;
     });
@@ -537,8 +538,8 @@ if (signupForm) {
     }
 
     if (registrationSuccess) {
-      const activeValor = Number(window.EJC_ACTIVE_PRICE || 50);
-      const activeLote = window.EJC_ACTIVE_LOTE || "1º Lote";
+      const activeValor = (window.EJC_ACTIVE_PRICE && Number(window.EJC_ACTIVE_PRICE) > 0) ? Number(window.EJC_ACTIVE_PRICE) : "";
+      const activeLote = window.EJC_ACTIVE_LOTE || "Aguardando Coordenação";
       const activeVersao = window.EJC_ACTIVE_VERSION || 0;
       const inscricaoIdParam = registeredId || "";
       const tokenAcessoParam = userToken || "";
@@ -585,11 +586,21 @@ if (signupForm) {
         );
       }
 
-      // Acesso exclusivo ao Grupo Geral do WhatsApp após a inscrição
-      const generalGroupUrl = "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t";
+      // Acesso ao Grupo Geral do WhatsApp após a inscrição (configuração oficial do banco)
+      const generalGroupUrl = (window.EJC_WHATSAPP_SUBS && (window.EJC_WHATSAPP_SUBS["Geral"] || window.EJC_WHATSAPP_SUBS["geral"])) || "";
 
       if (whatsappGroupButton) {
-        whatsappGroupButton.href = generalGroupUrl;
+        if (generalGroupUrl) {
+          whatsappGroupButton.href = generalGroupUrl;
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp`;
+          whatsappGroupButton.style.pointerEvents = "auto";
+          whatsappGroupButton.style.opacity = "1";
+        } else {
+          whatsappGroupButton.href = "#";
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Grupo Geral: Aguardando link da coordenação`;
+          whatsappGroupButton.style.pointerEvents = "none";
+          whatsappGroupButton.style.opacity = "0.7";
+        }
       }
       if (whatsappSuccess) {
         whatsappSuccess.hidden = false;
@@ -654,8 +665,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==============================================================================
 // SINCRONIZAÇÃO DINÂMICA DA CONFIGURAÇÃO FINANCEIRA PÚBLICA (PREÇO, LOTE)
 // ==============================================================================
-window.EJC_ACTIVE_PRICE = 50.00;
-window.EJC_ACTIVE_LOTE = "1º Lote";
+window.EJC_ACTIVE_PRICE = null;
+window.EJC_ACTIVE_LOTE = "Aguardando Coordenação";
 window.EJC_ACTIVE_VERSION = 0;
 
 function aplicarConfiguracaoNaPagina(cfg) {
@@ -673,8 +684,54 @@ function aplicarConfiguracaoNaPagina(cfg) {
     window.EJC_ACTIVE_VERSION = incomingVersion;
   }
 
-  const valorInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || 50.00);
-  const lote = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || "1º Lote";
+  // Atualiza links de WhatsApp se presentes no payload oficial
+  if (cfg.whatsapp) {
+    window.EJC_WHATSAPP_SUBS = window.EJC_WHATSAPP_SUBS || {};
+    Object.assign(window.EJC_WHATSAPP_SUBS, cfg.whatsapp);
+    const geralLink = cfg.whatsapp.geral || cfg.whatsapp.Geral;
+    if (geralLink) {
+      document.querySelectorAll('[data-whatsapp-target="geral"]').forEach(el => {
+        el.href = geralLink;
+      });
+      const floatBtn = document.querySelector(".whatsapp-float");
+      if (floatBtn) floatBtn.href = geralLink;
+      const navWpp = document.querySelector(".nav-cta");
+      if (navWpp) navWpp.href = geralLink;
+    }
+  }
+
+  const rawVal = pixData.valorTaxaInscricao !== undefined ? pixData.valorTaxaInscricao : (pixData.valor_inscricao !== undefined ? pixData.valor_inscricao : cfg.valor_inscricao);
+  const isConfigurado = Boolean(cfg.configurado || pixData.configurado || (rawVal !== null && rawVal !== undefined && rawVal !== "" && Number(rawVal) > 0));
+  const valorInscricao = (rawVal !== null && rawVal !== undefined && rawVal !== "") ? Number(rawVal) : null;
+  const lote = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || "Aguardando Coordenação";
+
+  if (!isConfigurado || valorInscricao === null || isNaN(valorInscricao) || valorInscricao <= 0) {
+    window.EJC_ACTIVE_PRICE = null;
+    window.EJC_ACTIVE_LOTE = lote;
+
+    const heroFeeText = document.getElementById("heroFeeText");
+    if (heroFeeText) {
+      heroFeeText.textContent = "Inscrições da equipe. Pagamento via Cartão de crédito em até 12x ou Pix com baixa imediata.";
+    }
+    const feeLotBadge = document.getElementById("feeLotBadge");
+    if (feeLotBadge) {
+      feeLotBadge.textContent = "Taxa da equipe";
+    }
+    const mainFeePriceDisplay = document.getElementById("mainFeePriceDisplay");
+    if (mainFeePriceDisplay) {
+      mainFeePriceDisplay.textContent = "A definir";
+    }
+    const paymentLegend = document.getElementById("paymentLegendTitle");
+    if (paymentLegend) {
+      paymentLegend.textContent = "Taxa de inscrição da equipe (Aguardando Coordenação)";
+    }
+    const btnPayFeeSection = document.getElementById("btnPayFeeSection");
+    if (btnPayFeeSection) {
+      btnPayFeeSection.textContent = "Acessar Checkout";
+    }
+    return;
+  }
+
   const promo = (pixData.valorPromocional !== undefined && pixData.valorPromocional !== null)
     ? Number(pixData.valorPromocional)
     : (cfg.valor_promocional !== undefined && cfg.valor_promocional !== null ? Number(cfg.valor_promocional) : null);

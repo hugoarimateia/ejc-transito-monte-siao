@@ -37,25 +37,30 @@ module.exports = async (req, res) => {
   const w = activeData.whatsapp || {};
   const precoEfetivo = settingsStore.getEffectivePrice(s);
 
+  const isConfigured = Boolean(s.configurado || (s.valor_inscricao !== null && s.valor_inscricao !== undefined && Number(s.valor_inscricao) > 0));
+  const valorInscricaoNum = (s.valor_inscricao !== null && s.valor_inscricao !== undefined) ? Number(s.valor_inscricao) : null;
+  const precoEfetivoNum = precoEfetivo !== null ? Number(precoEfetivo) : null;
+
   const currentMod = s.modalidade_pix || s.pix_mode || "api_webhook";
   const pixConfig = {
+    configurado: isConfigured,
     modalidade: currentMod,
     modalidade_pix: currentMod,
     pix_mode: currentMod,
-    chave: s.pix_chave,
-    tipoChave: s.pix_tipo_chave,
-    beneficiario: s.pix_beneficiario,
-    cidade: s.pix_cidade,
+    chave: s.pix_chave || null,
+    tipoChave: s.pix_tipo_chave || null,
+    beneficiario: s.pix_beneficiario || null,
+    cidade: s.pix_cidade || null,
     instrucoesManual: s.pix_instrucoes_manual || "",
     pix_instrucoes_manual: s.pix_instrucoes_manual || "",
     permiteComprovante: s.pix_permite_comprovante !== false,
     pix_permite_comprovante: s.pix_permite_comprovante !== false,
-    valorTaxaInscricao: Number(s.valor_inscricao),
-    valor_inscricao: Number(s.valor_inscricao),
-    precoEfetivo: Number(precoEfetivo),
-    preco_efetivo: Number(precoEfetivo),
-    loteAtual: s.lote_atual,
-    lote_atual: s.lote_atual,
+    valorTaxaInscricao: valorInscricaoNum,
+    valor_inscricao: valorInscricaoNum,
+    precoEfetivo: precoEfetivoNum,
+    preco_efetivo: precoEfetivoNum,
+    loteAtual: s.lote_atual || "Aguardando Coordenação",
+    lote_atual: s.lote_atual || "Aguardando Coordenação",
     valorPromocional: s.valor_promocional ? Number(s.valor_promocional) : null,
     valor_promocional: s.valor_promocional ? Number(s.valor_promocional) : null,
     taxaAdicional: Number(s.taxa_adicional || 0),
@@ -67,23 +72,23 @@ module.exports = async (req, res) => {
   };
 
   const whatsappConfig = {
-    verde: w.verde || process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-    vermelho: w.vermelho || process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-    amarelo: w.amarelo || process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-    laranja: w.laranja || process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-    azul: w.azul || w.laranja || process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-    geral: w.geral || process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+    verde: (w.verde !== undefined && w.verde !== null) ? String(w.verde).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_VERDE || ""),
+    vermelho: (w.vermelho !== undefined && w.vermelho !== null) ? String(w.vermelho).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || ""),
+    amarelo: (w.amarelo !== undefined && w.amarelo !== null) ? String(w.amarelo).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || ""),
+    laranja: (w.laranja !== undefined && w.laranja !== null) ? String(w.laranja).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || ""),
+    geral: (w.geral !== undefined && w.geral !== null) ? String(w.geral).trim() : (process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "")
   };
 
   return res.status(200).json({
     success: true,
+    configurado: isConfigured,
     versao: s.versao,
     is_stale_replica: isStaleReplica,
     supabaseUrl,
     supabaseAnonKey,
-    preco_efetivo: precoEfetivo,
-    precoEfetivo: precoEfetivo,
-    valor_inscricao: pixConfig.valor_inscricao,
+    preco_efetivo: precoEfetivoNum,
+    precoEfetivo: precoEfetivoNum,
+    valor_inscricao: valorInscricaoNum,
     valor_promocional: pixConfig.valor_promocional,
     taxa_adicional: pixConfig.taxa_adicional,
     max_parcelas: pixConfig.max_parcelas,

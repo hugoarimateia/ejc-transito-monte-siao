@@ -262,7 +262,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                   <div class="form-field">
                     <label for="inputValorInscricao">Preço Oficial (R$):</label>
-                    <input type="number" id="inputValorInscricao" step="0.01" min="1.00" required placeholder="50.00">
+                    <input type="number" id="inputValorInscricao" step="0.01" min="1.00" required placeholder="Ex: 150.00">
                     <small>Valor unitário da inscrição.</small>
                   </div>
 
@@ -609,21 +609,22 @@
     let currentAdminPass = "ejc2026";
     let canUserEditFinance = true;
 
-    // Configuração ativa em memória
+    // Configuração ativa em memória (Sem fallback fixo para R$ 50 - Fonte da Verdade é o Banco)
     let configFinanceiraAtiva = {
       modalidade_pix: "api_webhook",
-      lote_atual: "1º Lote",
-      valor_inscricao: 50.00,
+      lote_atual: "Aguardando Coordenação",
+      valor_inscricao: null,
       valor_promocional: null,
       taxa_adicional: 0.00,
       max_parcelas: 12,
-      pix_chave: "83996431326",
+      pix_chave: "",
       pix_tipo_chave: "TELEFONE",
       pix_beneficiario: "EJC TRANSITO MONTE SIAO",
       pix_documento: "",
       pix_cidade: "CAMPINA GRANDE",
       pix_instrucoes_manual: "",
       pix_permite_comprovante: true,
+      configurado: false,
       versao: 1
     };
     let historicoFinanceiroData = [];
@@ -640,11 +641,11 @@
     let pagamentosData = [];
     let auditoriaData = [];
     let wppLinksData = {
-      "Verde": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-      "Vermelho": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-      "Amarelo": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-      "Laranja": "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-      "Geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+      "Verde": "",
+      "Vermelho": "",
+      "Amarelo": "",
+      "Laranja": "",
+      "Geral": ""
     };
 
     let activeModalTxid = null;
@@ -782,22 +783,18 @@
         try {
           const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
           
-          // Inscrições
+          // Inscrições (Apenas Ativas / Não Arquivadas - Fonte Oficial do Banco)
           client.from("inscricoes").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
-              const remotePhones = new Set(data.map(d => d.whatsapp));
-              const nonDuplicatedLocal = localInscricoes.filter(l => !remotePhones.has(l.whatsapp));
-              inscricoesData = [...data, ...nonDuplicatedLocal];
+            if (!error && Array.isArray(data)) {
+              inscricoesData = data.filter(i => i.arquivado !== true);
               renderizarTudo();
             }
           });
 
           // Pagamentos Unificados
           client.from("pagamentos").select("*").order("criado_em", { ascending: false }).then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
-              const remoteTxids = new Set(data.map(d => d.txid));
-              const nonDuplicated = pagamentosData.filter(l => !remoteTxids.has(l.txid));
-              pagamentosData = [...data, ...nonDuplicated];
+            if (!error && Array.isArray(data)) {
+              pagamentosData = data;
               renderizarTudo();
             }
           });
@@ -813,8 +810,8 @@
           client.from("configuracoes_whatsapp").select("*").then(({ data, error }) => {
             if (!error && data && data.length > 0) {
               data.forEach(item => {
-                if (item.sub && item.link_grupo) {
-                  wppLinksData[item.sub] = item.link_grupo;
+                if (item.sub) {
+                  wppLinksData[item.sub] = item.link_grupo || "";
                 }
               });
               renderizarPainelWhatsApp();
@@ -822,8 +819,8 @@
               client.from("subs").select("nome, link_whatsapp").then(({ data: subsData, error: subsErr }) => {
                 if (!subsErr && subsData && subsData.length > 0) {
                   subsData.forEach(item => {
-                    if (item.nome && item.link_whatsapp) {
-                      wppLinksData[item.nome] = item.link_whatsapp;
+                    if (item.nome) {
+                      wppLinksData[item.nome] = item.link_whatsapp || "";
                     }
                   });
                   renderizarPainelWhatsApp();
@@ -1483,11 +1480,14 @@
         });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.settings && data.settings.valor_inscricao !== undefined) {
+          if (data && data.settings) {
+            const rawVal = data.settings.valor_inscricao;
+            const parsedVal = (rawVal !== null && rawVal !== undefined && rawVal !== "") ? Number(rawVal) : null;
             configFinanceiraAtiva = {
               ...configFinanceiraAtiva,
               ...data.settings,
-              valor_inscricao: Number(data.settings.valor_inscricao)
+              valor_inscricao: parsedVal,
+              configurado: Boolean(data.settings.configurado && parsedVal !== null && parsedVal > 0)
             };
             try {
               localStorage.setItem("ejc_config_financeira", JSON.stringify(configFinanceiraAtiva));
@@ -1529,7 +1529,11 @@
 
       const statLote = document.getElementById("statLoteAtual");
       if (statLote) {
-        statLote.textContent = `${configFinanceiraAtiva.lote_atual || '1º Lote'} (R$ ${Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2).replace('.', ',')})`;
+        if (configFinanceiraAtiva.valor_inscricao && Number(configFinanceiraAtiva.valor_inscricao) > 0) {
+          statLote.textContent = `${configFinanceiraAtiva.lote_atual || '1º Lote'} (R$ ${Number(configFinanceiraAtiva.valor_inscricao).toFixed(2).replace('.', ',')})`;
+        } else {
+          statLote.textContent = `${configFinanceiraAtiva.lote_atual || 'Aguardando Coordenação'} (Preço Não Configurado)`;
+        }
       }
     }
 
@@ -1564,8 +1568,8 @@
     }
 
     function preencherFormulariosFinanceiros() {
-      document.getElementById("inputLoteAtual").value = configFinanceiraAtiva.lote_atual || "1º Lote";
-      document.getElementById("inputValorInscricao").value = Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2);
+      document.getElementById("inputLoteAtual").value = configFinanceiraAtiva.lote_atual || "";
+      document.getElementById("inputValorInscricao").value = (configFinanceiraAtiva.valor_inscricao !== null && configFinanceiraAtiva.valor_inscricao !== undefined && Number(configFinanceiraAtiva.valor_inscricao) > 0) ? Number(configFinanceiraAtiva.valor_inscricao).toFixed(2) : "";
       document.getElementById("inputValorPromocional").value = configFinanceiraAtiva.valor_promocional ? Number(configFinanceiraAtiva.valor_promocional).toFixed(2) : "";
       document.getElementById("inputMaxParcelas").value = String(configFinanceiraAtiva.max_parcelas || 12);
       document.getElementById("inputTaxaAdicional").value = configFinanceiraAtiva.taxa_adicional ? Number(configFinanceiraAtiva.taxa_adicional).toFixed(2) : "0.00";
@@ -1756,7 +1760,7 @@
         </div>
         <div class="diff-row">
           <span>Preço Oficial da Inscrição:</span>
-          <span><span class="diff-old">R$ ${Number(configFinanceiraAtiva.valor_inscricao || 50).toFixed(2).replace('.', ',')}</span> → <span class="diff-new">R$ ${novoValor.toFixed(2).replace('.', ',')}</span></span>
+          <span><span class="diff-old">${configFinanceiraAtiva.valor_inscricao ? 'R$ ' + Number(configFinanceiraAtiva.valor_inscricao).toFixed(2).replace('.', ',') : 'Não configurado'}</span> → <span class="diff-new">R$ ${novoValor.toFixed(2).replace('.', ',')}</span></span>
         </div>
         <div class="diff-row">
           <span>Preço Promocional:</span>

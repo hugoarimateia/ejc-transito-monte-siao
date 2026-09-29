@@ -1,22 +1,31 @@
 // ==============================================================================
 // VERCEL SERVERLESS FUNCTION: /api/whatsapp
 // Validação de token de inscrição e redirecionamento para o grupo de WhatsApp do Sub
+// Fonte Oficial: Supabase (configuracoes_whatsapp) / Settings Store
+// Zero Hardcoded Defaults: Se não configurado, redireciona com mensagem informativa
 // ==============================================================================
 
-const SUB_GROUPS = {
-  "Verde": process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-  "Vermelho": process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-  "Amarelo": process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-  "Laranja": process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  "Azul": process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-  "Geral": process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
-};
+const settingsStore = require("./_settings-store");
 
 module.exports = async (req, res) => {
   const token = req.query.t || req.query.token;
 
+  let activeData = null;
+  try {
+    activeData = await settingsStore.getActiveSettings();
+  } catch (e) {
+    activeData = settingsStore.getDefaultStore();
+  }
+
+  const wppMap = (activeData && activeData.whatsapp) ? activeData.whatsapp : {};
+
+  // Se não foi fornecido token, tenta redirecionar para o Grupo Geral oficial
   if (!token) {
-    return res.redirect(302, SUB_GROUPS["Geral"]);
+    const geralLink = wppMap["Geral"] || wppMap["geral"];
+    if (geralLink && typeof geralLink === "string" && geralLink.startsWith("http")) {
+      return res.redirect(302, geralLink);
+    }
+    return res.redirect(302, "/?msg=whatsapp_aguardando_configuracao");
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -36,9 +45,10 @@ module.exports = async (req, res) => {
         if (data && data.length > 0 && data[0].sub) {
           let subName = data[0].sub;
           if (subName === "Azul") subName = "Laranja";
-          // Tenta obter o link administrável do Sub
+
+          // 1. Tenta tabela configuracoes_whatsapp via Supabase diretamente
           try {
-            const confRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=eq.${encodeURIComponent(subName)}&select=link_grupo,ativo`, {
+            const confRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/configuracoes_whatsapp?sub=ilike.${encodeURIComponent(subName)}&ativo=eq.true&select=link_grupo`, {
               headers: {
                 "apikey": supabaseKey,
                 "Authorization": `Bearer ${supabaseKey}`
@@ -46,14 +56,17 @@ module.exports = async (req, res) => {
             });
             if (confRes.ok) {
               const confData = await confRes.json();
-              if (confData && confData.length > 0 && confData[0].ativo && confData[0].link_grupo) {
+              if (confData && confData.length > 0 && confData[0].link_grupo && confData[0].link_grupo.startsWith("http")) {
                 return res.redirect(302, confData[0].link_grupo);
               }
             }
           } catch(e) {}
 
-          const targetUrl = SUB_GROUPS[subName] || SUB_GROUPS["Geral"];
-          return res.redirect(302, targetUrl);
+          // 2. Tenta store central
+          const link = wppMap[subName] || wppMap[subName.toLowerCase()];
+          if (link && typeof link === "string" && link.startsWith("http")) {
+            return res.redirect(302, link);
+          }
         }
       }
     } catch (err) {
@@ -61,6 +74,11 @@ module.exports = async (req, res) => {
     }
   }
 
-  // Fallback para grupo geral se não encontrar token específico
-  return res.redirect(302, SUB_GROUPS["Geral"]);
+  // Fallback para Grupo Geral se existir
+  const geralLink = wppMap["Geral"] || wppMap["geral"];
+  if (geralLink && typeof geralLink === "string" && geralLink.startsWith("http")) {
+    return res.redirect(302, geralLink);
+  }
+
+  return res.redirect(302, "/?msg=whatsapp_aguardando_configuracao");
 };

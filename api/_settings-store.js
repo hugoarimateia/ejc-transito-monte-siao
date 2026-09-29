@@ -19,11 +19,12 @@ let memoryStore = null;
 
 // Helper: calcula o preço efetivo considerando promoção ativa
 function getEffectivePrice(settings) {
-  if (!settings) return 50.00;
+  if (!settings || settings.valor_inscricao === null || settings.valor_inscricao === undefined) return null;
+  const regular = Number(settings.valor_inscricao);
+  if (isNaN(regular) || regular <= 0) return null;
   const promo = settings.valor_promocional !== null && settings.valor_promocional !== undefined
     ? Number(settings.valor_promocional)
     : null;
-  const regular = Number(settings.valor_inscricao || 50.00);
   if (promo !== null && !isNaN(promo) && promo > 0 && promo < regular) {
     return promo;
   }
@@ -89,27 +90,28 @@ function getNextMonotonicVersion(knownCurrent = 0) {
   return maxV + 1;
 }
 
-// Configurações padrão de fábrica (somente usadas se não houver dados gravados)
+// Configurações padrão de fábrica (somente usadas se banco estiver vazio antes do Admin configurar)
 function getDefaultSettings() {
   return {
     versao: 1,
     ativo: true,
-    lote_atual: "1º Lote",
-    valor_inscricao: Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00),
+    configurado: false,
+    lote_atual: "Aguardando Coordenação",
+    valor_inscricao: process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO ? Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO) : null,
     valor_promocional: null,
     taxa_adicional: 0.0,
     max_parcelas: 12,
     modalidade_pix: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook", // "api_webhook" ou "manual"
     pix_mode: process.env.NEXT_PUBLIC_MODALIDADE_PIX || "api_webhook",
-    pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || "83996431326",
-    pix_tipo_chave: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || "TELEFONE",
-    pix_beneficiario: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO",
+    pix_chave: process.env.NEXT_PUBLIC_PIX_CHAVE || null,
+    pix_tipo_chave: process.env.NEXT_PUBLIC_PIX_TIPO_CHAVE || null,
+    pix_beneficiario: process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || null,
     pix_documento: "",
-    pix_cidade: process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE",
+    pix_cidade: process.env.NEXT_PUBLIC_PIX_CIDADE || null,
     pix_instituicao: "",
-    pix_instrucoes_manual: "Faça o Pix para a chave acima e anexe o comprovante nesta tela para análise da coordenação.",
+    pix_instrucoes_manual: "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     pix_permite_comprovante: true,
-    motivo_alteracao: "Configuração padrão inicial",
+    motivo_alteracao: "Configuração inicial - Aguardando definição pelo Administrador",
     atualizado_por: "sistema",
     atualizado_em: new Date().toISOString()
   };
@@ -119,29 +121,14 @@ function getDefaultStore() {
   const defaults = getDefaultSettings();
   return {
     settings: defaults,
-    lotes: [
-      { id: "lote-1", nome: defaults.lote_atual, valor: defaults.valor_inscricao, ativo: true, criado_em: defaults.atualizado_em }
-    ],
-    historico: [
-      {
-        id: "hist-0",
-        acao: "SYSTEM_INITIALIZED",
-        usuario: "sistema",
-        campo_afetado: "inicializacao",
-        valor_anterior: null,
-        valor_novo: `R$ ${defaults.valor_inscricao.toFixed(2)} - ${defaults.pix_chave}`,
-        motivo: "Criação do repositório persistente",
-        criado_em: defaults.atualizado_em,
-        ip_origem: "127.0.0.1"
-      }
-    ],
+    lotes: [],
+    historico: [],
     whatsapp: {
-      verde: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=verde",
-      vermelho: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=vermelho",
-      amarelo: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=amarelo",
-      laranja: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-      azul: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || process.env.NEXT_PUBLIC_WHATSAPP_AZUL || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6?sub=laranja",
-      geral: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
+      verde: process.env.NEXT_PUBLIC_WHATSAPP_VERDE || "",
+      vermelho: process.env.NEXT_PUBLIC_WHATSAPP_VERMELHO || "",
+      amarelo: process.env.NEXT_PUBLIC_WHATSAPP_AMARELO || "",
+      laranja: process.env.NEXT_PUBLIC_WHATSAPP_LARANJA || "",
+      geral: process.env.NEXT_PUBLIC_WHATSAPP_GERAL || ""
     }
   };
 }
@@ -288,10 +275,13 @@ async function getActiveSettings() {
         const rows = await res.json();
         if (rows && rows.length > 0) {
           const remoteSettings = rows[0];
+          const rawRemotePrice = remoteSettings.valor_inscricao;
+          const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
           localData.settings = {
             ...localData.settings,
             ...remoteSettings,
-            valor_inscricao: Number(remoteSettings.valor_inscricao),
+            valor_inscricao: parsedRemotePrice,
+            configurado: Boolean(remoteSettings.configurado && parsedRemotePrice !== null && parsedRemotePrice > 0),
             taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
             max_parcelas: Number(remoteSettings.max_parcelas || 12)
           };
@@ -322,8 +312,10 @@ async function getActiveSettings() {
               if (Array.isArray(wppRows) && wppRows.length > 0) {
                 const wppMap = {};
                 wppRows.forEach(r => {
-                  if (r.sub && r.link_grupo) {
-                    wppMap[String(r.sub).toLowerCase()] = r.link_grupo;
+                  if (r.sub) {
+                    const link = r.link_grupo || "";
+                    wppMap[String(r.sub).toLowerCase()] = link;
+                    wppMap[r.sub] = link;
                   }
                 });
                 localData.whatsapp = { ...localData.whatsapp, ...wppMap };
@@ -699,8 +691,8 @@ async function updatePixSettings({
         },
         body: JSON.stringify({
           p_usuario: usuario || "admin",
-          p_lote_atual: currentSettings.lote_atual || "1º Lote",
-          p_valor_inscricao: currentSettings.valor_inscricao || 50.00,
+          p_lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
+          p_valor_inscricao: currentSettings.valor_inscricao ?? null,
           p_valor_promocional: currentSettings.valor_promocional || null,
           p_taxa_adicional: currentSettings.taxa_adicional || 0.00,
           p_max_parcelas: currentSettings.max_parcelas || 12,
@@ -730,8 +722,8 @@ async function updatePixSettings({
           body: JSON.stringify({
             versao: novaVersao,
             ativo: true,
-            lote_atual: currentSettings.lote_atual || "1º Lote",
-            valor_inscricao: currentSettings.valor_inscricao || 50.00,
+            lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
+            valor_inscricao: currentSettings.valor_inscricao ?? null,
             valor_promocional: currentSettings.valor_promocional,
             taxa_adicional: currentSettings.taxa_adicional || 0.00,
             max_parcelas: currentSettings.max_parcelas || 12,
@@ -855,38 +847,47 @@ async function updateWhatsAppSettings({ subsData, usuario, ip }) {
   if (url && key) {
     try {
       const subs = Object.keys(subsData);
+      const promises = [];
       for (const sub of subs) {
-        const link = subsData[sub];
-        if (!link) continue;
+        const link = subsData[sub] !== undefined ? String(subsData[sub]).trim() : "";
+        const subCap = sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
 
         // 1. Tenta tabela configuracoes_whatsapp
-        fetch(`${url}/rest/v1/configuracoes_whatsapp`, {
-          method: "POST",
-          headers: {
-            "apikey": key,
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates"
-          },
-          body: JSON.stringify({
-            sub: sub,
-            link_grupo: link,
-            ativo: true,
-            atualizado_em: agora
-          })
-        }).catch(() => {});
+        promises.push(
+          fetch(`${url}/rest/v1/configuracoes_whatsapp`, {
+            method: "POST",
+            headers: {
+              "apikey": key,
+              "Authorization": `Bearer ${key}`,
+              "Content-Type": "application/json",
+              "Prefer": "resolution=merge-duplicates"
+            },
+            body: JSON.stringify({
+              sub: subCap,
+              link_grupo: link,
+              ativo: true,
+              atualizado_em: agora,
+              atualizado_por: usuario || "admin"
+            })
+          }).catch(err => console.warn(`[Wpp Sync] Erro ao sincronizar configuracoes_whatsapp (${subCap}):`, err.message))
+        );
 
-        // 2. Tenta tabela subs (coluna link_whatsapp)
-        fetch(`${url}/rest/v1/subs?nome=ilike.${encodeURIComponent(sub)}`, {
-          method: "PATCH",
-          headers: {
-            "apikey": key,
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ link_whatsapp: link })
-        }).catch(() => {});
+        // 2. Tenta tabela subs (coluna link_whatsapp se for sub de equipe)
+        if (subCap !== "Geral") {
+          promises.push(
+            fetch(`${url}/rest/v1/subs?nome=ilike.${encodeURIComponent(subCap)}`, {
+              method: "PATCH",
+              headers: {
+                "apikey": key,
+                "Authorization": `Bearer ${key}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ link_whatsapp: link })
+            }).catch(err => console.warn(`[Wpp Sync] Erro ao sincronizar subs (${subCap}):`, err.message))
+          );
+        }
       }
+      await Promise.all(promises);
     } catch (e) {
       console.warn("[SettingsStore updateWhatsAppSettings] Supabase sync falhou:", e.message);
     }

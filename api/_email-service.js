@@ -31,7 +31,7 @@ const SUB_COLORS = {
 async function getSubWhatsAppLink(subName) {
   let subNorm = String(subName || "Geral").trim();
   if (subNorm.toLowerCase() === "azul") subNorm = "Laranja";
-  const defaultLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+  const defaultLink = "";
 
   const { url, key } = getSupabaseCredentials();
   if (url && key && subNorm) {

@@ -971,8 +971,11 @@
       cidade: (localConfig && localConfig.pix_cidade) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.cidade) || "CAMPINA GRANDE",
       instrucoesManual: (localConfig && localConfig.pix_instrucoes_manual) || "",
       permiteComprovante: (localConfig && localConfig.pix_permite_comprovante !== false),
-      loteAtual: (localConfig && localConfig.lote_atual) || urlLoteParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "1º Lote",
-      valorTaxaInscricao: Number((localConfig && localConfig.valor_inscricao) || (urlValorParam > 0 ? urlValorParam : 0) || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.valorTaxaInscricao) || 50.00),
+      loteAtual: (localConfig && localConfig.lote_atual) || urlLoteParam || (window.EJC_PIX_CONFIG && window.EJC_PIX_CONFIG.loteAtual) || "Aguardando Coordenação",
+      valorTaxaInscricao: (() => {
+        const raw = (localConfig && localConfig.valor_inscricao !== null && localConfig.valor_inscricao !== undefined) ? localConfig.valor_inscricao : (urlValorParam > 0 ? urlValorParam : (window.EJC_PIX_CONFIG ? window.EJC_PIX_CONFIG.valorTaxaInscricao : null));
+        return (raw !== null && raw !== undefined && raw !== "" && Number(raw) > 0) ? Number(raw) : null;
+      })(),
       valorPromocional: (localConfig && localConfig.valor_promocional !== undefined && localConfig.valor_promocional !== null) ? Number(localConfig.valor_promocional) : null,
       maxParcelas: Number((localConfig && localConfig.max_parcelas) || 12)
     };
@@ -981,12 +984,27 @@
     if (tipoCheckout === "inscricao") {
       valorBase = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
     } else {
-      valorBase = Math.max(1, Number(urlParams.get("valor") || activePixConfig.valorTaxaInscricao || 50));
+      valorBase = Math.max(1, Number(urlParams.get("valor") || activePixConfig.valorTaxaInscricao || 0));
     }
     let valorTotal = valorBase;
 
     function atualizarValoresUI() {
       if (tipoCheckout === "inscricao") {
+        if (!activePixConfig.valorTaxaInscricao || activePixConfig.valorTaxaInscricao <= 0) {
+          valorTotal = 0;
+          document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual || 'Aguardando Coordenação'})`;
+          document.getElementById("labelItemTaxa").textContent = "Taxa de Inscrição";
+          document.getElementById("valItemTaxa").textContent = "Aguardando Coordenação";
+          document.getElementById("summaryTotalVal").textContent = "Não configurado";
+          const btnSubmit = document.getElementById("btnSubmitStep1");
+          if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-clock"></i> Taxa ainda não configurada pela coordenação`;
+            btnSubmit.style.opacity = "0.6";
+            btnSubmit.style.cursor = "not-allowed";
+          }
+          return;
+        }
         const precoEfetivo = computeEffectivePrice(activePixConfig.valorTaxaInscricao, activePixConfig.valorPromocional);
         valorTotal = precoEfetivo;
         document.getElementById("summaryEventTitle").textContent = `Taxa de Inscrição (${activePixConfig.loteAtual})`;
@@ -1813,7 +1831,8 @@
       activePixConfig.instrucoesManual = cfg.pix_instrucoes_manual || pixData.pix_instrucoes_manual || activePixConfig.instrucoesManual || "";
       activePixConfig.permiteComprovante = cfg.pix_permite_comprovante !== false;
       activePixConfig.loteAtual = pixData.loteAtual || pixData.lote_atual || cfg.lote_atual || activePixConfig.loteAtual;
-      activePixConfig.valorTaxaInscricao = Number(pixData.valorTaxaInscricao || pixData.valor_inscricao || cfg.valor_inscricao || activePixConfig.valorTaxaInscricao);
+      const rawPrice = pixData.valorTaxaInscricao !== undefined ? pixData.valorTaxaInscricao : (pixData.valor_inscricao !== undefined ? pixData.valor_inscricao : cfg.valor_inscricao);
+      activePixConfig.valorTaxaInscricao = (rawPrice !== null && rawPrice !== undefined && rawPrice !== "" && Number(rawPrice) > 0) ? Number(rawPrice) : null;
       
       const rawPromo = pixData.valorPromocional !== undefined ? pixData.valorPromocional : (pixData.valor_promocional !== undefined ? pixData.valor_promocional : cfg.valor_promocional);
       activePixConfig.valorPromocional = (rawPromo !== undefined && rawPromo !== null && rawPromo !== "") ? Number(rawPromo) : null;
@@ -2312,7 +2331,7 @@
       if (adminLinks[sub]) return adminLinks[sub];
 
       const fallbackSubs = window.EJC_WHATSAPP_SUBS || {};
-      return fallbackSubs[sub] || fallbackSubs["Geral"] || "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+      return fallbackSubs[sub] || fallbackSubs["Geral"] || "";
     }
 
     // Inicialização da configuração ativa

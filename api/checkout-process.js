@@ -602,14 +602,14 @@ module.exports = async (req, res) => {
         }
       }
 
-      // 3. Obtém link do grupo do WhatsApp
+      // 3. Obtém link do grupo do WhatsApp da configuração oficial ativa
       const sub = transactionFound.metadata?.sub || transactionFound.sub || "Geral";
-      let whatsappLink = "https://chat.whatsapp.com/F0aBlRgma3LDGFFG9WrZF6";
+      let whatsappLink = "";
       try {
         const activeData = await settingsStore.getActiveSettings();
         if (activeData?.whatsapp) {
           const subKey = String(sub).toLowerCase();
-          whatsappLink = activeData.whatsapp[subKey] || activeData.whatsapp["geral"] || whatsappLink;
+          whatsappLink = activeData.whatsapp[subKey] || activeData.whatsapp[sub] || activeData.whatsapp["geral"] || activeData.whatsapp["Geral"] || "";
         }
       } catch (eWpp) {}
 
@@ -1028,11 +1028,11 @@ module.exports = async (req, res) => {
     const externalReference = txid;
 
     // Busca configuração financeira ativa oficial garantida pelo settingsStore
-    let officialPrice = Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO || 50.00);
+    let officialPrice = process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO ? Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO) : null;
     let chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "leoeuler03@gmail.com";
     let beneficiario = process.env.NEXT_PUBLIC_PIX_BENEFICIARIO || "EJC TRANSITO MONTE SIAO";
     let cidade = process.env.NEXT_PUBLIC_PIX_CIDADE || "CAMPINA GRANDE";
-    let loteAtual = "1º Lote";
+    let loteAtual = "Aguardando Coordenação";
     let maxParcelasAllowed = 12;
     let activeData = null;
 
@@ -1065,9 +1065,15 @@ module.exports = async (req, res) => {
     // SEGURANÇA: Para inscrições, o valor OFICIAL ativo no backend é obrigatório (não confia no valor manipulado pelo cliente)
     let valorNumerico;
     if (tipo === "inscricao") {
+      if (!officialPrice || isNaN(officialPrice) || officialPrice <= 0) {
+        return res.status(400).json({
+          error: "A taxa de inscrição ainda não foi configurada pela coordenação. Aguarde a abertura do lote para realizar o pagamento.",
+          configurado: false
+        });
+      }
       valorNumerico = officialPrice;
     } else {
-      valorNumerico = Number(valor || officialPrice);
+      valorNumerico = Number(valor || officialPrice || 0);
       if (isNaN(valorNumerico) || valorNumerico <= 0) {
         return res.status(400).json({ error: "Valor da contribuição inválido." });
       }
