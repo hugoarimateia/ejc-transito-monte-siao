@@ -205,6 +205,138 @@ function gerarPayloadPixBACEN({ chave, nome, cidade, valor, txid, info }) {
   return finalPayload;
 }
 
+function getSupabaseClientCredentials() {
+  if (typeof settingsStore.getSupabaseCredentials === "function") {
+    return settingsStore.getSupabaseCredentials();
+  }
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co").replace(/\/$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
+  return { url, key };
+}
+
+async function persistirTransacaoSupabase({
+  txid,
+  nome_pagador,
+  email,
+  whatsapp_pagador = null,
+  cpf_pagador = null,
+  valor,
+  metodo = "pix",
+  parcelas = 1,
+  cartao_ultimos_digitos = null,
+  cartao_bandeira = null,
+  status = "pending",
+  tipo = "inscricao",
+  pix_copia_e_cola = null,
+  qr_code_base64 = null,
+  expiracao = null,
+  inscricao_id = null,
+  metadata = {}
+}) {
+  const { url: sbUrl, key: sbKey } = getSupabaseClientCredentials();
+  if (!sbUrl || !sbKey) {
+    console.warn("[persistirTransacaoSupabase] Supabase credentials indisponíveis.");
+    return { success: false, reason: "missing_credentials" };
+  }
+
+  const safeInscId = safeUuidOrNull(inscricao_id);
+  const cleanExp = expiracao || new Date(Date.now() + 86400000).toISOString();
+  const cleanValor = (valor !== null && valor !== undefined && !isNaN(Number(valor))) ? Number(Number(valor).toFixed(2)) : 0;
+  const cleanMetodo = String(metodo || "pix").toLowerCase();
+  const cleanStatus = String(status || "pending").toLowerCase();
+
+  // 1. Tenta via RPC unificada 'criar_transacao_checkout'
+  try {
+    const resRpc = await fetch(`${sbUrl}/rest/v1/rpc/criar_transacao_checkout`, {
+      method: "POST",
+      headers: {
+        "apikey": sbKey,
+        "Authorization": `Bearer ${sbKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        p_txid: String(txid),
+        p_nome_pagador: String(nome_pagador || "Participante EJC"),
+        p_email: String(email || "").trim().toLowerCase(),
+        p_whatsapp_pagador: whatsapp_pagador || null,
+        p_cpf_pagador: cpf_pagador || null,
+        p_valor: cleanValor,
+        p_metodo: cleanMetodo,
+        p_parcelas: Math.max(1, parseInt(parcelas, 10) || 1),
+        p_cartao_ultimos_digitos: cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : null,
+        p_cartao_bandeira: cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : null,
+        p_status: cleanStatus,
+        p_tipo: String(tipo || "inscricao"),
+        p_pix_copia_e_cola: pix_copia_e_cola || null,
+        p_qr_code_base64: qr_code_base64 || null,
+        p_expiracao: cleanExp,
+        p_inscricao_id: safeInscId,
+        p_metadata: metadata || {}
+      }),
+      signal: AbortSignal.timeout(6000)
+    });
+
+    if (resRpc.ok) {
+      const rpcData = await resRpc.json();
+      return { success: true, via: "rpc", data: rpcData };
+    } else {
+      const errTxt = await resRpc.text();
+      console.warn(`[persistirTransacaoSupabase] RPC criar_transacao_checkout falhou (${resRpc.status}): ${errTxt}. Acionando fallback direto na tabela pagamentos...`);
+    }
+  } catch (rpcErr) {
+    console.warn("[persistirTransacaoSupabase] Exceção na RPC:", rpcErr.message);
+  }
+
+  // 2. Fallback direto: INSERT / UPSERT na tabela 'public.pagamentos'
+  try {
+    const rowPayload = {
+      txid: String(txid),
+      nome_pagador: String(nome_pagador || "Participante EJC"),
+      email: String(email || "").trim().toLowerCase(),
+      whatsapp_pagador: whatsapp_pagador || null,
+      cpf_pagador: cpf_pagador || null,
+      valor: cleanValor,
+      metodo: cleanMetodo,
+      parcelas: Math.max(1, parseInt(parcelas, 10) || 1),
+      cartao_ultimos_digitos: cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : null,
+      cartao_bandeira: cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : null,
+      status: cleanStatus,
+      tipo: String(tipo || "inscricao"),
+      pix_copia_e_cola: pix_copia_e_cola || null,
+      qr_code_base64: qr_code_base64 || null,
+      expiracao: cleanExp,
+      inscricao_id: safeInscId,
+      gateway_transaction_id: metadata?.payment_id ? String(metadata.payment_id) : String(txid),
+      metadata: metadata || {},
+      atualizado_em: new Date().toISOString()
+    };
+
+    const directRes = await fetch(`${sbUrl}/rest/v1/pagamentos?on_conflict=txid`, {
+      method: "POST",
+      headers: {
+        "apikey": sbKey,
+        "Authorization": `Bearer ${sbKey}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify(rowPayload),
+      signal: AbortSignal.timeout(6000)
+    });
+
+    if (directRes.ok) {
+      const directData = await directRes.json();
+      return { success: true, via: "direct_table", data: directData };
+    } else {
+      const directErr = await directRes.text();
+      console.error(`[persistirTransacaoSupabase] Falha no fallback direto (${directRes.status}):`, directErr);
+    }
+  } catch (directErr) {
+    console.error("[persistirTransacaoSupabase] Exceção no fallback direto:", directErr.message);
+  }
+
+  return { success: false };
+}
+
 async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload = {}, executado_por = "sistema" }) {
   if (!txid) throw new Error("TXID é obrigatório para confirmação.");
   const cleanTxid = String(txid).trim();
@@ -212,8 +344,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
 
   let confirmedOnDatabase = false;
   let paymentRecord = null;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseClientCredentials();
 
   // 1. Atualiza Supabase via RPC unificada multi-identificador
   if (supabaseUrl && supabaseKey) {
@@ -342,8 +473,7 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseClientCredentials();
 
   // ==============================================================================
   // FLUXO GET: CONSULTA E POLLING DE STATUS (POR TXID, EMAIL OU INSCRIÇÃO)
@@ -563,15 +693,46 @@ module.exports = async (req, res) => {
                 pago_em: mpItem.date_approved || new Date().toISOString()
               };
             } else {
+              const detectedMethod = (mpItem.payment_type_id === "credit_card" || String(extRef).startsWith("CARD"))
+                ? "credit_card"
+                : (mpItem.payment_type_id || "pix");
+
               transactionFound = {
                 txid: extRef,
                 payment_id: String(mpItem.id),
                 status: mpItem.status || "pending",
+                status_detail: mpItem.status_detail || "",
+                metodo: detectedMethod,
                 valor: Number(mpItem.transaction_amount),
-                email: mpItem.payer?.email,
+                email: mpItem.payer?.email || null,
                 nome_pagador: `${mpItem.payer?.first_name || ''} ${mpItem.payer?.last_name || ''}`.trim() || "Participante EJC",
-                criado_em: mpItem.date_created || new Date().toISOString()
+                criado_em: mpItem.date_created || new Date().toISOString(),
+                pago_em: mpItem.date_approved || null,
+                cartao_ultimos_digitos: mpItem.card?.last_four_digits || null,
+                cartao_bandeira: mpItem.payment_method_id || null,
+                parcelas: mpItem.installments || 1,
+                metadata: {
+                  payment_id: String(mpItem.id),
+                  external_reference: extRef,
+                  status_detail: mpItem.status_detail,
+                  order_id: mpItem.order?.id || null,
+                  gateway: "mercadopago"
+                }
               };
+
+              // Reconcilia e sincroniza com o Supabase automaticamente!
+              persistirTransacaoSupabase({
+                txid: extRef,
+                nome_pagador: transactionFound.nome_pagador,
+                email: transactionFound.email,
+                valor: transactionFound.valor,
+                metodo: detectedMethod,
+                parcelas: transactionFound.parcelas,
+                cartao_ultimos_digitos: transactionFound.cartao_ultimos_digitos,
+                cartao_bandeira: transactionFound.cartao_bandeira,
+                status: transactionFound.status,
+                metadata: transactionFound.metadata
+              }).catch(e => console.warn("[Reconcile Recovery] Sync Supabase error:", e.message));
             }
 
             // Persiste no store local deste container
@@ -658,26 +819,35 @@ module.exports = async (req, res) => {
         }
       } catch (eWpp) {}
 
+      const realStatusDetail = transactionFound.status_detail || transactionFound.metadata?.status_detail || null;
+      const detectedMetodo = transactionFound.metodo || (String(transactionFound.txid || "").startsWith("CARD") ? "credit_card" : "pix");
+      const realPaymentId = transactionFound.payment_id || transactionFound.metadata?.payment_id || transactionFound.gateway_transaction_id || (detectedMetodo === "credit_card" ? null : transactionFound.txid);
+
       const responsePayload = {
         success: true,
         txid: transactionFound.txid,
-        payment_id: transactionFound.payment_id || transactionFound.metadata?.payment_id || (transactionFound.metodo === "credit_card" ? null : transactionFound.txid),
+        payment_id: realPaymentId,
         order_id: transactionFound.order_id || transactionFound.metadata?.order_id || null,
         external_reference: transactionFound.external_reference || transactionFound.metadata?.external_reference || transactionFound.txid,
         modalidade_pix: isManual ? "manual" : "api_webhook",
         status: transactionFound.status || (isManual ? "aguardando_analise" : "pending"),
+        status_detail: realStatusDetail,
+        mensagem_usuario: getFriendlyCardErrorMessage(realStatusDetail) || null,
         status_analise_manual: transactionFound.status_analise_manual || transactionFound.metadata?.status_analise_manual || (isManual ? "pendente" : null),
         comprovante_caminho: transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || null,
         comprovante_enviado: Boolean(transactionFound.comprovante_caminho || transactionFound.metadata?.comprovante_url || transactionFound.metadata?.comprovante_caminho),
         pago: transactionFound.status === "approved" || transactionFound.status === "confirmado" || transactionFound.status === "paid",
         pago_em: transactionFound.pago_em || null,
         criado_em: transactionFound.criado_em || null,
-        metodo: transactionFound.metodo || "pix",
+        metodo: detectedMetodo,
         valor: Number(transactionFound.valor),
         nome: transactionFound.nome_pagador,
         email: transactionFound.email,
         sub: sub,
         lote: transactionFound.metadata?.lote || transactionFound.lote || "1º Lote",
+        parcelas: transactionFound.parcelas || transactionFound.metadata?.parcelas || 1,
+        cartao_bandeira: transactionFound.cartao_bandeira || transactionFound.metadata?.bandeira || null,
+        cartao_ultimos_digitos: transactionFound.cartao_ultimos_digitos || transactionFound.metadata?.ultimos_digitos || null,
         inscricao_id: transactionFound.inscricao_id || null,
         comprovante_email_enviado: Boolean(transactionFound.comprovante_email_enviado),
         comprovante_email_em: transactionFound.comprovante_email_em || null,
@@ -1213,52 +1383,38 @@ module.exports = async (req, res) => {
         console.log(`[CHECKOUT_PIX_DIAGNOSTICO] ORIGEM_PIX=MANUAL | TXID=${txid} | CHAVE_LEN=${chavePix.length}`);
       }
 
-      // Persiste no Supabase usando a RPC de conciliação inteligente
-      if (supabaseUrl && supabaseKey) {
-        try {
-          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/criar_transacao_checkout`, {
-            method: "POST",
-            headers: {
-              "apikey": supabaseKey,
-              "Authorization": `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              p_txid: txid,
-              p_nome_pagador: nomeFinal,
-              p_email: email.trim().toLowerCase(),
-              p_whatsapp_pagador: whatsapp || null,
-              p_cpf_pagador: cpf || null,
-              p_valor: valorNumerico,
-              p_metodo: "pix",
-              p_parcelas: 1,
-              p_cartao_ultimos_digitos: null,
-              p_cartao_bandeira: null,
-              p_status: initialStatus,
-              p_tipo: tipo || "inscricao",
-              p_pix_copia_e_cola: payloadPix,
-              p_qr_code_base64: qrCodeBase64,
-              p_expiracao: expiracao,
-              p_inscricao_id: safeUuidOrNull(inscricao_id),
-              p_metadata: {
-                order_id: orderId,
-                payment_id: paymentId,
-                external_reference: externalReference,
-                sub: subFinal,
-                modalidade_pix: modalidadePix,
-                status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
-                gerado_via: mpGenerated ? "api_mercadopago" : "pix_manual",
-                provedor: mpGenerated ? "mercadopago" : "pix_manual",
-                ticket_url: ticketUrl,
-                lote: loteAtual,
-                inscricao_id: inscricao_id || null
-              }
-            })
-          });
-        } catch (dbErr) {
-          console.warn("[Checkout Process] Erro ao persistir Pix no Supabase:", dbErr.message);
+      // Persiste no Supabase usando a RPC inteligente com fallback direto
+      await persistirTransacaoSupabase({
+        txid: txid,
+        nome_pagador: nomeFinal,
+        email: email.trim().toLowerCase(),
+        whatsapp_pagador: whatsapp || null,
+        cpf_pagador: cpf || null,
+        valor: valorNumerico,
+        metodo: "pix",
+        parcelas: 1,
+        cartao_ultimos_digitos: null,
+        cartao_bandeira: null,
+        status: initialStatus,
+        tipo: tipo || "inscricao",
+        pix_copia_e_cola: payloadPix,
+        qr_code_base64: qrCodeBase64,
+        expiracao: expiracao,
+        inscricao_id: safeUuidOrNull(inscricao_id),
+        metadata: {
+          order_id: orderId,
+          payment_id: paymentId,
+          external_reference: externalReference,
+          sub: subFinal,
+          modalidade_pix: modalidadePix,
+          status_analise_manual: modalidadePix === "manual" ? "pendente" : null,
+          gerado_via: mpGenerated ? "api_mercadopago" : "pix_manual",
+          provedor: mpGenerated ? "mercadopago" : "pix_manual",
+          ticket_url: ticketUrl,
+          lote: loteAtual,
+          inscricao_id: inscricao_id || null
         }
-      }
+      });
 
       // Persiste no store local para resiliência de cache/leitura rápida
       try {
@@ -1444,17 +1600,11 @@ module.exports = async (req, res) => {
           if (mpResult.payment_method_id) bandeira = mpResult.payment_method_id;
         } catch (mpErr) {
           console.error("[Checkout Card] Falha na API Mercado Pago:", mpErr.message, mpErr.mpData || "");
-          const mpStatusDetail = mpErr?.mpData?.status_detail || (Array.isArray(mpErr?.mpData?.cause) && mpErr.mpData.cause[0]?.code) || "card_rejected";
-          const friendlyErr = getFriendlyCardErrorMessage(mpStatusDetail) || mpErr.message || "Não foi possível autorizar a transação no cartão informado.";
-          return res.status(400).json({
-            success: false,
-            error: friendlyErr,
-            message: friendlyErr,
-            mensagem_usuario: friendlyErr,
-            status: "rejected",
-            status_detail: mpStatusDetail,
-            cause: mpErr?.mpData?.cause || null
-          });
+          paymentId = mpErr?.mpData?.id ? String(mpErr.mpData.id) : (paymentId || null);
+          statusFinal = mpErr?.mpData?.status || "rejected";
+          statusDetail = mpErr?.mpData?.status_detail || (Array.isArray(mpErr?.mpData?.cause) && mpErr.mpData.cause[0]?.code) || "card_rejected";
+          if (mpErr?.mpData?.card?.last_four_digits) ultimosDigitos = mpErr.mpData.card.last_four_digits;
+          if (mpErr?.mpData?.payment_method_id) bandeira = mpErr.mpData.payment_method_id;
         }
       } else if (!activeCardToken) {
         return res.status(400).json({
@@ -1469,12 +1619,41 @@ module.exports = async (req, res) => {
 
       const isApproved = statusFinal === "approved";
 
-      // 3. Persistência no Supabase
-      if (supabaseUrl && supabaseKey) {
+      // 3. Persistência no Supabase (grava approved, pending, in_process, rejected ou error)
+      await persistirTransacaoSupabase({
+        txid: txid,
+        nome_pagador: nome || cartao_titular || "Titular do Cartão",
+        email: email.trim().toLowerCase(),
+        whatsapp_pagador: whatsapp || null,
+        cpf_pagador: cpf || null,
+        valor: valorFinalCobranca,
+        metodo: "credit_card",
+        parcelas: totalParcelas,
+        cartao_ultimos_digitos: ultimosDigitos,
+        cartao_bandeira: bandeira,
+        status: statusFinal,
+        tipo: tipo || "inscricao",
+        expiracao: new Date(Date.now() + 86400000).toISOString(),
+        inscricao_id: safeUuidOrNull(inscricao_id),
+        metadata: {
+          order_id: orderId,
+          payment_id: paymentId,
+          external_reference: externalReference,
+          sub: subFinal,
+          titular: cartao_titular || null,
+          token: "tokenizado_brick",
+          lote: loteAtual,
+          status_detail: statusDetail,
+          modo_parcelamento: cardMode,
+          acrescimo_percentual: markupPercentual,
+          inscricao_id: safeUuidOrNull(inscricao_id)
+        }
+      });
+
+      // Se e somente se o pagamento foi APROVADO, concilia e confirma a vaga no Supabase
+      if (isApproved && supabaseUrl && supabaseKey) {
         try {
-          const safeInscId = safeUuidOrNull(inscricao_id);
-          // Cria transação com status retornado pelo Mercado Pago
-          const resRpc = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/criar_transacao_checkout`, {
+          await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
             method: "POST",
             headers: {
               "apikey": supabaseKey,
@@ -1483,67 +1662,19 @@ module.exports = async (req, res) => {
             },
             body: JSON.stringify({
               p_txid: txid,
-              p_nome_pagador: nome || cartao_titular || "Titular do Cartão",
-              p_email: email.trim().toLowerCase(),
-              p_whatsapp_pagador: whatsapp || null,
-              p_cpf_pagador: cpf || null,
-              p_valor: valorFinalCobranca,
-              p_metodo: "credit_card",
-              p_parcelas: totalParcelas,
-              p_cartao_ultimos_digitos: ultimosDigitos,
-              p_cartao_bandeira: bandeira,
-              p_status: statusFinal,
-              p_tipo: tipo || "inscricao",
-              p_pix_copia_e_cola: null,
-              p_qr_code_base64: null,
-              p_expiracao: new Date(Date.now() + 86400000).toISOString(),
-              p_inscricao_id: safeInscId,
-              p_metadata: {
-                order_id: orderId,
+              p_gateway: "mercadopago_credit_card",
+              p_executado_por: "checkout_api",
+              p_payload: {
+                parcelas: totalParcelas,
+                bandeira: bandeira,
+                ultimos_digitos: ultimosDigitos,
                 payment_id: paymentId,
-                external_reference: externalReference,
-                sub: subFinal,
-                titular: cartao_titular || null,
-                token: "tokenizado_brick",
-                lote: loteAtual,
-                status_detail: statusDetail,
-                modo_parcelamento: cardMode,
-                acrescimo_percentual: markupPercentual,
-                inscricao_id: safeInscId
+                status_detail: statusDetail
               }
             })
           });
-
-          if (!resRpc.ok) {
-            const errTxt = await resRpc.text();
-            console.warn("[Checkout Card] Erro ao persistir no Supabase:", resRpc.status, errTxt);
-          }
-
-          // Se e somente se o pagamento foi APROVADO, concilia e confirma a inscrição
-          if (isApproved) {
-            await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
-              method: "POST",
-              headers: {
-                "apikey": supabaseKey,
-                "Authorization": `Bearer ${supabaseKey}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                p_txid: txid,
-                p_gateway: "mercadopago_credit_card",
-                p_executado_por: "checkout_api",
-                p_payload: {
-                  parcelas: totalParcelas,
-                  bandeira: bandeira,
-                  ultimos_digitos: ultimosDigitos,
-                  payment_id: paymentId,
-                  status_detail: statusDetail
-                }
-              })
-            });
-          }
         } catch (dbErr) {
-          console.warn("[Checkout Process] Erro ao persistir Cartão no Supabase:", dbErr.message);
+          console.warn("[Checkout Process] Erro ao confirmar Cartão no Supabase:", dbErr.message);
         }
       }
 
@@ -1657,12 +1788,13 @@ module.exports = async (req, res) => {
         });
       } else {
         // rejected
-        const friendlyMsg = getFriendlyCardErrorMessage(statusDetail);
+        const friendlyMsg = getFriendlyCardErrorMessage(statusDetail) || "Não foi possível autorizar a transação no cartão informado.";
         return res.status(400).json({
           success: false,
           metodo: "credit_card",
           txid: txid,
           payment_id: paymentId,
+          order_id: orderId,
           status: "rejected",
           status_detail: statusDetail,
           error: friendlyMsg,

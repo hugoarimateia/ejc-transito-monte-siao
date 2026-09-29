@@ -2485,15 +2485,6 @@
         amountToCharge = Math.round((baseAmount * (1 + rate / 100)) * 100) / 100;
         maxInstToSet = Math.min(selectedManualInstallment, effectiveMax);
         minInstToSet = maxInstToSet;
-      }
-
-      // Regra técnica do Mercado Pago: o Card Payment Brick exige valor mínimo (>= R$ 1.00) para inicialização
-      if (amountToCharge < 1.00) {
-        amountToCharge = (activePixConfig.valorTaxaInscricao && activePixConfig.valorTaxaInscricao >= 1.00)
-          ? activePixConfig.valorTaxaInscricao
-          : 1.00;
-      }
-
       if (cardBrickController && !forceRemount && Math.abs(cardBrickCurrentAmount - amountToCharge) < 0.01) {
         return;
       }
@@ -2690,7 +2681,7 @@
         }
 
         const msgErro = data.mensagem_usuario || data.message || data.error || "O pagamento não foi aprovado pela operadora do cartão. Verifique os dados ou tente outro cartão.";
-        exibirErroCartao(msgErro);
+        exibirErroCartao(msgErro, data.status_detail);
         return {
           success: false,
           error: msgErro,
@@ -2701,17 +2692,18 @@
       } catch (err) {
         console.error("[Checkout Card Error]", err);
         const msgNet = "Falha na comunicação com o servidor de pagamentos. Por favor, tente novamente ou utilize o Pix.";
-        exibirErroCartao(msgNet);
+        exibirErroCartao(msgNet, "network_error");
         return { success: false, error: msgNet, status: "error" };
       } finally {
         isProcessingCard = false;
       }
     }
 
-    function exibirErroCartao(mensagem) {
+    function exibirErroCartao(mensagem, statusDetail = null) {
       const feedbackBox = document.getElementById("cardFeedbackMsg");
       if (!feedbackBox) return;
       feedbackBox.style.display = "block";
+      const badgeHtml = statusDetail ? `<div style="margin-top: 5px;"><span style="display: inline-block; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 600; border: 1px solid #fca5a5;">Código de retorno: ${statusDetail}</span></div>` : "";
       feedbackBox.innerHTML = `
         <div class="alert-banner alert-danger" style="display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 12px 14px; border-radius: 8px;">
           <div style="display: flex; align-items: flex-start; gap: 10px;">
@@ -2719,11 +2711,12 @@
             <div style="color: #991b1b; font-size: 0.90rem; line-height: 1.45;">
               <strong style="display: block; margin-bottom: 2px;">Não foi possível concluir o pagamento:</strong>
               ${mensagem}
+              ${badgeHtml}
             </div>
           </div>
-          <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
-            <button type="button" onclick="reiniciarTentativaCartao()" class="btn" style="background: #ffffff; color: #b91c1c; border: 1px solid #f87171; padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              <i class="fa-solid fa-arrows-rotate"></i> Limpar / Recarregar Formulário de Cartão
+          <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+            <button type="button" onclick="reiniciarTentativaCartao()" class="btn" style="background: #ffffff; color: #b91c1c; border: 1px solid #f87171; padding: 6px 14px; border-radius: 6px; font-size: 0.84rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <i class="fa-solid fa-arrows-rotate"></i> Tentar Novamente / Usar Outro Cartão
             </button>
           </div>
         </div>
@@ -2731,12 +2724,13 @@
       feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
-    window.reiniciarTentativaCartao = async function() {
+    async function reiniciarTentativaCartao() {
       isProcessingCard = false;
       const feedback = document.getElementById("cardFeedbackMsg");
       if (feedback) feedback.style.display = "none";
       await montarCardPaymentBrick(true);
-    };
+    }
+    window.reiniciarTentativaCartao = reiniciarTentativaCartao;
 
     let cardPollingInterval = null;
 

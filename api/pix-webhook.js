@@ -79,11 +79,18 @@ module.exports = async (req, res) => {
       payload.pix?.[0]?.txid ||
       payload.data?.id ||
       payload.id ||
-      payload.payment?.id;
+      payload.payment?.id ||
+      req.query?.["data.id"] ||
+      req.query?.id;
 
     // 2. Tratamento Especial Mercado Pago (Busca ativa de detalhes se Access Token estiver disponível)
-    const isMercadoPagoEvent = (payload.type === "payment" || (payload.action && String(payload.action).startsWith("payment"))) && (payload.data?.id || payload.id);
-    const mpPaymentId = isMercadoPagoEvent ? (payload.data?.id || payload.id) : null;
+    const isMercadoPagoEvent = (
+      payload.type === "payment" ||
+      (payload.action && String(payload.action).startsWith("payment")) ||
+      req.query?.type === "payment" ||
+      req.query?.topic === "payment"
+    ) && (payload.data?.id || payload.id || req.query?.["data.id"] || req.query?.id);
+    const mpPaymentId = isMercadoPagoEvent ? (payload.data?.id || payload.id || req.query?.["data.id"] || req.query?.id) : null;
     let mpPayloadFetched = null;
 
     if (mpPaymentId && mercadoPago.isConfigured()) {
@@ -169,6 +176,38 @@ module.exports = async (req, res) => {
         txid: txid,
         status: "aprovado"
       });
+    }
+
+    // Se o webhook não for de aprovação (ex: rejected, in_process, pending, cancelled, refunded):
+    // Não deixa o banco desatualizado! Atualiza status real e payload no Supabase e no localStore!
+    if (txid) {
+      console.log(`[Webhook] Evento não-liquidado ('${rawStatus}') para ${txid}. Atualizando registro no banco...`);
+      try {
+        const { url: sbUrl, key: sbKey } = (typeof settingsStore.getSupabaseCredentials === "function")
+          ? settingsStore.getSupabaseCredentials()
+          : { url: process.env.NEXT_PUBLIC_SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co", key: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i" };
+
+        if (sbUrl && sbKey) {
+          await fetch(`${sbUrl}/rest/v1/pagamentos?txid=eq.${encodeURIComponent(String(txid))}`, {
+            method: "PATCH",
+            headers: {
+              "apikey": sbKey,
+              "Authorization": `Bearer ${sbKey}`,
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({
+              status: rawStatus,
+              gateway_transaction_id: String(mpPaymentId || txid),
+              payload_webhook: effectivePayload,
+              atualizado_em: new Date().toISOString()
+            }),
+            signal: AbortSignal.timeout(4000)
+          });
+        }
+      } catch (ePatch) {
+        console.warn("[Webhook] Aviso ao atualizar status não-aprovado no Supabase:", ePatch.message);
+      }
     }
 
     return res.status(200).json({
