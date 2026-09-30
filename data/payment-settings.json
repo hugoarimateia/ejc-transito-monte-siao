@@ -683,53 +683,5 @@
       "criado_em": "2026-09-29T06:31:45.117Z"
     }
   ],
-  "inscricoes": [
-    {
-      "id": "152809ab-8be8-470e-9b24-099d801d9d20",
-      "nome_completo": "Teste",
-      "whatsapp": "83999998888",
-      "email": "",
-      "sub": "Verde",
-      "tamanho_camisa": null,
-      "quer_camisa_adicional": false,
-      "quantidade_camisas_adicionais": 0,
-      "modelo_camisa_adicional": null,
-      "tamanho_camisa_adicional": null,
-      "talento": null,
-      "forma_pagamento": "checkout",
-      "pagamento_informado": false,
-      "pagamento_status": "pendente",
-      "justificativa_pagamento": null,
-      "token_acesso": null,
-      "criado_em": "2026-09-29T15:09:14.437Z",
-      "atualizado_em": "2026-09-29T23:14:10.462Z"
-    },
-    {
-      "id": "test-sub-management-uuid",
-      "nome_completo": "Teste Auditoria Sub",
-      "sub": "Amarelo",
-      "whatsapp": "83999999999",
-      "atualizado_em": "2026-09-29T23:16:35.450Z"
-    },
-    {
-      "id": "c8c3cc75-655d-4718-9168-3d55517fe9d0",
-      "nome_completo": "Participante Teste Unitário",
-      "whatsapp": "83988887777",
-      "email": "teste@exemplo.com",
-      "sub": "Verde",
-      "tamanho_camisa": null,
-      "quer_camisa_adicional": false,
-      "quantidade_camisas_adicionais": 0,
-      "modelo_camisa_adicional": null,
-      "tamanho_camisa_adicional": null,
-      "talento": null,
-      "forma_pagamento": "checkout",
-      "pagamento_informado": false,
-      "pagamento_status": "pendente",
-      "justificativa_pagamento": null,
-      "token_acesso": null,
-      "criado_em": "2026-09-29T23:45:17.833Z",
-      "atualizado_em": "2026-09-30T00:00:07.335Z"
-    }
-  ]
+  "inscricoes": []
 }

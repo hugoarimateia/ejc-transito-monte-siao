@@ -237,8 +237,11 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
 }
 
 // Contagem unificada de vagas por Sub (Fonte Única Centralizada)
+let latestCountRequestId = 0;
+
 async function updateSubCounts() {
-  let counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+  const currentRequestId = ++latestCountRequestId;
+  let counts = null;
   let remoteLoaded = false;
 
   // 1. Consulta o endpoint central oficial com anti-cache estrito
@@ -250,7 +253,7 @@ async function updateSubCounts() {
     if (res.ok) {
       const data = await res.json();
       if (data && data.success && data.counts) {
-        counts = { ...counts, ...data.counts };
+        counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, ...data.counts };
         remoteLoaded = true;
       }
     }
@@ -259,10 +262,11 @@ async function updateSubCounts() {
   }
 
   // 2. Se a API não respondeu e Supabase estiver configurado, tenta Supabase
-  if (!remoteLoaded && supabaseClient) {
+  if (!remoteLoaded && typeof supabaseClient !== "undefined" && supabaseClient) {
     try {
       const { data, error } = await supabaseClient.rpc("contagem_inscricoes_por_sub");
       if (!error && data && Array.isArray(data)) {
+        counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
         data.forEach(item => {
           const s = (item.sub === "Azul") ? "Laranja" : item.sub;
           if (counts[s] !== undefined) {
@@ -276,23 +280,19 @@ async function updateSubCounts() {
     }
   }
 
-  // 3. Fallback apenas se completamente offline
-  if (!remoteLoaded) {
-    const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-    local.forEach(i => {
-      if (i.arquivado) return;
-      const pagStatus = String(i.pagamento_status || "").trim().toLowerCase();
-      if (!["approved", "confirmado", "pago"].includes(pagStatus)) return;
-      const subNorm = (i.sub === "Azul") ? "Laranja" : i.sub;
-      if (counts[subNorm] !== undefined) counts[subNorm]++;
-    });
-  }
+  // Descarta resposta obsoleta se outra requisição mais nova foi disparada
+  if (currentRequestId !== latestCountRequestId) return;
 
+  // Se nenhuma fonte retornou dados válidos, não sobrescreve os valores na tela com falso zero
+  if (!remoteLoaded || !counts) {
+    console.warn("[updateSubCounts] Não foi possível obter contagem oficial atualizada.");
+    return;
+  }
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;
     const capacity = Number(button.dataset.capacity || 70);
-    const current = counts[sub] || 0;
+    const current = Number(counts[sub] || 0);
     const countEl = document.querySelector(`[data-count-for="${sub}"]`);
     const progressEl = document.querySelector(`[data-progress-for="${sub}"]`);
     if (countEl) countEl.textContent = current;

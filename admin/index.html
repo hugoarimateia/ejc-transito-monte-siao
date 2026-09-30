@@ -1421,17 +1421,31 @@
     }
 
     function isApproved(status) {
-      return status === "approved" || status === "confirmado";
+      const s = String(status || "").trim().toLowerCase();
+      return s === "approved" || s === "confirmado" || s === "pago";
     }
 
     function renderizarEstatisticas() {
       const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+      let totalConfirmados = 0;
+
       inscricoesData.forEach(item => {
-        const s = (item.sub === "Azul") ? "Laranja" : item.sub;
-        if (subs[s] !== undefined) subs[s]++;
+        if (item.arquivado) return;
+        if (!isApproved(item.pagamento_status)) return;
+        const subRaw = (item.sub === "Azul") ? "Laranja" : item.sub;
+        const s = (subRaw && subRaw.includes("Verd")) ? "Verde"
+          : (subRaw && subRaw.includes("Verm")) ? "Vermelho"
+          : (subRaw && subRaw.includes("Amar")) ? "Amarelo"
+          : (subRaw && (subRaw.includes("Laran") || subRaw.includes("Azul"))) ? "Laranja"
+          : subRaw;
+
+        if (subs[s] !== undefined) {
+          subs[s]++;
+          totalConfirmados++;
+        }
       });
 
-      document.getElementById("statTotalInscritos").textContent = inscricoesData.length;
+      document.getElementById("statTotalInscritos").textContent = totalConfirmados;
       document.getElementById("statSubVerde").textContent = `${subs.Verde} / 70`;
       document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 70`;
       document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 70`;

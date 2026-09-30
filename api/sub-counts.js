@@ -154,16 +154,8 @@ module.exports = async (req, res) => {
     let finalTotal = calcTotal;
 
     if (remoteCounts) {
-      const remoteTotal = Object.values(remoteCounts).reduce((a, b) => a + b, 0);
-      // Proteção de integridade: se temos cadastros locais e nenhum deles está pago (calcTotal === 0),
-      // não permite que o contador público exiba registros pendentes/rejeitados
-      if (calcTotal === 0 && Array.isArray(localStore.inscricoes) && localStore.inscricoes.length > 0 && remoteTotal > 0) {
-        finalCounts = calculatedCounts;
-        finalTotal = calcTotal;
-      } else {
-        finalCounts = remoteCounts;
-        finalTotal = remoteTotal;
-      }
+      finalCounts = remoteCounts;
+      finalTotal = Object.values(remoteCounts).reduce((a, b) => a + b, 0);
     }
 
     return res.status(200).json({
