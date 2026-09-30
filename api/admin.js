@@ -150,6 +150,42 @@ module.exports = async (req, res) => {
       }
     }
 
+    // 2.1 AÇÃO: DESARQUIVAR INSCRIÇÃO
+    if (action === "desarquivar_inscricao") {
+      const auth = adminAuth.requireRole(req, res, ["superadmin", "financeiro", "admin"]);
+      if (!auth) return;
+
+      const targetId = body.id || body.inscricao_id;
+      const targetEmail = body.email;
+      if (!targetId && !targetEmail) {
+        return res.status(400).json({ error: "Informe o ID ou E-mail da inscrição a desarquivar." });
+      }
+
+      const baseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co").replace(/\/$/, "");
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
+
+      const query = targetId ? `id=eq.${encodeURIComponent(targetId)}` : `email=eq.${encodeURIComponent(targetEmail)}`;
+      const patchRes = await fetch(`${baseUrl}/rest/v1/inscricoes?${query}`, {
+        method: "PATCH",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          arquivado: false,
+          motivo_arquivamento: null
+        })
+      });
+
+      if (patchRes.ok) {
+        const rows = await patchRes.json().catch(() => []);
+        return res.status(200).json({ success: true, message: "Inscrição desarquivada com sucesso.", rows });
+      }
+      return res.status(500).json({ error: "Falha ao desarquivar inscrição no Supabase." });
+    }
+
     // 3. AÇÃO: AUDITORIA MERCADO PAGO (SUPERADMIN E FINANCEIRO)
     if (action === "audit_mercadopago") {
       const auth = adminAuth.requireRole(req, res, ["superadmin", "financeiro"]);

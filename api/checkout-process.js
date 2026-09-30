@@ -12,7 +12,10 @@ const { applyCors } = require("./_cors");
 
 function getPublicBaseUrl() {
   const custom = process.env.SITE_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
-  if (custom) return custom.replace(/\/$/, "");
+  if (custom) {
+    const clean = custom.replace(/\/$/, "");
+    return clean.startsWith("http") ? clean : `https://${clean}`;
+  }
   return "https://www.transitoejc.site";
 }
 
@@ -420,21 +423,53 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
             paymentRecord = patched[0];
             const linkedInscId = patched[0].inscricao_id;
             const linkedWpp = patched[0].whatsapp_pagador;
-            if (linkedInscId || linkedWpp) {
-              const targetInscFilter = linkedInscId ? `id=eq.${encodeURIComponent(linkedInscId)}` : `whatsapp=eq.${encodeURIComponent(linkedWpp)}`;
-              await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${targetInscFilter}`, {
+            const linkedEmail = patched[0].email;
+            const linkedNome = patched[0].nome_pagador;
+            const linkedSub = patched[0].sub || patched[0].metadata?.sub || "Verde";
+            if (linkedInscId || linkedWpp || linkedEmail) {
+              const targetInscFilter = linkedInscId 
+                ? `id=eq.${encodeURIComponent(linkedInscId)}` 
+                : (linkedEmail ? `email=eq.${encodeURIComponent(linkedEmail)}` : `whatsapp=eq.${encodeURIComponent(linkedWpp)}`);
+              
+              const resInscPatch = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${targetInscFilter}`, {
                 method: "PATCH",
                 headers: {
                   "apikey": supabaseKey,
                   "Authorization": `Bearer ${supabaseKey}`,
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
+                  "Prefer": "return=representation"
                 },
                 body: JSON.stringify({
                   pagamento_status: "confirmado",
                   pagamento_confirmado_em: agora,
-                  forma_pagamento: patched[0].metodo || "pix"
+                  forma_pagamento: patched[0].metodo || "pix",
+                  arquivado: false
                 })
-              }).catch(() => {});
+              }).catch(() => null);
+
+              const updatedRows = (resInscPatch && resInscPatch.ok) ? await resInscPatch.json().catch(() => []) : [];
+              if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+                await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes`, {
+                  method: "POST",
+                  headers: {
+                    "apikey": supabaseKey,
+                    "Authorization": `Bearer ${supabaseKey}`,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                  },
+                  body: JSON.stringify({
+                    id: (linkedInscId && isCleanUuid) ? linkedInscId : undefined,
+                    nome_completo: linkedNome || "Inscrito Confirmado",
+                    email: linkedEmail || null,
+                    whatsapp: linkedWpp || null,
+                    sub: linkedSub,
+                    forma_pagamento: patched[0].metodo || "pix",
+                    pagamento_status: "confirmado",
+                    pagamento_confirmado_em: agora,
+                    arquivado: false
+                  })
+                }).catch(() => {});
+              }
             }
           }
         }

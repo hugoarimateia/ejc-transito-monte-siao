@@ -1279,7 +1279,8 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
           body: JSON.stringify({
             pagamento_status: "confirmado",
-            pagamento_confirmado_em: agora
+            pagamento_confirmado_em: agora,
+            arquivado: false
           })
         });
         debugInfo.resInscStatus = resInsc.status;
