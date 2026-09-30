@@ -1196,6 +1196,7 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
   let matchedMetodo = "pix";
   let matchedSub = sub || null;
   let matchedTxid = String(identificador);
+  let debugInfo = { keyPrefix: key ? key.substring(0, 10) : null };
 
   if (url && key) {
     try {
@@ -1244,6 +1245,7 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
 
       if (inscFilters.length > 0) {
         const inscUrl = `${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}`;
+        debugInfo.inscUrl = inscUrl;
         const resInsc = await fetch(inscUrl, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
@@ -1253,8 +1255,11 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
             atualizado_em: agora
           })
         });
+        debugInfo.resInscStatus = resInsc.status;
+        debugInfo.resInscBody = await resInsc.clone().text().catch(() => "");
         if (resInsc.ok) {
           const patchedRows = await resInsc.json().catch(() => []);
+          debugInfo.patchedInscCount = Array.isArray(patchedRows) ? patchedRows.length : 0;
           if (Array.isArray(patchedRows) && patchedRows.length > 0) {
             supabaseUpdated = true;
             matchedEmail = matchedEmail || patchedRows[0].email;
@@ -1281,6 +1286,7 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
 
       if (payFilters.length > 0) {
         const payUrl = `${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}`;
+        debugInfo.payUrl = payUrl;
         const resTx = await fetch(payUrl, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
@@ -1290,8 +1296,11 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
             atualizado_em: agora
           })
         });
+        debugInfo.resTxStatus = resTx.status;
+        debugInfo.resTxBody = await resTx.clone().text().catch(() => "");
         if (resTx.ok) {
           const patchedTx = await resTx.json().catch(() => []);
+          debugInfo.patchedTxCount = Array.isArray(patchedTx) ? patchedTx.length : 0;
           if (Array.isArray(patchedTx) && patchedTx.length > 0) {
             supabaseUpdated = true;
             matchedTxid = patchedTx[0].txid || matchedTxid;
@@ -1452,6 +1461,7 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
     alreadyApproved,
     supabaseUpdated,
     emailDispatched,
+    debug: debugInfo,
     message: alreadyApproved
       ? `Pagamento de ${identificador} já estava aprovado.`
       : `Pagamento de ${identificador} aprovado e registrado com sucesso.${emailDispatched ? ' Comprovante oficial enviado para ' + matchedEmail : ''}`
