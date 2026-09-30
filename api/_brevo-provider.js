@@ -10,13 +10,13 @@ const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 // Configurações padrão do remetente institucional (alinhado com o remetente verificado na Brevo)
 function getSenderConfig() {
-  const email = process.env.BREVO_FROM_EMAIL || "";
-  const name = process.env.BREVO_FROM_NAME || "EJC — AD Monte Sião";
+  const email = (process.env.BREVO_FROM_EMAIL || "hugogeeta.gamer@gmail.com").trim();
+  const name = (process.env.BREVO_FROM_NAME || "EJC — AD Monte Sião").trim();
   return { email, name };
 }
 
 function getAdminEmail() {
-  return process.env.BREVO_ADMIN_EMAIL || "";
+  return (process.env.BREVO_ADMIN_EMAIL || "hugogeeta.gamer@gmail.com").trim();
 }
 
 function isConfigured() {
@@ -76,7 +76,7 @@ async function sendEmail({
   const defaultSender = getSenderConfig();
   const senderFinal = {
     name: (sender && sender.name) || defaultSender.name,
-    email: (sender && sender.email) || defaultSender.email
+    email: (sender && sender.email) || defaultSender.email || "hugogeeta.gamer@gmail.com"
   };
 
   const payload = {
