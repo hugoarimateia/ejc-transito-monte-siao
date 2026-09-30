@@ -351,28 +351,35 @@ async function getActiveSettings() {
       }
 
       if (remoteSettings) {
-        const rawRemotePrice = remoteSettings.valor_inscricao;
-        const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
-        const remotePublicKey = (remoteSettings.mp_public_key || "").trim();
-        const effectivePublicKey = remotePublicKey || (localData.settings && localData.settings.mp_public_key) || CANONICAL_MP_PUBLIC_KEY;
-        const effectiveRates = (Array.isArray(remoteSettings.card_installment_rates) && remoteSettings.card_installment_rates.length > 0)
-          ? remoteSettings.card_installment_rates
-          : ((localData.settings && Array.isArray(localData.settings.card_installment_rates) && localData.settings.card_installment_rates.length > 0)
-              ? localData.settings.card_installment_rates
-              : getDefaultCardRates());
+        const remoteVersao = Number(remoteSettings.versao || 0);
+        const localVersao = Number(localData.settings?.versao || 0);
+        if (remoteVersao >= localVersao || !localData.settings?.valor_inscricao) {
+          const rawRemotePrice = remoteSettings.valor_inscricao;
+          const parsedRemotePrice = (rawRemotePrice !== null && rawRemotePrice !== undefined && rawRemotePrice !== "") ? Number(rawRemotePrice) : null;
+          const parsedRemotePromo = (remoteSettings.valor_promocional !== null && remoteSettings.valor_promocional !== undefined && remoteSettings.valor_promocional !== "") ? Number(remoteSettings.valor_promocional) : null;
+          const remotePublicKey = (remoteSettings.mp_public_key || "").trim();
+          const effectivePublicKey = remotePublicKey || (localData.settings && localData.settings.mp_public_key) || CANONICAL_MP_PUBLIC_KEY;
+          const effectiveRates = (Array.isArray(remoteSettings.card_installment_rates) && remoteSettings.card_installment_rates.length > 0)
+            ? remoteSettings.card_installment_rates
+            : ((localData.settings && Array.isArray(localData.settings.card_installment_rates) && localData.settings.card_installment_rates.length > 0)
+                ? localData.settings.card_installment_rates
+                : getDefaultCardRates());
 
-        localData.settings = {
-          ...localData.settings,
-          ...remoteSettings,
-          valor_inscricao: parsedRemotePrice,
-          configurado: Boolean(parsedRemotePrice !== null && parsedRemotePrice > 0),
-          taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
-          max_parcelas: Number(remoteSettings.max_parcelas || 12),
-          card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
-          card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),
-          card_installment_rates: effectiveRates,
-          mp_public_key: effectivePublicKey
-        };
+          localData.settings = {
+            ...localData.settings,
+            ...remoteSettings,
+            versao: Math.max(remoteVersao, localVersao),
+            valor_inscricao: parsedRemotePrice,
+            valor_promocional: parsedRemotePromo,
+            configurado: Boolean(parsedRemotePrice !== null && parsedRemotePrice > 0),
+            taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
+            max_parcelas: Number(remoteSettings.max_parcelas || 12),
+            card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
+            card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),
+            card_installment_rates: effectiveRates,
+            mp_public_key: effectivePublicKey
+          };
+        }
       }
 
 
@@ -550,7 +557,11 @@ async function updatePriceSettings({
         signal: AbortSignal.timeout(5000)
       });
 
-      // 1.2 Insere nova versão preservando integralmente parâmetros do cartão e PIX
+      // 1.2 Insere nova versão preservando integralmente parâmetros do cartão e PIX com colunas estritas do banco
+      const promoFinal = (novoSettings.valor_promocional !== null && novoSettings.valor_promocional !== undefined && novoSettings.valor_promocional !== "")
+        ? Number(novoSettings.valor_promocional)
+        : null;
+
       const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
         method: "POST",
         headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" },
@@ -559,7 +570,7 @@ async function updatePriceSettings({
           ativo: true,
           lote_atual: novoSettings.lote_atual,
           valor_inscricao: valorNum,
-          valor_promocional: novoSettings.valor_promocional,
+          valor_promocional: promoFinal,
           taxa_adicional: novoSettings.taxa_adicional,
           max_parcelas: novoSettings.max_parcelas,
           card_installment_mode: currentSettings.card_installment_mode || "mercado_pago",
@@ -568,14 +579,11 @@ async function updatePriceSettings({
             ? currentSettings.card_installment_rates
             : getDefaultCardRates(),
           mp_public_key: (currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
-          modalidade_pix: currentSettings.modalidade_pix || "api_webhook",
           pix_chave: currentSettings.pix_chave,
           pix_tipo_chave: currentSettings.pix_tipo_chave,
           pix_beneficiario: currentSettings.pix_beneficiario,
-          pix_documento: currentSettings.pix_documento,
+          pix_documento: currentSettings.pix_documento || "",
           pix_cidade: currentSettings.pix_cidade,
-          pix_instrucoes_manual: currentSettings.pix_instrucoes_manual,
-          pix_permite_comprovante: currentSettings.pix_permite_comprovante,
           motivo_alteracao: motivo,
           atualizado_por: usuario || "admin",
           atualizado_em: agora
@@ -596,9 +604,12 @@ async function updatePriceSettings({
             valor_novo: String(valorNum),
             motivo: motivo || "Atualização de preço",
             ip_origem: ip || "127.0.0.1",
-            detalhes: { lote: novoSettings.lote_atual, versao: novaVersao }
+            detalhes: { lote: novoSettings.lote_atual, versao: novaVersao, valor_promocional: promoFinal }
           })
         }).catch(() => {});
+      } else {
+        const errText = await directRes.text().catch(() => "");
+        console.warn(`[SettingsStore updatePriceSettings] Supabase retornou status ${directRes.status}: ${errText}`);
       }
     } catch (err) {
       console.warn("[SettingsStore updatePriceSettings] Supabase indisponível no momento:", err.message);
@@ -770,7 +781,7 @@ async function updatePixSettings({
         signal: AbortSignal.timeout(5000)
       });
 
-      // 1.2 Insere nova versão preservando configurações de cartão de crédito e preços
+      // 1.2 Insere nova versão preservando configurações de cartão de crédito e preços com colunas estritas
       const directRes = await fetch(`${url}/rest/v1/configuracoes_financeiras`, {
         method: "POST",
         headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" },
@@ -779,7 +790,7 @@ async function updatePixSettings({
           ativo: true,
           lote_atual: currentSettings.lote_atual || "Aguardando Coordenação",
           valor_inscricao: currentSettings.valor_inscricao ?? null,
-          valor_promocional: currentSettings.valor_promocional,
+          valor_promocional: currentSettings.valor_promocional ?? null,
           taxa_adicional: currentSettings.taxa_adicional || 0.00,
           max_parcelas: currentSettings.max_parcelas || 12,
           card_installment_mode: currentSettings.card_installment_mode || "mercado_pago",
@@ -788,14 +799,11 @@ async function updatePixSettings({
             ? currentSettings.card_installment_rates
             : getDefaultCardRates(),
           mp_public_key: (currentSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
-          modalidade_pix: novoSettings.modalidade_pix,
           pix_chave: chaveLimpa,
           pix_tipo_chave: tipoChave,
           pix_beneficiario: beneficiarioLimpo,
-          pix_documento: novoSettings.pix_documento,
+          pix_documento: novoSettings.pix_documento || "",
           pix_cidade: cidadeLimpa,
-          pix_instrucoes_manual: novoSettings.pix_instrucoes_manual,
-          pix_permite_comprovante: novoSettings.pix_permite_comprovante,
           motivo_alteracao: motivo,
           atualizado_por: usuario || "admin",
           atualizado_em: agora
@@ -1551,7 +1559,7 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
             ativo: true,
             lote_atual: updatedSettings.lote_atual,
             valor_inscricao: updatedSettings.valor_inscricao,
-            valor_promocional: updatedSettings.valor_promocional,
+            valor_promocional: updatedSettings.valor_promocional ?? null,
             taxa_adicional: updatedSettings.taxa_adicional,
             max_parcelas: updatedSettings.max_parcelas,
             card_installment_mode: updatedSettings.card_installment_mode || "mercado_pago",
@@ -1560,14 +1568,11 @@ async function syncFullSettings({ settings, usuario, motivo, ip }) {
               ? updatedSettings.card_installment_rates
               : getDefaultCardRates(),
             mp_public_key: (updatedSettings.mp_public_key || CANONICAL_MP_PUBLIC_KEY).trim(),
-            modalidade_pix: updatedSettings.modalidade_pix || "api_webhook",
             pix_chave: updatedSettings.pix_chave,
             pix_tipo_chave: updatedSettings.pix_tipo_chave,
             pix_beneficiario: updatedSettings.pix_beneficiario,
-            pix_documento: updatedSettings.pix_documento,
+            pix_documento: updatedSettings.pix_documento || "",
             pix_cidade: updatedSettings.pix_cidade,
-            pix_instrucoes_manual: updatedSettings.pix_instrucoes_manual,
-            pix_permite_comprovante: updatedSettings.pix_permite_comprovante,
             motivo_alteracao: motivo || "Sincronização integral",
             atualizado_por: usuario || "admin_sync",
             atualizado_em: agora

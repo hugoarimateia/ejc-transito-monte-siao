@@ -200,19 +200,19 @@
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
-          <strong id="statSubVerde">0 / 50</strong>
+          <strong id="statSubVerde">0 / 70</strong>
         </div>
         <div class="stat-box red">
           <span>Sub Vermelho</span>
-          <strong id="statSubVermelho">0 / 50</strong>
+          <strong id="statSubVermelho">0 / 70</strong>
         </div>
         <div class="stat-box yellow">
           <span>Sub Amarelo</span>
-          <strong id="statSubAmarelo">0 / 50</strong>
+          <strong id="statSubAmarelo">0 / 70</strong>
         </div>
         <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
-          <strong id="statSubLaranja">0 / 50</strong>
+          <strong id="statSubLaranja">0 / 70</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -736,7 +736,7 @@
         <div id="wppReadOnlyBanner" class="alert-banner alert-warning" style="display: none; margin-bottom: 16px;">
           <i class="fa-solid fa-lock" style="margin-top: 2px;"></i>
           <div>
-            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com perfil apenas de visualização (<code>coordenacao2026</code>). Para alterar os links dos grupos de WhatsApp, clique em <strong>Sair</strong> no topo da página e faça login com a credencial administrativa (<code>ejc2026</code> ou <code>financeiro2026</code>).
+            <strong>Acesso em Modo Somente Leitura:</strong> Você está conectado com perfil de visualização. Para alterar os links dos grupos de WhatsApp, clique em <strong>Sair</strong> no topo da página e faça login com uma credencial administrativa autorizada (Admin ou Coordenação).
           </div>
         </div>
 
@@ -1432,10 +1432,10 @@
       });
 
       document.getElementById("statTotalInscritos").textContent = inscricoesData.length;
-      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 50`;
-      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 50`;
-      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 50`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 50`;
+      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 70`;
+      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 70`;
+      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 70`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 70`;
 
       // Cálculos financeiros
       let totalGeral = 0;
@@ -1686,7 +1686,7 @@
         <p><strong>Status do Pagamento:</strong> <span class="status-badge status-${item.pagamento_status}">${item.pagamento_status}</span></p>
         <p><strong>Forma Informada:</strong> ${item.forma_pagamento || '-'}</p>
         ${item.justificativa_pagamento ? `<p><strong>Justificativa/Obs:</strong> ${item.justificativa_pagamento}</p>` : ''}
-        ${item.foto_caminho ? `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${item.foto_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>` : ''}
+        ${item.foto_caminho ? `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${item.foto_url || item.foto_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>` : ''}
         ${item.comprovante_caminho ? `<div style="margin-top: 10px;"><strong>Comprovante de Pagamento:</strong><br><a href="${item.comprovante_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver comprovante anexo</a></div>` : ''}
       `;
       document.getElementById("detailModal").showModal();

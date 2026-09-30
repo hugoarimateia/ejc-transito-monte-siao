@@ -39,7 +39,7 @@ function isPagamentoConfirmado(status) {
 // Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas e PAGAS
 function calcularContagensOficiais(localStore) {
   const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-  const capacities = { Verde: 50, Vermelho: 50, Amarelo: 50, Laranja: 50 };
+  const capacities = { Verde: 70, Vermelho: 70, Amarelo: 70, Laranja: 70 };
   
   // Mapa de pessoas únicas: identificador único -> sub
   // Fonte Única: apenas inscrições não arquivadas (arquivado = false) e com pagamento confirmado
@@ -183,22 +183,30 @@ module.exports = async (req, res) => {
   if (req.method === "POST") {
     let body = req.body;
     if (typeof body === "string") {
-      try { body = JSON.parse(body); } catch (e) { body = {}; }
+      try { 
+        body = JSON.parse(body); 
+      } catch (e) {
+        try {
+          body = Object.fromEntries(new URLSearchParams(body));
+        } catch (e2) {
+          body = {};
+        }
+      }
     }
     body = body || {};
 
-    const nome = String(body.nome_completo || "").trim();
-    const whatsapp = normalizarTelefone(body.whatsapp);
-    const sub = normalizarSub(body.sub);
+    const nome = String(body.nome_completo || body.nome || body.name || "").trim();
+    const whatsapp = normalizarTelefone(body.whatsapp || body.phone || body.telefone || body.celular);
+    const sub = normalizarSub(body.sub || body.sub_equipe || body.equipe);
 
     if (!nome) {
       return res.status(400).json({ success: false, error: "Nome completo é obrigatório." });
     }
     if (!whatsapp || whatsapp.length < 10) {
-      return res.status(400).json({ success: false, error: "WhatsApp válido é obrigatório." });
+      return res.status(400).json({ success: false, error: "WhatsApp válido é obrigatório (mínimo 10 dígitos com DDD)." });
     }
     if (!sub) {
-      return res.status(400).json({ success: false, error: "Selecione um Sub válido." });
+      return res.status(400).json({ success: false, error: "Selecione um Sub válido (Verde, Vermelho, Amarelo ou Laranja)." });
     }
 
     // Carrega a store central
@@ -212,8 +220,15 @@ module.exports = async (req, res) => {
       localStore.inscricoes = [];
     }
 
-    // Verifica se já existe inscrição com este WhatsApp
+    // Valida capacidade máxima de 70 vagas confirmadas para a Sub
+    const { counts: currentCounts } = calcularContagensOficiais(localStore);
     const existingIndex = localStore.inscricoes.findIndex(i => normalizarTelefone(i.whatsapp) === whatsapp);
+    if ((currentCounts[sub] || 0) >= 70 && existingIndex < 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Limite máximo de 70 vagas atingido para a Sub ${sub}. Por favor, escolha outra Sub.`
+      });
+    }
 
     // Gera UUID válido para conformidade com a coluna id (type UUID) do PostgreSQL no Supabase
     const isUuid = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(str || ""));

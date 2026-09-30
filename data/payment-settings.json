@@ -1,13 +1,13 @@
 {
   "settings": {
-    "versao": 26,
-    "ativo": true,
+    "versao": 30,
+    "ativo": false,
     "configurado": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
     "valor_promocional": null,
     "taxa_adicional": 0,
-    "max_parcelas": 12,
+    "max_parcelas": 6,
     "modalidade_pix": "api_webhook",
     "pix_mode": "api_webhook",
     "pix_chave": "leoeuler03@gmail.com",
@@ -18,9 +18,9 @@
     "pix_instituicao": "",
     "pix_instrucoes_manual": "Faça o Pix para a chave oficial cadastrada pela coordenação.",
     "pix_permite_comprovante": true,
-    "motivo_alteracao": "teste preço",
+    "motivo_alteracao": "Remove promoção",
     "atualizado_por": "superadmin",
-    "atualizado_em": "2026-09-29T16:45:04.942104+00:00",
+    "atualizado_em": "2026-09-30T00:00:06.668Z",
     "id": "f9910886-d5a9-405d-b053-58627d2abb01",
     "criado_em": "2026-09-29T16:45:04.942104+00:00",
     "preco_efetivo": 50,
@@ -115,6 +115,70 @@
     }
   ],
   "historico": [
+    {
+      "id": "audit-1790726406668-imvh",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 100.00 (1º Lote)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Remove promoção",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-30T00:00:06.668Z",
+      "detalhes": {
+        "versao": 30,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1790726402529-aqf5",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote)",
+      "valor_novo": "R$ 100.00 (1º Lote)",
+      "motivo": "Teste unitário preço",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-30T00:00:02.529Z",
+      "detalhes": {
+        "versao": 29,
+        "lote": "1º Lote",
+        "valor_promocional": 80
+      }
+    },
+    {
+      "id": "audit-1790726365904-vib9",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 100.00 (1º Lote)",
+      "valor_novo": "R$ 50.00 (1º Lote)",
+      "motivo": "Remove promoção",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T23:59:25.904Z",
+      "detalhes": {
+        "versao": 28,
+        "lote": "1º Lote",
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "audit-1790726360919-r9oe",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
+      "valor_novo": "R$ 100.00 (1º Lote)",
+      "motivo": "Teste unitário preço",
+      "ip_origem": "127.0.0.1",
+      "criado_em": "2026-09-29T23:59:20.919Z",
+      "detalhes": {
+        "versao": 27,
+        "lote": "1º Lote",
+        "valor_promocional": 80
+      }
+    },
     {
       "id": "audit-1790700973263-tsvd",
       "acao": "PRICE_UPDATED",
@@ -646,6 +710,26 @@
       "sub": "Amarelo",
       "whatsapp": "83999999999",
       "atualizado_em": "2026-09-29T23:16:35.450Z"
+    },
+    {
+      "id": "c8c3cc75-655d-4718-9168-3d55517fe9d0",
+      "nome_completo": "Participante Teste Unitário",
+      "whatsapp": "83988887777",
+      "email": "teste@exemplo.com",
+      "sub": "Verde",
+      "tamanho_camisa": null,
+      "quer_camisa_adicional": false,
+      "quantidade_camisas_adicionais": 0,
+      "modelo_camisa_adicional": null,
+      "tamanho_camisa_adicional": null,
+      "talento": null,
+      "forma_pagamento": "checkout",
+      "pagamento_informado": false,
+      "pagamento_status": "pendente",
+      "justificativa_pagamento": null,
+      "token_acesso": null,
+      "criado_em": "2026-09-29T23:45:17.833Z",
+      "atualizado_em": "2026-09-30T00:00:07.335Z"
     }
   ]
 }

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.subs (
     nome TEXT UNIQUE NOT NULL,
     cor TEXT NOT NULL,
     casal_coordenador TEXT NOT NULL,
-    capacidade INT NOT NULL DEFAULT 50,
+    capacidade INT NOT NULL DEFAULT 70,
     link_whatsapp TEXT,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -24,10 +24,10 @@ DELETE FROM public.subs WHERE nome = 'Azul';
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
 VALUES
-    ('Verde', '#24a764', 'Abraão e Sara', 50, NULL),
-    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 50, NULL),
-    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 50, NULL),
-    ('Laranja', '#f97316', 'Alan e Kallyne', 50, NULL)
+    ('Verde', '#24a764', 'Abraão e Sara', 70, NULL),
+    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 70, NULL),
+    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 70, NULL),
+    ('Laranja', '#f97316', 'Alan e Kallyne', 70, NULL)
 ON CONFLICT (nome) DO UPDATE 
 SET casal_coordenador = EXCLUDED.casal_coordenador,
     capacidade = EXCLUDED.capacidade;
@@ -175,6 +175,7 @@ CREATE OR REPLACE FUNCTION public.realizar_inscricao_com_link(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
     v_token TEXT;
@@ -182,15 +183,28 @@ DECLARE
     v_total_sub INT;
     v_capacidade INT;
 BEGIN
-    -- Checa limite de vagas com bloqueio de linha
+    -- Checa limite de vagas com bloqueio de linha: conta APENAS inscrições com pagamento confirmado
     SELECT capacidade INTO v_capacidade FROM public.subs WHERE nome = p_sub FOR SHARE;
-    SELECT COUNT(*) INTO v_total_sub FROM public.inscricoes WHERE sub = p_sub;
-    
-    IF v_total_sub >= v_capacidade THEN
-        RAISE EXCEPTION 'limite de vagas atingido para este Sub';
+    IF v_capacidade IS NULL THEN
+        v_capacidade := 70;
     END IF;
 
-    v_token := encode(gen_random_bytes(24), 'hex');
+    SELECT COUNT(*) INTO v_total_sub 
+    FROM public.inscricoes 
+    WHERE sub = p_sub 
+      AND arquivado = false 
+      AND LOWER(TRIM(COALESCE(pagamento_status, ''))) IN ('approved', 'confirmado', 'pago');
+    
+    IF v_total_sub >= v_capacidade THEN
+        RAISE EXCEPTION 'limite de vagas atingido para este Sub (70 vagas preenchidas)';
+    END IF;
+
+    -- Geração segura de token com fallback
+    BEGIN
+        v_token := encode(extensions.gen_random_bytes(24), 'hex');
+    EXCEPTION WHEN OTHERS THEN
+        v_token := md5(random()::text || clock_timestamp()::text) || md5(random()::text);
+    END;
 
     INSERT INTO public.inscricoes (
         nome_completo, sub, whatsapp, modelo_camisa, tamanho_camisa,

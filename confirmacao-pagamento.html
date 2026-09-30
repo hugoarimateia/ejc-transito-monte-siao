@@ -665,11 +665,33 @@
       }
     }
 
+    function tocarAudioAprovacao(id) {
+      const storageKey = `ejc_audio_aprovado_${id || "default"}`;
+      try {
+        if (sessionStorage.getItem(storageKey)) return;
+        sessionStorage.setItem(storageKey, "1");
+      } catch (e) {}
+
+      try {
+        const audio = new Audio("audio/aprovado.aac");
+        audio.preload = "auto";
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("[Áudio Aprovação] Autoplay bloqueado pelo navegador ou arquivo indisponível:", err.message);
+          });
+        }
+      } catch (err) {
+        console.warn("[Áudio Aprovação] Erro ao reproduzir áudio:", err.message);
+      }
+    }
+
     // ----------------------------------------------------------------------------
     // RENDERIZADORES DE ESTADO
     // ----------------------------------------------------------------------------
     function renderApproved(data) {
       showState(stateApproved);
+      tocarAudioAprovacao(data.txid || data.payment_id || "aprovado");
 
       document.getElementById("apprNome").textContent = data.nome || inputNome.value || "Participante";
       document.getElementById("apprEmail").textContent = data.email || inputEmail.value || "-";

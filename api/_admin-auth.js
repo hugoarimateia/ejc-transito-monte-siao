@@ -44,16 +44,16 @@ function safeEqual(a, b) {
 function configuredPasswords() {
   const list = [];
 
-  // 1. Coordenação / Super Admin: senha transito2026tt
-  const passCoordenacao = process.env.ADMIN_PASSWORD_COORDENACAO || "transito2026tt";
+  // 1. Coordenação / Super Admin: senha transitoejc26
+  const passCoordenacao = process.env.ADMIN_PASSWORD_COORDENACAO || "transitoejc26";
   list.push({ pass: passCoordenacao, role: "superadmin" });
 
-  // 2. Financeiro: preserva a senha existente configurada
-  const passFinanceiro = process.env.ADMIN_PASSWORD_FINANCEIRO || process.env.FINANCEIRO_PASSWORD || "financeiro2026";
+  // 2. Financeiro: senha financeirott26
+  const passFinanceiro = process.env.ADMIN_PASSWORD_FINANCEIRO || process.env.FINANCEIRO_PASSWORD || "financeirott26";
   list.push({ pass: passFinanceiro, role: "financeiro" });
 
-  // 3. Admin Normal: preserva a senha existente configurada
-  const passAdmin = process.env.ADMIN_PASSWORD || "ejc2026";
+  // 3. Admin Normal: senha ejc2026adm
+  const passAdmin = process.env.ADMIN_PASSWORD || "ejc2026adm";
   list.push({ pass: passAdmin, role: "admin" });
 
   return list;

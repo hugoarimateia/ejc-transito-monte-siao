@@ -5,7 +5,7 @@
 const crypto = require("crypto");
 
 function getSigningSecret() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.ADMIN_PASSWORD_COORDENACAO || "transito2026tt";
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.ADMIN_PASSWORD_COORDENACAO || "transitoejc26";
 }
 
 function generateSignedPhotoToken(path, ttlSeconds = 7200) {
