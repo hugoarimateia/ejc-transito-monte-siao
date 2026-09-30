@@ -294,7 +294,7 @@ function saveLocalStore(data) {
 // Helper para credenciais Supabase
 function getSupabaseCredentials() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
   return { url: url ? url.replace(/\/$/, "") : null, key };
 }
 
@@ -1199,69 +1199,147 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
 
   if (url && key) {
     try {
-      // 1. Tenta acionar a RPC de confirmação unificada se identificador for txid
-      try {
-        const rpcRes = await fetch(`${url}/rest/v1/rpc/confirmar_pagamento_unificado`, {
-          method: "POST",
-          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      const rawId = String(identificador || "").trim();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawId);
+      const cleanTel = rawId.replace(/\D/g, "");
+      const isPhone = cleanTel.length >= 10 && cleanTel.length <= 13;
+
+      // 1. Tenta acionar a RPC de confirmação unificada se identificador tiver formato de txid (não-telefone)
+      if (!isPhone) {
+        try {
+          const rpcRes = await fetch(`${url}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+            method: "POST",
+            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              p_txid: rawId,
+              p_gateway: "admin_manual",
+              p_executado_por: usuario || "admin_manual"
+            })
+          });
+          if (rpcRes.ok) {
+            const rpcData = await rpcRes.json().catch(() => ({}));
+            if (rpcData && rpcData.success) {
+              supabaseUpdated = true;
+              matchedTxid = rawId;
+            }
+          }
+        } catch (eRpc) {}
+      }
+
+      // 2. Atualiza em 'inscricoes' com filtros seguros (sem tipagem UUID quebrada)
+      const inscFilters = [];
+      if (isUuid) {
+        inscFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+      } else {
+        if (isPhone) {
+          inscFilters.push(`whatsapp.eq.${encodeURIComponent(rawId)}`);
+          if (cleanTel !== rawId) {
+            inscFilters.push(`whatsapp.eq.${encodeURIComponent(cleanTel)}`);
+          }
+        }
+        if (/^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
+          inscFilters.push(`token_acesso.eq.${encodeURIComponent(rawId)}`);
+        }
+      }
+
+      if (inscFilters.length > 0) {
+        const inscUrl = `${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}`;
+        const resInsc = await fetch(inscUrl, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
           body: JSON.stringify({
-            p_txid: String(identificador),
-            p_gateway: "admin_manual",
-            p_executado_por: usuario || "admin_manual"
+            pagamento_status: "confirmado",
+            pagamento_confirmado_em: agora,
+            atualizado_em: agora
           })
         });
-        if (rpcRes.ok) {
-          supabaseUpdated = true;
-          matchedTxid = String(identificador);
+        if (resInsc.ok) {
+          const patchedRows = await resInsc.json().catch(() => []);
+          if (Array.isArray(patchedRows) && patchedRows.length > 0) {
+            supabaseUpdated = true;
+            matchedEmail = matchedEmail || patchedRows[0].email;
+            matchedNome = matchedNome || patchedRows[0].nome_completo;
+            matchedSub = matchedSub || patchedRows[0].sub;
+          }
         }
-      } catch (eRpc) {}
+      }
 
-      // 2. Atualiza em 'inscricoes' (por whatsapp, token_acesso ou id)
-      const resInsc = await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
-        method: "PATCH",
-        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pagamento_status: "confirmado",
-          pagamento_confirmado_em: agora,
-          atualizado_em: agora
-        })
-      });
+      // 3. Atualiza em 'pagamentos' com filtros seguros
+      const payFilters = [];
+      if (isUuid) {
+        payFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+      } else {
+        payFilters.push(`txid.eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`gateway_transaction_id.eq.${encodeURIComponent(rawId)}`);
+        if (isPhone) {
+          payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(rawId)}`);
+          if (cleanTel !== rawId) {
+            payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(cleanTel)}`);
+          }
+        }
+      }
 
-      // 3. Atualiza em 'pagamentos' (por txid, whatsapp_pagador ou id)
-      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
-        method: "PATCH",
-        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "approved",
-          pago_em: agora,
-          atualizado_em: agora
-        })
-      });
+      if (payFilters.length > 0) {
+        const payUrl = `${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}`;
+        const resTx = await fetch(payUrl, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+          body: JSON.stringify({
+            status: "approved",
+            pago_em: agora,
+            atualizado_em: agora
+          })
+        });
+        if (resTx.ok) {
+          const patchedTx = await resTx.json().catch(() => []);
+          if (Array.isArray(patchedTx) && patchedTx.length > 0) {
+            supabaseUpdated = true;
+            matchedTxid = patchedTx[0].txid || matchedTxid;
+            matchedEmail = matchedEmail || patchedTx[0].email;
+            matchedNome = matchedNome || patchedTx[0].nome_pagador;
+            matchedValor = matchedValor || patchedTx[0].valor;
+            matchedMetodo = matchedMetodo || patchedTx[0].metodo;
+            matchedSub = matchedSub || patchedTx[0].metadata?.sub || patchedTx[0].sub;
+          }
+        }
+      }
 
-      if (resInsc.ok || resTx.ok) {
-        supabaseUpdated = true;
+      // Se encontrou txid associado ao telefone e ainda não rodou a RPC, roda com o txid real
+      if (matchedTxid && matchedTxid !== rawId && !isPhone) {
+        try {
+          await fetch(`${url}/rest/v1/rpc/confirmar_pagamento_unificado`, {
+            method: "POST",
+            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              p_txid: String(matchedTxid),
+              p_gateway: "admin_manual",
+              p_executado_por: usuario || "admin_manual"
+            })
+          });
+        } catch (eRpc2) {}
       }
 
       // 4. Busca dados da transação/inscrição para disparo do comprovante
       try {
-        const payRes = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
-          headers: { "apikey": key, "Authorization": `Bearer ${key}` }
-        });
-        if (payRes.ok) {
-          const pays = await payRes.json();
-          if (pays && pays.length > 0) {
-            matchedTxid = pays[0].txid || matchedTxid;
-            matchedEmail = pays[0].email;
-            matchedNome = pays[0].nome_pagador;
-            matchedValor = pays[0].valor;
-            matchedMetodo = pays[0].metodo;
-            matchedSub = pays[0].metadata?.sub || pays[0].sub;
+        if (!matchedEmail && payFilters.length > 0) {
+          const payRes = await fetch(`${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}&limit=1`, {
+            headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+          });
+          if (payRes.ok) {
+            const pays = await payRes.json();
+            if (pays && pays.length > 0) {
+              matchedTxid = pays[0].txid || matchedTxid;
+              matchedEmail = pays[0].email;
+              matchedNome = matchedNome || pays[0].nome_pagador;
+              matchedValor = matchedValor || pays[0].valor;
+              matchedMetodo = matchedMetodo || pays[0].metodo;
+              matchedSub = matchedSub || pays[0].metadata?.sub || pays[0].sub;
+            }
           }
         }
 
-        // Se ainda não achou o email, busca na tabela inscricoes
-        if (!matchedEmail) {
-          const inscRes = await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
+        if (!matchedEmail && inscFilters.length > 0) {
+          const inscRes = await fetch(`${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}&limit=1`, {
             headers: { "apikey": key, "Authorization": `Bearer ${key}` }
           });
           if (inscRes.ok) {
@@ -1400,37 +1478,71 @@ async function rejectPayment({ identificador, usuario, motivo, ip, email, nome }
   const { url, key } = getSupabaseCredentials();
   if (url && key) {
     try {
-      // 1.1 Atualiza em 'inscricoes'
-      await fetch(`${url}/rest/v1/inscricoes?or=(whatsapp.eq.${encodeURIComponent(identificador)},token_acesso.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
-        method: "PATCH",
-        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pagamento_status: "recusado",
-          atualizado_em: agora
-        })
-      });
+      const rawId = String(identificador || "").trim();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawId);
+      const cleanTel = rawId.replace(/\D/g, "");
+      const isPhone = cleanTel.length >= 10 && cleanTel.length <= 13;
 
-      // 1.2 Atualiza em 'pagamentos'
-      const resTx = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})`, {
-        method: "PATCH",
-        headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "rejected",
-          atualizado_em: agora
-        })
-      });
-      if (resTx.ok) supabaseUpdated = true;
+      const inscFilters = [];
+      if (isUuid) {
+        inscFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+      } else {
+        if (isPhone) {
+          inscFilters.push(`whatsapp.eq.${encodeURIComponent(rawId)}`);
+          if (cleanTel !== rawId) {
+            inscFilters.push(`whatsapp.eq.${encodeURIComponent(cleanTel)}`);
+          }
+        }
+        if (/^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
+          inscFilters.push(`token_acesso.eq.${encodeURIComponent(rawId)}`);
+        }
+      }
 
-      // Busca dados para email
-      const payRes = await fetch(`${url}/rest/v1/pagamentos?or=(txid.eq.${encodeURIComponent(identificador)},whatsapp_pagador.eq.${encodeURIComponent(identificador)},id.eq.${encodeURIComponent(identificador)})&limit=1`, {
-        headers: { "apikey": key, "Authorization": `Bearer ${key}` }
-      });
-      if (payRes.ok) {
-        const rows = await payRes.json();
-        if (rows && rows.length > 0) {
-          matchedEmail = rows[0].email;
-          matchedNome = rows[0].nome_pagador;
-          matchedTxid = rows[0].txid;
+      if (inscFilters.length > 0) {
+        const inscUrl = `${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}`;
+        const resInsc = await fetch(inscUrl, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+          body: JSON.stringify({
+            pagamento_status: "recusado",
+            atualizado_em: agora
+          })
+        });
+        if (resInsc.ok) supabaseUpdated = true;
+      }
+
+      const payFilters = [];
+      if (isUuid) {
+        payFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+      } else {
+        payFilters.push(`txid.eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`gateway_transaction_id.eq.${encodeURIComponent(rawId)}`);
+        if (isPhone) {
+          payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(rawId)}`);
+          if (cleanTel !== rawId) {
+            payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(cleanTel)}`);
+          }
+        }
+      }
+
+      if (payFilters.length > 0) {
+        const payUrl = `${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}`;
+        const resTx = await fetch(payUrl, {
+          method: "PATCH",
+          headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+          body: JSON.stringify({
+            status: "rejected",
+            atualizado_em: agora
+          })
+        });
+        if (resTx.ok) {
+          supabaseUpdated = true;
+          const patchedTx = await resTx.json().catch(() => []);
+          if (Array.isArray(patchedTx) && patchedTx.length > 0) {
+            matchedEmail = matchedEmail || patchedTx[0].email;
+            matchedNome = matchedNome || patchedTx[0].nome_pagador;
+            matchedTxid = patchedTx[0].txid || matchedTxid;
+          }
         }
       }
     } catch (e) {

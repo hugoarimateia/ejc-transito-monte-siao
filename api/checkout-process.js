@@ -361,6 +361,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
 
   // 1. Atualiza Supabase via RPC unificada multi-identificador
   if (supabaseUrl && supabaseKey) {
+    const isCleanUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(cleanTxid);
     try {
       const dbResponse = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/confirmar_pagamento_unificado`, {
         method: "POST",
@@ -378,7 +379,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
         signal: AbortSignal.timeout(4000)
       });
       if (dbResponse.ok) {
-        const rpcResult = await dbResponse.json();
+        const rpcResult = await dbResponse.json().catch(() => ({}));
         if (rpcResult && rpcResult.success) {
           confirmedOnDatabase = true;
           if (rpcResult.pagamento) {
@@ -390,10 +391,70 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
       console.warn("[confirmarPagamentoResiliente] Erro RPC Supabase:", dbErr.message);
     }
 
+    // Fallback de atualização direta no Supabase com service_role se a RPC falhou ou não confirmou
+    if (!confirmedOnDatabase) {
+      try {
+        const directPayFilter = isCleanUuid
+          ? `or=(id.eq.${encodeURIComponent(cleanTxid)},txid.eq.${encodeURIComponent(cleanTxid)})`
+          : `or=(txid.eq.${encodeURIComponent(cleanTxid)},gateway_transaction_id.eq.${encodeURIComponent(cleanTxid)})`;
+
+        const directPatchPay = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?${directPayFilter}`, {
+          method: "PATCH",
+          headers: {
+            "apikey": supabaseKey,
+            "Authorization": `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+          },
+          body: JSON.stringify({
+            status: "approved",
+            pago_em: agora,
+            atualizado_em: agora
+          })
+        });
+
+        if (directPatchPay.ok) {
+          const patched = await directPatchPay.json().catch(() => []);
+          if (Array.isArray(patched) && patched.length > 0) {
+            confirmedOnDatabase = true;
+            paymentRecord = patched[0];
+            const linkedInscId = patched[0].inscricao_id;
+            const linkedWpp = patched[0].whatsapp_pagador;
+            if (linkedInscId || linkedWpp) {
+              const targetInscFilter = linkedInscId ? `id=eq.${encodeURIComponent(linkedInscId)}` : `whatsapp=eq.${encodeURIComponent(linkedWpp)}`;
+              await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${targetInscFilter}`, {
+                method: "PATCH",
+                headers: {
+                  "apikey": supabaseKey,
+                  "Authorization": `Bearer ${supabaseKey}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  pagamento_status: "confirmado",
+                  pagamento_confirmado_em: agora,
+                  forma_pagamento: patched[0].metodo || "pix",
+                  atualizado_em: agora
+                })
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (directErr) {
+        console.warn("[confirmarPagamentoResiliente] Falha no fallback direto Supabase:", directErr.message);
+      }
+    }
+
     // Busca detalhada multi-identificador se o registro ainda não foi obtido
     if (!paymentRecord) {
       try {
-        const multiQuery = `or=(txid.eq.${encodeURIComponent(cleanTxid)},gateway_transaction_id.eq.${encodeURIComponent(cleanTxid)},id.eq.${encodeURIComponent(cleanTxid)})&limit=1`;
+        const filterParts = [
+          `txid.eq.${encodeURIComponent(cleanTxid)}`,
+          `gateway_transaction_id.eq.${encodeURIComponent(cleanTxid)}`
+        ];
+        if (isCleanUuid) {
+          filterParts.push(`id.eq.${encodeURIComponent(cleanTxid)}`);
+        }
+        const multiQuery = `or=(${filterParts.join(",")})&limit=1`;
         const payRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?${multiQuery}`, {
           headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
           signal: AbortSignal.timeout(3000)
@@ -596,7 +657,15 @@ module.exports = async (req, res) => {
         try {
           let urlQuery = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
           if (queryTxid) {
-            urlQuery += `or=(txid.eq.${encodeURIComponent(queryTxid)},gateway_transaction_id.eq.${encodeURIComponent(queryTxid)},id.eq.${encodeURIComponent(queryTxid)})&limit=1`;
+            const isQueryUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(queryTxid);
+            const qParts = [
+              `txid.eq.${encodeURIComponent(queryTxid)}`,
+              `gateway_transaction_id.eq.${encodeURIComponent(queryTxid)}`
+            ];
+            if (isQueryUuid) {
+              qParts.push(`id.eq.${encodeURIComponent(queryTxid)}`);
+            }
+            urlQuery += `or=(${qParts.join(",")})&limit=1`;
           } else if (queryInscricao) {
             urlQuery += `inscricao_id=eq.${encodeURIComponent(queryInscricao)}&order=criado_em.desc&limit=1`;
           } else if (queryEmail) {

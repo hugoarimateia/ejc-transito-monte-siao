@@ -43,7 +43,16 @@ module.exports = async (req, res) => {
     try {
       let queryUrl = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/pagamentos?`;
       if (queryTxid) {
-        queryUrl += `or=(txid.eq.${encodeURIComponent(queryTxid)},payment_id.eq.${encodeURIComponent(queryTxid)},order_id.eq.${encodeURIComponent(queryTxid)},id.eq.${encodeURIComponent(queryTxid)})&limit=1`;
+        const isTxidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(queryTxid);
+        const rParts = [
+          `txid.eq.${encodeURIComponent(queryTxid)}`,
+          `payment_id.eq.${encodeURIComponent(queryTxid)}`,
+          `order_id.eq.${encodeURIComponent(queryTxid)}`
+        ];
+        if (isTxidUuid) {
+          rParts.push(`id.eq.${encodeURIComponent(queryTxid)}`);
+        }
+        queryUrl += `or=(${rParts.join(",")})&limit=1`;
       } else if (queryEmail) {
         queryUrl += `email=eq.${encodeURIComponent(queryEmail)}&status=eq.approved&order=criado_em.desc&limit=1`;
       }
