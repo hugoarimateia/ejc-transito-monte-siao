@@ -593,20 +593,33 @@ if (signupForm) {
         );
       }
 
-      // Acesso ao Grupo Geral do WhatsApp após a inscrição (configuração oficial do banco)
-      const generalGroupUrl = (window.EJC_WHATSAPP_SUBS && (window.EJC_WHATSAPP_SUBS["Geral"] || window.EJC_WHATSAPP_SUBS["geral"])) || "";
+      // Acesso ao Grupo do WhatsApp do Sub escolhido após a inscrição (sem pagamento)
+      let subKey = String(chosenSub || "").trim();
+      if (subKey.toLowerCase() === "azul") subKey = "Laranja";
+
+      const subGroupUrl = (window.EJC_WHATSAPP_SUBS && (
+        window.EJC_WHATSAPP_SUBS[subKey] ||
+        window.EJC_WHATSAPP_SUBS[subKey.toLowerCase()] ||
+        window.EJC_WHATSAPP_SUBS[subKey.charAt(0).toUpperCase() + subKey.slice(1).toLowerCase()]
+      )) || "";
 
       if (whatsappGroupButton) {
-        if (generalGroupUrl && generalGroupUrl.startsWith("http")) {
-          whatsappGroupButton.href = generalGroupUrl;
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp`;
+        whatsappGroupButton.removeAttribute("data-whatsapp-target");
+        if (subGroupUrl && typeof subGroupUrl === "string" && subGroupUrl.startsWith("http")) {
+          whatsappGroupButton.href = subGroupUrl;
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
+          whatsappGroupButton.style.pointerEvents = "auto";
+          whatsappGroupButton.style.opacity = "1";
+        } else if (tokenAcessoParam) {
+          whatsappGroupButton.href = `/api/whatsapp?token=${encodeURIComponent(tokenAcessoParam)}`;
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
           whatsappGroupButton.style.pointerEvents = "auto";
           whatsappGroupButton.style.opacity = "1";
         } else {
-          whatsappGroupButton.href = "/api/whatsapp";
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo geral do WhatsApp`;
-          whatsappGroupButton.style.pointerEvents = "auto";
-          whatsappGroupButton.style.opacity = "1";
+          whatsappGroupButton.removeAttribute("href");
+          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
+          whatsappGroupButton.style.pointerEvents = "none";
+          whatsappGroupButton.style.opacity = "0.6";
         }
       }
       if (whatsappSuccess) {
@@ -686,14 +699,14 @@ function aplicarConfiguracaoNaPagina(cfg) {
     const geralLink = cfg.whatsapp.geral || cfg.whatsapp.Geral;
     if (geralLink && typeof geralLink === "string" && geralLink.startsWith("http")) {
       document.querySelectorAll('[data-whatsapp-target="geral"]').forEach(el => {
-        el.href = geralLink;
+        if (el.id !== "whatsapp-group-button") {
+          el.href = geralLink;
+        }
       });
       const floatBtn = document.querySelector(".whatsapp-float");
       if (floatBtn) floatBtn.href = geralLink;
       const navWpp = document.querySelector(".nav-cta");
       if (navWpp) navWpp.href = geralLink;
-      const successWpp = document.querySelector("#whatsapp-group-button");
-      if (successWpp) successWpp.href = geralLink;
     }
   }
 
@@ -889,8 +902,8 @@ if (btnSubmitContributionCheckout) {
 
 // Garantidor dinâmico e resiliente de redirecionamento para o Grupo Geral do WhatsApp
 document.addEventListener("click", (e) => {
-  const target = e.target.closest('[data-whatsapp-target="geral"], .whatsapp-float, .nav-cta, #whatsapp-group-button');
-  if (!target) return;
+  const target = e.target.closest('[data-whatsapp-target="geral"], .whatsapp-float, .nav-cta');
+  if (!target || target.id === "whatsapp-group-button") return;
   const currentHref = target.getAttribute("href");
   if (!currentHref || currentHref === "#" || currentHref.trim() === "") {
     e.preventDefault();

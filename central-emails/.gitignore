@@ -1,0 +1,6 @@
+# Central de E-mails do EJC — Proteção de Arquivos Sensíveis
+.env
+.env.local
+*.env
+data/audit-logs.json
+node_modules/

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central de E-mails Seletivos | EJC Trânsito Monte Sião</title>
+  
+  <!-- Fontes Oficiais -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-theme="light">
+
+  <!-- TELA DE AUTENTICAÇÃO INDEPENDENTE -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-badge"><i class="fa-solid fa-shield-halved"></i> Acesso Restrito</div>
+      <h2>Central de E-mails do EJC</h2>
+      <p>Informe a senha de acesso para gerenciar o envio seletivo de e-mails aos participantes.</p>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginPassword">Senha Administrativa</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" id="loginPassword" placeholder="Digite a senha..." required autofocus>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btnLogin">
+          <i class="fa-solid fa-right-to-bracket"></i> Acessar Central
+        </button>
+      </form>
+      <div id="loginError" class="auth-error" style="display: none;"></div>
+      <div class="auth-footer">
+        EJC — Trânsito Monte Sião • Ferramenta Independente
+      </div>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO PRINCIPAL -->
+  <div class="app-container" id="appContainer" style="display: none;">
+    
+    <!-- BARRA SUPERIOR (HEADER) -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <div>
+          <div class="brand-eyebrow">EQUIPE DO TRÂNSITO • EJC MONTE SIÃO</div>
+          <h1 class="brand-title">Central de Envio Seletivo de E-mails</h1>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="btn btn-sm btn-ghost" id="themeToggleBtn" title="Alternar Tema Claro/Escuro">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <button class="btn btn-sm btn-outline" id="btnOpenTestMode">
+          <i class="fa-solid fa-vial"></i> Modo Teste
+        </button>
+        <button class="btn btn-sm btn-outline" id="btnOpenAuditLogs">
+          <i class="fa-solid fa-clock-rotate-left"></i> Histórico
+        </button>
+        <button class="btn btn-sm btn-outline" id="btnOpenSettings">
+          <i class="fa-solid fa-gear"></i> Configurações
+        </button>
+        <button class="btn btn-sm btn-danger-outline" id="btnLogout">
+          <i class="fa-solid fa-power-off"></i> Sair
+        </button>
+      </div>
+    </header>
+
+    <!-- CARDS DE ESTATÍSTICAS E RESUMO -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon icon-blue"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Inscrições Concluídas</span>
+          <strong class="stat-value" id="statTotalParticipants">0</strong>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Pagamentos Confirmados</span>
+          <strong class="stat-value" id="statTotalPaid">0</strong>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-yellow"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Pagamentos Pendentes</span>
+          <strong class="stat-value" id="statTotalUnpaid">0</strong>
+        </div>
+      </div>
+      <div class="stat-card card-highlight">
+        <div class="stat-icon icon-purple"><i class="fa-solid fa-square-check"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Destinatários Selecionados</span>
+          <strong class="stat-value text-primary" id="statSelectedCount">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÁREA PRINCIPAL DIVIDIDA EM 2 COLUNAS: LISTA DE PARTICIPANTES & COMPOSITOR -->
+    <main class="main-layout">
+
+      <!-- COLUNA ESQUERDA: LISTA E FILTROS DE PARTICIPANTES -->
+      <section class="panel-card panel-participants">
+        
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <h2><i class="fa-solid fa-list-check"></i> Participantes com Inscrição Concluída</h2>
+            <p>Selecione os participantes que receberão a comunicação oficial.</p>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btnReloadParticipants" title="Recarregar dados do sistema">
+            <i class="fa-solid fa-rotate"></i> Atualizar
+          </button>
+        </div>
+
+        <!-- BARRA DE FILTROS -->
+        <div class="filters-toolbar">
+          <div class="filter-item">
+            <label><i class="fa-solid fa-clipboard-check"></i> Inscrição:</label>
+            <div class="status-fixed-pill">
+              <i class="fa-solid fa-check"></i> CONCLUÍDA
+            </div>
+          </div>
+
+          <div class="filter-item">
+            <label for="filterPayment"><i class="fa-solid fa-money-bill-wave"></i> Pagamento:</label>
+            <select id="filterPayment" class="select-control">
+              <option value="todos" selected>TODOS OS PARTICIPANTES</option>
+              <option value="pago">PAGO (Confirmado)</option>
+              <option value="nao_pago">NÃO PAGO (Pendente)</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="filterSub"><i class="fa-solid fa-layer-group"></i> Sub:</label>
+            <select id="filterSub" class="select-control">
+              <option value="todos" selected>TODOS OS SUBS</option>
+              <option value="Verde">Sub Verde</option>
+              <option value="Vermelho">Sub Vermelho</option>
+              <option value="Amarelo">Sub Amarelo</option>
+              <option value="Laranja">Sub Laranja</option>
+            </select>
+          </div>
+
+          <div class="filter-item search-grow">
+            <label for="searchParticipant"><i class="fa-solid fa-magnifying-glass"></i> Buscar:</label>
+            <div class="search-input-wrap">
+              <input type="text" id="searchParticipant" placeholder="Buscar por nome ou e-mail..." class="input-control">
+            </div>
+          </div>
+        </div>
+
+        <!-- SELEÇÃO RÁPIDA E CONTADOR -->
+        <div class="selection-actions-bar">
+          <div class="actions-left">
+            <button class="btn btn-xs btn-outline" id="btnSelectAll">
+              <i class="fa-solid fa-check-double"></i> Selecionar Todos os Filtrados
+            </button>
+            <button class="btn btn-xs btn-ghost" id="btnDeselectAll">
+              <i class="fa-solid fa-xmark"></i> Desmarcar Todos
+            </button>
+          </div>
+          <div class="actions-right">
+            <span class="selection-counter" id="selectionStatusText">
+              <strong>0</strong> de 0 selecionados
+            </span>
+          </div>
+        </div>
+
+        <!-- TABELA COM SCROLL -->
+        <div class="table-responsive">
+          <table class="data-table" id="participantsTable">
+            <thead>
+              <tr>
+                <th style="width: 44px; text-align: center;">
+                  <input type="checkbox" id="checkMaster" title="Selecionar todos visíveis">
+                </th>
+                <th>Nome Completo</th>
+                <th>E-mail</th>
+                <th style="width: 110px;">Sub</th>
+                <th style="width: 100px;">Inscrição</th>
+                <th style="width: 100px;">Pagamento</th>
+                <th style="width: 130px; text-align: center;">Link WPP</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyParticipants">
+              <tr>
+                <td colspan="7" class="table-loading">
+                  <i class="fa-solid fa-spinner fa-spin"></i> Carregando participantes do sistema...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- COLUNA DIREITA: COMPOSITOR DE E-MAIL -->
+      <section class="panel-card panel-composer">
+        
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <h2><i class="fa-solid fa-pen-nib"></i> Compositor da Mensagem</h2>
+            <p>O e-mail será personalizado individualmente no envio com o link do Sub correto.</p>
+          </div>
+        </div>
+
+        <form id="composerForm" onsubmit="return false;">
+          
+          <div class="form-group">
+            <label for="emailSubject">Assunto do E-mail <span class="required">*</span></label>
+            <input type="text" id="emailSubject" class="input-control" placeholder="Ex: Informações importantes sobre a sua equipe no EJC" required value="EJC Trânsito Monte Sião — Informações Importantes da sua Equipe">
+          </div>
+
+          <!-- BOTÕES DE INSERÇÃO RÁPIDA DE VARIÁVEIS -->
+          <div class="variable-tags-bar">
+            <span class="tags-label"><i class="fa-solid fa-code"></i> Inserir Variáveis:</span>
+            <button type="button" class="tag-btn" data-insert="{{nome}}" title="Insere o nome do participante">
+              + {{nome}}
+            </button>
+            <button type="button" class="tag-btn" data-insert="{{sub}}" title="Insere o Sub do participante">
+              + {{sub}}
+            </button>
+            <button type="button" class="tag-btn tag-btn-highlight" data-insert="{{link_whatsapp}}" title="Insere o botão visual com o link do WhatsApp do Sub">
+              + {{link_whatsapp}} (Botão do Grupo)
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="emailBody">Mensagem / Corpo do E-mail <span class="required">*</span></label>
+            <textarea id="emailBody" class="textarea-control" rows="12" placeholder="Digite a mensagem..." required>Olá, {{nome}}!
+
+Sua inscrição no EJC - Equipe do Trânsito está registrada com sucesso!
+
+Você faz parte da equipe do Sub {{sub}}. Para acompanhar todos os avisos, horários, ensaios e orientações da coordenação, entre no grupo oficial do seu Sub através do botão abaixo:
+
+{{link_whatsapp}}
+
+Contamos com a sua dedicação e alegria!
+
+Com carinho,
+Coordenação Geral do EJC — AD Monte Sião</textarea>
+          </div>
+
+          <!-- AVISO DE SEGURANÇA DO LINK DO SUB -->
+          <div class="alert-box alert-info">
+            <i class="fa-solid fa-circle-info"></i>
+            <div>
+              <strong>Segurança Garantida:</strong> A tag <code>{{link_whatsapp}}</code> será convertida no backend em um <strong>botão visual de WhatsApp</strong> apontando EXCLUSIVAMENTE para o link oficial do <strong>Sub correspondente de cada inscrito</strong> cadastrado na aba <em>Links de WPP</em>.
+            </div>
+          </div>
+
+          <!-- BOTÕES DE AÇÃO DO COMPOSITOR -->
+          <div class="composer-actions">
+            <button type="button" class="btn btn-secondary" id="btnPreviewEmail">
+              <i class="fa-solid fa-eye"></i> Visualizar Amostra Real
+            </button>
+            <button type="button" class="btn btn-primary btn-lg" id="btnStartReview">
+              <i class="fa-solid fa-paper-plane"></i> Revisar e Enviar Campanha
+            </button>
+          </div>
+
+        </form>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL 1: PRÉ-VISUALIZAÇÃO DE AMOSTRA REAL -->
+  <div class="modal-backdrop" id="modalPreview" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-eye text-primary"></i> Pré-visualização Real do E-mail</h3>
+        <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="preview-selector-bar">
+          <label for="previewParticipantSelect">Visualizar como o participante:</label>
+          <select id="previewParticipantSelect" class="select-control"></select>
+        </div>
+        <div class="preview-meta-info" id="previewMetaInfo"></div>
+        <div class="email-preview-frame-wrap">
+          <iframe id="previewIframe" title="Prévia do E-mail"></iframe>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Fechar</button>
+        <button class="btn btn-primary" id="btnProceedFromPreview">Avançar para Envio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: REVISÃO PRÉ-VOO & CONFIRMAÇÃO ANTI-DUPLICIDADE -->
+  <div class="modal-backdrop" id="modalReview" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-clipboard-check text-primary"></i> Revisão Antes do Envio</h3>
+        <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="review-summary-card">
+          <div class="review-stat-row">
+            <span>Total de Destinatários:</span>
+            <strong id="revTotalCount">0</strong>
+          </div>
+          <div class="review-stat-row">
+            <span>Inscrições Concluídas:</span>
+            <strong id="revCompletedCount">0</strong>
+          </div>
+          <div class="review-stat-row">
+            <span>Participantes Pagos:</span>
+            <strong class="text-green" id="revPaidCount">0</strong>
+          </div>
+          <div class="review-stat-row">
+            <span>Participantes Não Pagos:</span>
+            <strong class="text-yellow" id="revUnpaidCount">0</strong>
+          </div>
+        </div>
+
+        <h4 class="review-subhead"><i class="fa-solid fa-layer-group"></i> Distribuição por Sub:</h4>
+        <div class="sub-distribution-grid" id="revSubDistribution"></div>
+
+        <div class="alert-box alert-warning" style="margin-top: 18px;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div>
+            <strong>Confirmação de Segurança:</strong> Você está prestes a disparar e-mails para <strong id="revConfirmCount">0</strong> participantes. O envio será processado em lotes controlados para respeitar as quotas da Brevo. Deseja realmente prosseguir?
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Cancelar</button>
+        <button class="btn btn-primary btn-lg" id="btnConfirmSendBatch">
+          <i class="fa-solid fa-check"></i> Confirmar e Disparar E-mails
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: PROGRESSO DE DISPARO E RELATÓRIO INDIVIDUAL -->
+  <div class="modal-backdrop" id="modalProgress" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 id="progressTitle"><i class="fa-solid fa-paper-plane fa-bounce text-primary"></i> Disparando Campanha em Lotes...</h3>
+        <button class="modal-close" id="btnCloseProgress" style="display: none;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- BARRA DE PROGRESSO -->
+        <div class="progress-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-status-row">
+            <span id="progressText">Iniciando disparos...</span>
+            <span id="progressPercent">0%</span>
+          </div>
+        </div>
+
+        <!-- RELATÓRIO DE RESULTADOS INDIVIDUAIS -->
+        <h4 style="margin: 22px 0 10px; font-size: 1rem; color: var(--text-heading);"><i class="fa-solid fa-table-list"></i> Relatório Individual de Entrega</h4>
+        <div class="table-responsive" style="max-height: 320px;">
+          <table class="data-table" id="resultsTable">
+            <thead>
+              <tr>
+                <th>Participante</th>
+                <th>E-mail</th>
+                <th>Sub</th>
+                <th>Link Aplicado</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer" id="progressFooter" style="display: none;">
+        <button class="btn btn-primary" id="btnDoneProgress">Concluir e Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: MODO TESTE RÁPIDO -->
+  <div class="modal-backdrop" id="modalTestMode" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-vial text-primary"></i> Modo Teste Independente</h3>
+        <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0;">
+          Envie um e-mail de teste seguro para a sua própria caixa postal simulando o Sub desejado para verificar a montagem, o botão e a entrega pela Brevo.
+        </p>
+
+        <form id="formTestSend" onsubmit="return false;">
+          <div class="form-group">
+            <label for="testTargetEmail">E-mail de Destino do Teste <span class="required">*</span></label>
+            <input type="email" id="testTargetEmail" class="input-control" placeholder="seu-email@gmail.com" required value="hugogeeta.gamer@gmail.com">
+          </div>
+
+          <div class="form-group">
+            <label for="testTargetSub">Sub para Simulação <span class="required">*</span></label>
+            <select id="testTargetSub" class="select-control">
+              <option value="Verde">Sub Verde (Testar link Verde)</option>
+              <option value="Vermelho">Sub Vermelho (Testar link Vermelho)</option>
+              <option value="Amarelo">Sub Amarelo (Testar link Amarelo)</option>
+              <option value="Laranja">Sub Laranja (Testar link Laranja)</option>
+            </select>
+          </div>
+
+          <div id="testSendFeedback" style="display: none; margin-top: 12px;"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Fechar</button>
+        <button class="btn btn-primary" id="btnExecuteTestSend">
+          <i class="fa-solid fa-paper-plane"></i> Enviar E-mail de Teste
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: HISTÓRICO / LOGS DE AUDITORIA -->
+  <div class="modal-backdrop" id="modalAuditLogs" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-clock-rotate-left text-primary"></i> Histórico de Envios & Auditoria</h3>
+        <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive" style="max-height: 380px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data / Hora</th>
+                <th>Assunto</th>
+                <th style="text-align: center;">Selecionados</th>
+                <th style="text-align: center;">Enviados</th>
+                <th style="text-align: center;">Erros</th>
+                <th>Detalhamento</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogsTableBody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Carregando histórico...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: CONFIGURAÇÕES DA CENTRAL -->
+  <div class="modal-backdrop" id="modalSettings" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-gear text-primary"></i> Configurações da Central</h3>
+        <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>URL do Sistema Principal</label>
+          <input type="text" id="cfgSiteUrl" class="input-control" value="https://www.transitoejc.site" readonly>
+          <small style="color: var(--text-muted);">Origem de leitura dos participantes e links de WhatsApp.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Remetente Oficial Brevo</label>
+          <input type="text" id="cfgSender" class="input-control" value="hugogeeta.gamer@gmail.com (EJC — AD Monte Sião)" readonly>
+          <small style="color: var(--text-muted);">Remetente validado e homologado na API da Brevo.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Status da Integração Brevo</label>
+          <div id="cfgBrevoStatus" class="alert-box alert-info" style="margin: 0; padding: 10px 14px;">
+            <i class="fa-solid fa-circle-info"></i> <span id="cfgBrevoStatusText">Carregando status...</span>
+          </div>
+          <small style="color: var(--text-muted); margin-top: 6px;">Gerenciado de forma segura via variável <code>BREVO_API_KEY</code> no arquivo <code>central-emails/.env</code>.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Tamanho do Lote de Envio (Batch Size)</label>
+          <select id="cfgBatchSize" class="select-control">
+            <option value="5">5 e-mails por lote (Recomendado)</option>
+            <option value="10">10 e-mails por lote</option>
+            <option value="15">15 e-mails por lote</option>
+          </select>
+          <small style="color: var(--text-muted);">Controla a cadência de disparo para respeitar os limites da API.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close-modal>Salvar & Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
