@@ -186,6 +186,172 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: "Falha ao desarquivar inscrição no Supabase." });
     }
 
+    // 2.2 AÇÃO: CANCELAMENTO INDIVIDUAL DE INSCRIÇÃO (OPERAÇÃO SEGURA E ISOLADA)
+    if (action === "cancel_inscription") {
+      const auth = adminAuth.requireRole(req, res, ["superadmin", "financeiro", "admin"]);
+      if (!auth) return;
+
+      const rawId = body.registration_id || body.inscricao_id || body.id;
+      if (!rawId || typeof rawId !== "string") {
+        return res.status(400).json({ error: "Identificador único da inscrição é obrigatório." });
+      }
+
+      const cleanId = rawId.trim();
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(cleanId)) {
+        return res.status(400).json({ error: "Formato de ID inválido. Deve ser um UUID válido." });
+      }
+
+      const confirmKeyword = String(body.confirm_keyword || "").trim();
+      if (confirmKeyword !== "CANCELAR") {
+        return res.status(400).json({ error: 'Confirmação obrigatória: digite a palavra "CANCELAR" para confirmar.' });
+      }
+
+      const baseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co").replace(/\/$/, "");
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
+
+      try {
+        // 1. Localiza EXATAMENTE e SOMENTE a inscrição especificada
+        let participant = null;
+        try {
+          const checkRes = await fetch(`${baseUrl}/rest/v1/inscricoes?id=eq.${encodeURIComponent(cleanId)}&select=id,nome_completo,sub,email,whatsapp,pagamento_status,foto_caminho,comprovante_caminho`, {
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`
+            },
+            signal: AbortSignal.timeout(6000)
+          });
+          if (checkRes.ok) {
+            const foundRows = await checkRes.json().catch(() => []);
+            if (Array.isArray(foundRows) && foundRows.length > 0) {
+              participant = foundRows[0];
+            }
+          }
+        } catch (eDb) {
+          console.warn("[Cancel Inscription API] Consulta Supabase:", eDb.message);
+        }
+
+        // Fallback no store local caso a consulta direta ao banco esteja offline/restrita
+        if (!participant) {
+          try {
+            const local = settingsStore.loadLocalStore();
+            const found = (local.inscricoes || []).find(i => i.id === cleanId);
+            if (found) participant = found;
+          } catch (eLoc) {}
+        }
+
+        if (!participant) {
+          return res.status(404).json({ error: "Inscrição não encontrada ou já cancelada anteriormente." });
+        }
+
+        // 2. Se houver registro complementar em public.inscritos_dados, remove de forma segura
+        try {
+          await fetch(`${baseUrl}/rest/v1/inscritos_dados?inscricao_id=eq.${encodeURIComponent(cleanId)}`, {
+            method: "DELETE",
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`
+            },
+            signal: AbortSignal.timeout(4000)
+          });
+        } catch (eDados) {
+          // Ignora se tabela não existir
+        }
+
+        // 3. Se houver foto pessoal no Storage, remove EXCLUSIVAMENTE aquele arquivo específico
+        if (participant.foto_caminho) {
+          try {
+            const rawPath = String(participant.foto_caminho).replace(/^[/\\]+/, "").replace(/^(inscritos-fotos|fotos)[/\\]/, "");
+            if (rawPath.startsWith("inscritos/") && !rawPath.includes("..")) {
+              await fetch(`${baseUrl}/storage/v1/object/inscritos-fotos/${rawPath}`, {
+                method: "DELETE",
+                headers: { apikey: key, Authorization: `Bearer ${key}` },
+                signal: AbortSignal.timeout(4000)
+              });
+              await fetch(`${baseUrl}/storage/v1/object/fotos/${rawPath}`, {
+                method: "DELETE",
+                headers: { apikey: key, Authorization: `Bearer ${key}` },
+                signal: AbortSignal.timeout(4000)
+              });
+            }
+          } catch (eStorage) {
+            console.warn("[Cancel Inscription] Aviso ao remover foto do Storage:", eStorage.message);
+          }
+        }
+
+        // 4. Executa a exclusão definitiva do participante na tabela inscricoes
+        // Nota: A FK em pagamentos_pix e pagamentos possui ON DELETE SET NULL, preservando o histórico financeiro intacto.
+        try {
+          await fetch(`${baseUrl}/rest/v1/inscricoes?id=eq.${encodeURIComponent(cleanId)}`, {
+            method: "DELETE",
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+              "Prefer": "return=representation"
+            },
+            signal: AbortSignal.timeout(8000)
+          });
+        } catch (eDel) {
+          console.warn("[Cancel Inscription API] Exclusão Supabase:", eDel.message);
+        }
+
+        // 5. Se houver cópia em cache/localStore, remove com segurança
+        try {
+          const local = settingsStore.loadLocalStore();
+          let localChanged = false;
+          if (Array.isArray(local.inscricoes)) {
+            const initialLen = local.inscricoes.length;
+            local.inscricoes = local.inscricoes.filter(i => i.id !== cleanId);
+            if (local.inscricoes.length !== initialLen) localChanged = true;
+          }
+          if (Array.isArray(local.inscritos_dados)) {
+            const initialLen = local.inscritos_dados.length;
+            local.inscritos_dados = local.inscritos_dados.filter(i => i.inscricao_id !== cleanId);
+            if (local.inscritos_dados.length !== initialLen) localChanged = true;
+          }
+          if (localChanged) settingsStore.saveLocalStore(local);
+        } catch (eStore) {}
+
+        // 6. Registra auditoria administrativa da operação
+        try {
+          await fetch(`${baseUrl}/rest/v1/auditoria_transacoes`, {
+            method: "POST",
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({
+              acao: "CANCELAR_INSCRICAO",
+              usuario: auth.label || auth.role,
+              campo_afetado: "inscricoes",
+              valor_anterior: `${participant.nome_completo} (${participant.sub || 'Sem Sub'}) - Tel: ${participant.whatsapp || 'N/A'} - ID: ${cleanId}`,
+              valor_novo: "Cancelada e removida definitivamente",
+              motivo: body.motivo || "Cancelamento individual solicitado no painel administrativo",
+              ip_origem: String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1")
+            }),
+            signal: AbortSignal.timeout(5000)
+          });
+        } catch (eAud) {}
+
+        return res.status(200).json({
+          success: true,
+          message: "Inscrição cancelada com sucesso.",
+          removed: {
+            id: cleanId,
+            nome_completo: participant.nome_completo,
+            sub: participant.sub,
+            email: participant.email,
+            whatsapp: participant.whatsapp
+          }
+        });
+      } catch (err) {
+        console.error("[Cancel Inscription API Error]", err);
+        return res.status(500).json({ success: false, error: err.message || "Falha interna ao cancelar inscrição." });
+      }
+    }
+
     // 3. AÇÃO: AUDITORIA MERCADO PAGO (SUPERADMIN E FINANCEIRO)
     if (action === "audit_mercadopago") {
       const auth = adminAuth.requireRole(req, res, ["superadmin", "financeiro"]);

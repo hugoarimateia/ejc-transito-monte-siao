@@ -144,6 +144,69 @@
       border-color: var(--blue, #087df9);
       background: rgba(8, 125, 249, 0.06);
     }
+    /* Estilos da Navegação Agrupada do Painel */
+    .admin-tab-nav {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+      flex-wrap: wrap;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .admin-nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .admin-nav-group-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding-left: 4px;
+      user-select: none;
+    }
+    .admin-nav-group-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .admin-nav-divider {
+      width: 1px;
+      background: var(--border-subtle);
+      margin: 4px 0;
+      align-self: stretch;
+    }
+    @media (max-width: 900px) {
+      .admin-nav-divider {
+        display: none;
+      }
+      .admin-nav-group {
+        width: 100%;
+      }
+    }
+    .admin-tab-btn.btn-tab-cancelar {
+      color: #dc2626;
+    }
+    .admin-tab-btn.btn-tab-cancelar:hover {
+      background: rgba(220, 38, 38, 0.08);
+      color: #b91c1c;
+    }
+    .admin-tab-btn.btn-tab-cancelar.active {
+      background: #dc2626 !important;
+      color: #fff !important;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+    }
+    .admin-link-external {
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
@@ -232,14 +295,51 @@
         </div>
       </div>
 
-      <!-- BARRA DE NAVEGAÇÃO ENTRE ABAS -->
+      <!-- BARRA DE NAVEGAÇÃO ENTRE ABAS REORGANIZADA POR MÓDULOS -->
       <div class="admin-tab-nav" id="adminTabNav">
-        <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
-        <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-users"></i> Inscrições</button>
-        <button type="button" class="admin-tab-btn" data-tab="pagamentos"><i class="fa-solid fa-credit-card"></i> Pagamentos & Checkout</button>
-        <button type="button" class="admin-tab-btn" data-tab="financeiro"><i class="fa-solid fa-sliders"></i> Gestão Financeira & PIX</button>
-        <button type="button" class="admin-tab-btn" data-tab="whatsapp"><i class="fa-brands fa-whatsapp"></i> Links WhatsApp</button>
-        <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Inscritos</button>
+        <!-- GRUPO: INSCRIÇÕES -->
+        <div class="admin-nav-group">
+          <span class="admin-nav-group-title"><i class="fa-solid fa-users"></i> INSCRIÇÕES</span>
+          <div class="admin-nav-group-buttons">
+            <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-list-check"></i> Lista de Inscritos</button>
+            <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
+            <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
+          </div>
+        </div>
+
+        <div class="admin-nav-divider"></div>
+
+        <!-- GRUPO: FINANCEIRO -->
+        <div class="admin-nav-group">
+          <span class="admin-nav-group-title"><i class="fa-solid fa-coins"></i> FINANCEIRO</span>
+          <div class="admin-nav-group-buttons">
+            <button type="button" class="admin-tab-btn" data-tab="financeiro"><i class="fa-solid fa-sliders"></i> Gestão Financeira & PIX</button>
+            <button type="button" class="admin-tab-btn" data-tab="pagamentos"><i class="fa-solid fa-credit-card"></i> Pagamentos & Checkout</button>
+          </div>
+        </div>
+
+        <div class="admin-nav-divider"></div>
+
+        <!-- GRUPO: COMUNICAÇÃO -->
+        <div class="admin-nav-group">
+          <span class="admin-nav-group-title"><i class="fa-solid fa-bullhorn"></i> COMUNICAÇÃO</span>
+          <div class="admin-nav-group-buttons">
+            <button type="button" class="admin-tab-btn" data-tab="whatsapp"><i class="fa-brands fa-whatsapp"></i> Links de WhatsApp</button>
+            <a href="http://localhost:3333" target="_blank" class="admin-tab-btn admin-link-external" title="Abrir Central Seletiva de E-mails do EJC">
+              <i class="fa-solid fa-paper-plane"></i> Central de E-mails <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: .68rem; opacity: .7; margin-left: 2px;"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="admin-nav-divider"></div>
+
+        <!-- GRUPO: VISÃO GERAL -->
+        <div class="admin-nav-group">
+          <span class="admin-nav-group-title"><i class="fa-solid fa-eye"></i> VISÃO GERAL</span>
+          <div class="admin-nav-group-buttons">
+            <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
+          </div>
+        </div>
       </div>
 
       <!-- TABELA 1: INSCRIÇÕES DA EQUIPE -->
@@ -875,6 +975,86 @@
         </div>
       </div>
 
+      <!-- SEÇÃO 6: CANCELAR INSCRIÇÃO / REMOVER PARTICIPANTE (OPERAÇÃO SEGURA INDIVIDUAL) -->
+      <div class="table-container" id="sectionCancelarInscricao" style="display: none;">
+        <div class="table-toolbar" style="border-bottom: 1px solid var(--border-subtle, #e2e8f0); padding-bottom: 16px; margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: #dc2626; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição / Remover Participante
+              </h3>
+              <span class="status-badge" style="background: rgba(220, 38, 38, 0.12); color: #dc2626; font-size: .76rem; border: 1px solid rgba(220, 38, 38, 0.25);">
+                <i class="fa-solid fa-shield-halved"></i> Operação Individual Segura
+              </span>
+            </div>
+            <p style="margin: 6px 0 0; color: var(--muted); font-size: .88rem; line-height: 1.5;">
+              Localize o participante desejado por nome ou e-mail para cancelar definitivamente sua inscrição. A exclusão remove os dados cadastrais da pessoa e libera automaticamente a vaga do Sub. Registros contábeis de pagamentos são preservados de forma anônima para auditoria financeira.
+            </p>
+          </div>
+        </div>
+
+        <!-- FILTROS E BUSCA VISUAL -->
+        <div class="table-toolbar" style="margin-bottom: 18px; gap: 12px; flex-wrap: wrap; background: var(--bg-surface, #f8fafc); padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-subtle, #e2e8f0);">
+          <div style="flex: 1; min-width: 260px;">
+            <label for="cancelSearchInput" style="display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase;">
+              <i class="fa-solid fa-magnifying-glass"></i> Buscar por Nome ou E-mail:
+            </label>
+            <input type="text" id="cancelSearchInput" placeholder="Digite o nome completo ou e-mail do participante..." style="width: 100%;">
+          </div>
+          <div style="min-width: 170px;">
+            <label for="cancelFilterSub" style="display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase;">
+              <i class="fa-solid fa-filter"></i> Filtrar por Sub:
+            </label>
+            <select id="cancelFilterSub" style="width: 100%;">
+              <option value="">Todos os Subs</option>
+              <option value="Verde">Sub Verde</option>
+              <option value="Vermelho">Sub Vermelho</option>
+              <option value="Amarelo">Sub Amarelo</option>
+              <option value="Laranja">Sub Laranja</option>
+            </select>
+          </div>
+          <div style="min-width: 170px;">
+            <label for="cancelFilterPag" style="display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase;">
+              <i class="fa-solid fa-money-bill-wave"></i> Status do Pagamento:
+            </label>
+            <select id="cancelFilterPag" style="width: 100%;">
+              <option value="">Todos os Status</option>
+              <option value="confirmado">Confirmado / Aprovado</option>
+              <option value="pendente">Pendente</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+          <span style="font-size: .84rem; font-weight: 600; color: var(--muted);" id="cancelCountLabel">Carregando participantes...</span>
+          <span style="font-size: .78rem; color: #dc2626; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Exclusão definitiva individual sem recuperação</span>
+        </div>
+
+        <!-- TABELA DE RESULTADOS COM SELEÇÃO INDIVIDUAL -->
+        <div style="overflow-x: auto; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
+          <table class="data-table" id="tableCancelarInscricao" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Participante</th>
+                <th>Sub</th>
+                <th>Contato</th>
+                <th>Status Inscrição</th>
+                <th>Status Pagamento</th>
+                <th>ID da Inscrição</th>
+                <th style="text-align: right; min-width: 170px;">Ação Administrativa</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCancelarInscricao">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 35px;">
+                  <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando lista de participantes...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1107,6 +1287,77 @@
     </div>
   </dialog>
 
+  <!-- MODAL DE CANCELAMENTO INDIVIDUAL DE INSCRIÇÃO (CONFIRMAÇÃO DUPLA) -->
+  <dialog class="modal-detail" id="modalCancelarInscricao" style="max-width: 600px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle, #e2e8f0); padding-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; color: #dc2626; font-size: 1.25rem;">
+            Cancelar Inscrição Definitivamente
+          </h3>
+          <span style="color: var(--muted); font-size: .84rem;">Confirmação segura de remoção individual de participante</span>
+        </div>
+      </div>
+      <button type="button" onclick="fecharModalCancelar()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer; color: var(--muted);" title="Fechar">×</button>
+    </div>
+
+    <!-- AVISO EXPLÍCITO -->
+    <div class="alert-banner alert-warning" style="background: #fef2f2; border-color: #fecaca; color: #991b1b; margin-bottom: 18px;">
+      <i class="fa-solid fa-circle-exclamation" style="color: #dc2626; margin-top: 2px;"></i>
+      <div>
+        <strong>Atenção:</strong> Você está prestes a cancelar definitivamente esta inscrição. Os dados cadastrais e registros vinculados a esta inscrição serão removidos conforme as regras definidas pelo sistema. Esta ação não poderá ser desfeita.
+      </div>
+    </div>
+
+    <!-- CARD DOS DADOS DO PARTICIPANTE QUE SERÁ REMOVIDO -->
+    <div style="background: var(--bg-surface, #f8fafc); border: 1.5px solid var(--border-subtle, #e2e8f0); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+      <div style="font-size: .78rem; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-user-check"></i> PARTICIPANTE QUE SERÁ REMOVIDO
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: .88rem; line-height: 1.5;">
+        <div><strong>Nome:</strong> <span id="cancelModalNome" style="color: var(--ink); font-weight: 700;">-</span></div>
+        <div><strong>E-mail:</strong> <span id="cancelModalEmail" style="color: var(--muted);">-</span></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <strong>Sub:</strong> <span id="cancelModalSubBadge" class="sub-tag Verde">Sub Verde</span>
+        </div>
+        <div><strong>WhatsApp / Telefone:</strong> <span id="cancelModalWhatsapp">-</span></div>
+        <div><strong>Status da Inscrição:</strong> <span id="cancelModalStatus">-</span></div>
+        <div><strong>Status do Pagamento:</strong> <span id="cancelModalPagamento">-</span></div>
+        <div style="padding-top: 6px; border-top: 1px dashed var(--border-subtle, #e2e8f0); margin-top: 4px;">
+          <strong style="font-size: .8rem; color: var(--muted);">ID da Inscrição:</strong>
+          <code id="cancelModalId" style="display: block; font-size: .82rem; word-break: break-all; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 6px; margin-top: 2px; font-family: monospace; color: var(--blue-dark);">-</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEGUNDA CONFIRMAÇÃO OBRIGATÓRIA (DIGITAR 'CANCELAR') -->
+    <div style="margin-bottom: 20px;">
+      <label for="inputConfirmarCancelar" style="display: block; font-weight: 700; font-size: .88rem; margin-bottom: 8px; color: var(--ink);">
+        Para confirmar o cancelamento, digite exatamente a palavra <span style="color: #dc2626; font-weight: 800; letter-spacing: 1px;">CANCELAR</span> abaixo:
+      </label>
+      <input type="text" id="inputConfirmarCancelar" placeholder="Digite CANCELAR para desbloquear" autocomplete="off" oninput="validarKeywordCancelamento()" style="width: 100%; padding: 12px 14px; border: 2px solid var(--border-subtle, #cbd5e1); border-radius: 8px; font-weight: 800; font-size: 1rem; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
+      <small style="display: block; color: var(--muted); font-size: .76rem; margin-top: 5px;">
+        O botão de exclusão só será liberado quando a palavra CANCELAR for digitada em letras maiúsculas.
+      </small>
+    </div>
+
+    <div id="feedbackCancelarInscricao" style="display: none; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-weight: 700; font-size: .86rem;"></div>
+
+    <!-- BOTÕES DE AÇÃO COM PROTEÇÃO DE DUPLO CLIQUE -->
+    <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-subtle, #e2e8f0); padding-top: 16px;">
+      <button type="button" class="button button-secondary" onclick="fecharModalCancelar()" style="min-height: 42px; font-size: .86rem;">
+        Voltar / Manter Inscrição
+      </button>
+      <button type="button" class="button" id="btnConfirmarExclusaoDefinitiva" disabled onclick="executarCancelamentoDefinitivo()" style="min-height: 42px; font-size: .86rem; background: #dc2626; color: #fff; border: 1.5px solid #dc2626; font-weight: 700; opacity: 0.45; cursor: not-allowed; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-trash-can"></i> Confirmar Cancelamento Definitivo
+      </button>
+    </div>
+  </dialog>
+
   <script src="../js/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/env-config.js"></script>
@@ -1303,6 +1554,7 @@
       const secFin = document.getElementById("sectionFinanceiro");
       const secWpp = document.getElementById("sectionWhatsapp");
       const secInscDados = document.getElementById("sectionInscritosDados");
+      const secCancelar = document.getElementById("sectionCancelarInscricao");
 
       tabBtns.forEach(b => {
         if (b.getAttribute("data-tab") === targetTab) {
@@ -1318,16 +1570,20 @@
         if (secFin) secFin.style.display = "block";
         if (secWpp) secWpp.style.display = "block";
         if (secInscDados) secInscDados.style.display = "none";
+        if (secCancelar) secCancelar.style.display = "none";
       } else {
         if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
         if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
         if (secFin) secFin.style.display = (targetTab === "financeiro") ? "block" : "none";
         if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
         if (secInscDados) secInscDados.style.display = (targetTab === "inscritos-dados") ? "block" : "none";
+        if (secCancelar) secCancelar.style.display = (targetTab === "cancelar-inscricao") ? "block" : "none";
       }
 
       if (targetTab === "inscritos-dados") {
         carregarSubAtivo();
+      } else if (targetTab === "cancelar-inscricao") {
+        renderizarTabelaCancelarInscricao();
       }
     }
 
@@ -1336,6 +1592,7 @@
       tabBtns.forEach(btn => {
         btn.addEventListener("click", () => {
           const targetTab = btn.getAttribute("data-tab");
+          if (!targetTab) return;
           ativarAba(targetTab);
           try {
             if (targetTab === "all") {
@@ -1361,6 +1618,8 @@
           autoTab = "whatsapp";
         } else if (path.endsWith("/inscritos-dados") || hash === "inscritos-dados" || hash === "dados" || hash === "subs") {
           autoTab = "inscritos-dados";
+        } else if (path.endsWith("/cancelar-inscricao") || hash === "cancelar-inscricao" || hash === "cancelar" || hash === "remover") {
+          autoTab = "cancelar-inscricao";
         }
         ativarAba(autoTab);
       }
@@ -1418,6 +1677,7 @@
       renderizarTabelaInscricoes();
       renderizarTabelaPagamentos();
       renderizarPainelWhatsApp();
+      renderizarTabelaCancelarInscricao();
     }
 
     function isApproved(status) {
@@ -1992,6 +2252,255 @@
     document.getElementById("searchPayInput").addEventListener("input", renderizarTabelaPagamentos);
     document.getElementById("methodFilter").addEventListener("change", renderizarTabelaPagamentos);
     document.getElementById("payStatusFilter").addEventListener("change", renderizarTabelaPagamentos);
+
+    // Event listeners para filtros e busca do Cancelamento Individual
+    const cancelSearchEl = document.getElementById("cancelSearchInput");
+    if (cancelSearchEl) cancelSearchEl.addEventListener("input", renderizarTabelaCancelarInscricao);
+    const cancelFilterSubEl = document.getElementById("cancelFilterSub");
+    if (cancelFilterSubEl) cancelFilterSubEl.addEventListener("change", renderizarTabelaCancelarInscricao);
+    const cancelFilterPagEl = document.getElementById("cancelFilterPag");
+    if (cancelFilterPagEl) cancelFilterPagEl.addEventListener("change", renderizarTabelaCancelarInscricao);
+
+    // ==============================================================================
+    // MÓDULO: CANCELAMENTO INDIVIDUAL DE INSCRIÇÃO (OPERAÇÃO SEGURA)
+    // ==============================================================================
+    let participanteSelecionadoParaCancelar = null;
+
+    function renderizarTabelaCancelarInscricao() {
+      const tbody = document.getElementById("tbodyCancelarInscricao");
+      if (!tbody) return;
+
+      const search = (document.getElementById("cancelSearchInput")?.value || "").toLowerCase().trim();
+      const subFilter = document.getElementById("cancelFilterSub")?.value || "";
+      const pagFilter = document.getElementById("cancelFilterPag")?.value || "";
+
+      const filtrados = (inscricoesData || []).filter(item => {
+        if (item.arquivado) return false;
+
+        const matchSearch = !search ||
+          (item.nome_completo || "").toLowerCase().includes(search) ||
+          (item.email || "").toLowerCase().includes(search) ||
+          (item.id || "").toLowerCase().includes(search) ||
+          (item.whatsapp || "").includes(search);
+
+        const itemSubNorm = (item.sub === "Azul") ? "Laranja" : item.sub;
+        const matchSub = !subFilter || itemSubNorm === subFilter;
+
+        let matchPag = true;
+        if (pagFilter === "confirmado") {
+          matchPag = isApproved(item.pagamento_status);
+        } else if (pagFilter === "pendente") {
+          matchPag = !isApproved(item.pagamento_status);
+        }
+
+        return matchSearch && matchSub && matchPag;
+      });
+
+      const countLabel = document.getElementById("cancelCountLabel");
+      if (countLabel) {
+        countLabel.textContent = `${filtrados.length} participante(s) encontrado(s) de ${inscricoesData.length}`;
+      }
+
+      if (filtrados.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--muted); padding: 35px;">
+              <i class="fa-solid fa-user-slash" style="font-size: 1.8rem; margin-bottom: 8px; display: block;"></i>
+              Nenhum participante encontrado com os filtros selecionados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtrados.map(item => {
+        const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
+        const telLimpo = String(item.whatsapp || "").replace(/\D/g, "");
+        const telFormatado = telLimpo.length === 11
+          ? `(${telLimpo.slice(0, 2)}) ${telLimpo.slice(2, 7)}-${telLimpo.slice(7)}`
+          : (item.whatsapp || "-");
+
+        const statusClass = isApproved(item.pagamento_status) ? "status-approved" : `status-${item.pagamento_status || 'pendente'}`;
+        const statusLabel = isApproved(item.pagamento_status) ? "Confirmado" : (item.pagamento_status || "Pendente");
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--ink);">${escapeHtml(item.nome_completo || 'Sem nome')}</div>
+              <small style="color: var(--muted);">${escapeHtml(item.email || 'E-mail não informado')}</small>
+            </td>
+            <td><span class="sub-tag ${displaySub}">${displaySub}</span></td>
+            <td>
+              ${telLimpo ? `<a href="https://wa.me/55${telLimpo}" target="_blank" style="color: #25D366; font-weight: 600; text-decoration: none; font-size: .86rem;"><i class="fa-brands fa-whatsapp"></i> ${telFormatado}</a>` : '<span style="color: var(--muted);">-</span>'}
+            </td>
+            <td>
+              <span class="status-badge ${item.arquivado ? 'status-recusado' : 'status-approved'}">${item.arquivado ? 'Arquivado' : 'Ativo'}</span>
+            </td>
+            <td>
+              <span class="status-badge ${statusClass}">${statusLabel}</span>
+            </td>
+            <td>
+              <code style="font-size: .75rem; font-family: monospace; background: var(--bg-surface, #e2e8f0); padding: 2px 6px; border-radius: 4px;" title="${item.id}">${item.id ? (item.id.slice(0, 8) + '...' + item.id.slice(-4)) : '-'}</code>
+            </td>
+            <td style="text-align: right;">
+              <button type="button" class="button" onclick="abrirModalCancelarInscricao('${item.id}')" style="min-height: 34px; padding: 6px 12px; font-size: .8rem; background: #dc2626; color: #fff; border: 1px solid #dc2626; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;" title="Cancelar inscrição desta pessoa">
+                <i class="fa-solid fa-trash-can"></i> Cancelar Inscrição
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    window.abrirModalCancelarInscricao = function(id) {
+      if (!id) return;
+      const item = (inscricoesData || []).find(i => i.id === id);
+      if (!item) {
+        alert("Participante não encontrado na lista atual.");
+        return;
+      }
+
+      participanteSelecionadoParaCancelar = item;
+
+      // Preenche os campos de identificação clara
+      const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
+      document.getElementById("cancelModalNome").textContent = item.nome_completo || "-";
+      document.getElementById("cancelModalEmail").textContent = item.email || "Não informado";
+      
+      const subBadge = document.getElementById("cancelModalSubBadge");
+      if (subBadge) {
+        subBadge.textContent = `Sub ${displaySub}`;
+        subBadge.className = `sub-tag ${displaySub}`;
+      }
+
+      const telLimpo = String(item.whatsapp || "").replace(/\D/g, "");
+      const telFormatado = telLimpo.length === 11
+        ? `(${telLimpo.slice(0, 2)}) ${telLimpo.slice(2, 7)}-${telLimpo.slice(7)}`
+        : (item.whatsapp || "-");
+      document.getElementById("cancelModalWhatsapp").textContent = telFormatado;
+
+      document.getElementById("cancelModalStatus").textContent = item.arquivado ? "Arquivado" : "Inscrito Ativo";
+      
+      const isPagOk = isApproved(item.pagamento_status);
+      document.getElementById("cancelModalPagamento").innerHTML = `
+        <span class="status-badge ${isPagOk ? 'status-approved' : 'status-pendente'}">
+          ${isPagOk ? 'Confirmado' : (item.pagamento_status || 'Pendente')}
+        </span>
+      `;
+      document.getElementById("cancelModalId").textContent = item.id;
+
+      // Reseta campo de confirmação e botão
+      const inputConfirmar = document.getElementById("inputConfirmarCancelar");
+      if (inputConfirmar) {
+        inputConfirmar.value = "";
+      }
+      validarKeywordCancelamento();
+
+      const fb = document.getElementById("feedbackCancelarInscricao");
+      if (fb) fb.style.display = "none";
+
+      const modal = document.getElementById("modalCancelarInscricao");
+      if (modal) modal.showModal();
+    };
+
+    window.fecharModalCancelar = function() {
+      const modal = document.getElementById("modalCancelarInscricao");
+      if (modal) modal.close();
+      participanteSelecionadoParaCancelar = null;
+    };
+
+    window.validarKeywordCancelamento = function() {
+      const input = document.getElementById("inputConfirmarCancelar");
+      const btn = document.getElementById("btnConfirmarExclusaoDefinitiva");
+      if (!input || !btn) return;
+
+      const valor = input.value.trim();
+      if (valor === "CANCELAR") {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = "0.45";
+        btn.style.cursor = "not-allowed";
+      }
+    };
+
+    window.executarCancelamentoDefinitivo = async function() {
+      if (!participanteSelecionadoParaCancelar) return;
+
+      const input = document.getElementById("inputConfirmarCancelar");
+      if ((input?.value || "").trim() !== "CANCELAR") {
+        alert('Por favor, digite a palavra "CANCELAR" em letras maiúsculas para confirmar.');
+        return;
+      }
+
+      const item = participanteSelecionadoParaCancelar;
+      const targetId = item.id;
+      const btn = document.getElementById("btnConfirmarExclusaoDefinitiva");
+      const fb = document.getElementById("feedbackCancelarInscricao");
+      const originalHtml = btn.innerHTML;
+
+      // Proteção contra duplo clique e estado de carregamento
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Cancelando inscrição...`;
+      if (fb) fb.style.display = "none";
+
+      const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+
+      try {
+        const res = await fetch("/api/admin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": token,
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: "cancel_inscription",
+            registration_id: targetId,
+            confirm_keyword: "CANCELAR"
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || `Erro HTTP ${res.status}`);
+        }
+
+        // Sucesso: Remove do array local em memória
+        inscricoesData = inscricoesData.filter(i => i.id !== targetId);
+
+        // Atualiza interface imediatamente (estatísticas, tabela geral e tabela de cancelamento)
+        renderizarTudo();
+
+        if (fb) {
+          fb.textContent = "✓ Inscrição cancelada com sucesso.";
+          fb.style.background = "#dcfce7";
+          fb.style.color = "#15803d";
+          fb.style.border = "1px solid #bbf7d0";
+          fb.style.display = "block";
+        }
+
+        setTimeout(() => {
+          fecharModalCancelar();
+          alert(`✓ Inscrição de ${item.nome_completo} cancelada com sucesso.`);
+        }, 600);
+
+      } catch (err) {
+        console.error("[Cancelar Inscrição]", err);
+        if (fb) {
+          fb.textContent = `⚠️ Erro ao cancelar: ${err.message || 'Falha na comunicação com o servidor'}`;
+          fb.style.background = "#fee2e2";
+          fb.style.color = "#b91c1c";
+          fb.style.border = "1px solid #fecaca";
+          fb.style.display = "block";
+        }
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        validarKeywordCancelamento();
+      }
+    };
 
     // Exportar CSV
     document.getElementById("exportBtn").addEventListener("click", () => {
