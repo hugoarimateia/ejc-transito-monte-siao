@@ -230,12 +230,12 @@ module.exports = async (req, res) => {
           }
 
           // 2. Atualiza status na tabela inscricoes se vinculado
-          const filterQueries = [];
-          if (inscIdVinculada) filterQueries.push(`id.eq.${encodeURIComponent(inscIdVinculada)}`);
-          if (whatsappPagador) filterQueries.push(`whatsapp.eq.${encodeURIComponent(whatsappPagador)}`);
+          const filterParam = inscIdVinculada 
+            ? `id=eq.${encodeURIComponent(inscIdVinculada)}` 
+            : (whatsappPagador ? `whatsapp=eq.${encodeURIComponent(whatsappPagador)}` : null);
 
-          if (filterQueries.length > 0) {
-            await fetch(`${sbUrl}/rest/v1/inscricoes?or=(${filterQueries.join(",")})`, {
+          if (filterParam) {
+            await fetch(`${sbUrl}/rest/v1/inscricoes?${filterParam}`, {
               method: "PATCH",
               headers: {
                 "apikey": sbKey,
@@ -244,8 +244,7 @@ module.exports = async (req, res) => {
                 "Prefer": "return=minimal"
               },
               body: JSON.stringify({
-                pagamento_status: statusInscricao,
-                atualizado_em: agoraIso
+                pagamento_status: statusInscricao
               }),
               signal: AbortSignal.timeout(4000)
             }).catch(e => console.warn("[Webhook] Aviso ao atualizar inscricao:", e.message));

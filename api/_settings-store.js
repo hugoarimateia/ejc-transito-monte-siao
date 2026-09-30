@@ -1227,32 +1227,59 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
         } catch (eRpc) {}
       }
 
-      // 2. Atualiza em 'inscricoes' com filtros seguros (sem tipagem UUID quebrada)
-      const inscFilters = [];
-      if (isUuid) {
-        inscFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
-      } else {
-        if (isPhone) {
-          inscFilters.push(`whatsapp.eq.${encodeURIComponent(rawId)}`);
-          if (cleanTel !== rawId) {
-            inscFilters.push(`whatsapp.eq.${encodeURIComponent(cleanTel)}`);
+      // 2. Localiza a inscrição e atualiza em 'inscricoes' sem o campo inexistente 'atualizado_em'
+      let targetInscId = isUuid ? rawId : null;
+      let matchedInscRow = null;
+
+      if (!targetInscId) {
+        const lookupUrl1 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&whatsapp=eq.${encodeURIComponent(rawId)}&limit=1`;
+        const resLookup1 = await fetch(lookupUrl1, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+        if (resLookup1.ok) {
+          const rows1 = await resLookup1.json().catch(() => []);
+          if (rows1 && rows1.length > 0) {
+            targetInscId = rows1[0].id;
+            matchedInscRow = rows1[0];
           }
         }
-        if (/^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
-          inscFilters.push(`token_acesso.eq.${encodeURIComponent(rawId)}`);
+        if (!targetInscId && cleanTel && cleanTel !== rawId) {
+          const lookupUrl2 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&whatsapp=eq.${encodeURIComponent(cleanTel)}&limit=1`;
+          const resLookup2 = await fetch(lookupUrl2, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+          if (resLookup2.ok) {
+            const rows2 = await resLookup2.json().catch(() => []);
+            if (rows2 && rows2.length > 0) {
+              targetInscId = rows2[0].id;
+              matchedInscRow = rows2[0];
+            }
+          }
+        }
+        if (!targetInscId && /^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
+          const lookupUrl3 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&token_acesso=eq.${encodeURIComponent(rawId)}&limit=1`;
+          const resLookup3 = await fetch(lookupUrl3, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+          if (resLookup3.ok) {
+            const rows3 = await resLookup3.json().catch(() => []);
+            if (rows3 && rows3.length > 0) {
+              targetInscId = rows3[0].id;
+              matchedInscRow = rows3[0];
+            }
+          }
         }
       }
 
-      if (inscFilters.length > 0) {
-        const inscUrl = `${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}`;
-        debugInfo.inscUrl = inscUrl;
-        const resInsc = await fetch(inscUrl, {
+      if (matchedInscRow) {
+        matchedEmail = matchedEmail || matchedInscRow.email;
+        matchedNome = matchedNome || matchedInscRow.nome_completo;
+        matchedSub = matchedSub || matchedInscRow.sub;
+      }
+
+      if (targetInscId) {
+        const inscPatchUrl = `${url}/rest/v1/inscricoes?id=eq.${encodeURIComponent(targetInscId)}`;
+        debugInfo.inscUrl = inscPatchUrl;
+        const resInsc = await fetch(inscPatchUrl, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
           body: JSON.stringify({
             pagamento_status: "confirmado",
-            pagamento_confirmado_em: agora,
-            atualizado_em: agora
+            pagamento_confirmado_em: agora
           })
         });
         debugInfo.resInscStatus = resInsc.status;
@@ -1269,23 +1296,26 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
         }
       }
 
-      // 3. Atualiza em 'pagamentos' com filtros seguros
+      // 3. Atualiza em 'pagamentos'
       const payFilters = [];
       if (isUuid) {
-        payFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`id=eq.${encodeURIComponent(rawId)}`);
       } else {
-        payFilters.push(`txid.eq.${encodeURIComponent(rawId)}`);
-        payFilters.push(`gateway_transaction_id.eq.${encodeURIComponent(rawId)}`);
+        if (targetInscId) {
+          payFilters.push(`inscricao_id=eq.${encodeURIComponent(targetInscId)}`);
+        }
+        payFilters.push(`txid=eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`gateway_transaction_id=eq.${encodeURIComponent(rawId)}`);
         if (isPhone) {
-          payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(rawId)}`);
+          payFilters.push(`whatsapp_pagador=eq.${encodeURIComponent(rawId)}`);
           if (cleanTel !== rawId) {
-            payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(cleanTel)}`);
+            payFilters.push(`whatsapp_pagador=eq.${encodeURIComponent(cleanTel)}`);
           }
         }
       }
 
-      if (payFilters.length > 0) {
-        const payUrl = `${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}`;
+      for (const filter of payFilters) {
+        const payUrl = `${url}/rest/v1/pagamentos?${filter}`;
         debugInfo.payUrl = payUrl;
         const resTx = await fetch(payUrl, {
           method: "PATCH",
@@ -1309,6 +1339,7 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
             matchedValor = matchedValor || patchedTx[0].valor;
             matchedMetodo = matchedMetodo || patchedTx[0].metodo;
             matchedSub = matchedSub || patchedTx[0].metadata?.sub || patchedTx[0].sub;
+            break;
           }
         }
       }
@@ -1347,8 +1378,8 @@ async function approvePayment({ identificador, usuario, ip, email, nome, valor, 
           }
         }
 
-        if (!matchedEmail && inscFilters.length > 0) {
-          const inscRes = await fetch(`${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}&limit=1`, {
+        if (!matchedEmail && targetInscId) {
+          const inscRes = await fetch(`${url}/rest/v1/inscricoes?id=eq.${encodeURIComponent(targetInscId)}&limit=1`, {
             headers: { "apikey": key, "Authorization": `Bearer ${key}` }
           });
           if (inscRes.ok) {
@@ -1493,29 +1524,55 @@ async function rejectPayment({ identificador, usuario, motivo, ip, email, nome }
       const cleanTel = rawId.replace(/\D/g, "");
       const isPhone = cleanTel.length >= 10 && cleanTel.length <= 13;
 
-      const inscFilters = [];
-      if (isUuid) {
-        inscFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
-      } else {
-        if (isPhone) {
-          inscFilters.push(`whatsapp.eq.${encodeURIComponent(rawId)}`);
-          if (cleanTel !== rawId) {
-            inscFilters.push(`whatsapp.eq.${encodeURIComponent(cleanTel)}`);
+      let targetInscId = isUuid ? rawId : null;
+      let matchedInscRow = null;
+
+      if (!targetInscId) {
+        const lookupUrl1 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&whatsapp=eq.${encodeURIComponent(rawId)}&limit=1`;
+        const resLookup1 = await fetch(lookupUrl1, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+        if (resLookup1.ok) {
+          const rows1 = await resLookup1.json().catch(() => []);
+          if (rows1 && rows1.length > 0) {
+            targetInscId = rows1[0].id;
+            matchedInscRow = rows1[0];
           }
         }
-        if (/^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
-          inscFilters.push(`token_acesso.eq.${encodeURIComponent(rawId)}`);
+        if (!targetInscId && cleanTel && cleanTel !== rawId) {
+          const lookupUrl2 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&whatsapp=eq.${encodeURIComponent(cleanTel)}&limit=1`;
+          const resLookup2 = await fetch(lookupUrl2, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+          if (resLookup2.ok) {
+            const rows2 = await resLookup2.json().catch(() => []);
+            if (rows2 && rows2.length > 0) {
+              targetInscId = rows2[0].id;
+              matchedInscRow = rows2[0];
+            }
+          }
+        }
+        if (!targetInscId && /^[a-zA-Z0-9_-]{16,}$/.test(rawId)) {
+          const lookupUrl3 = `${url}/rest/v1/inscricoes?select=id,nome_completo,email,sub,whatsapp&token_acesso=eq.${encodeURIComponent(rawId)}&limit=1`;
+          const resLookup3 = await fetch(lookupUrl3, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
+          if (resLookup3.ok) {
+            const rows3 = await resLookup3.json().catch(() => []);
+            if (rows3 && rows3.length > 0) {
+              targetInscId = rows3[0].id;
+              matchedInscRow = rows3[0];
+            }
+          }
         }
       }
 
-      if (inscFilters.length > 0) {
-        const inscUrl = `${url}/rest/v1/inscricoes?${inscFilters.length > 1 ? `or=(${inscFilters.join(",")})` : inscFilters[0]}`;
+      if (matchedInscRow) {
+        matchedEmail = matchedEmail || matchedInscRow.email;
+        matchedNome = matchedNome || matchedInscRow.nome_completo;
+      }
+
+      if (targetInscId) {
+        const inscUrl = `${url}/rest/v1/inscricoes?id=eq.${encodeURIComponent(targetInscId)}`;
         const resInsc = await fetch(inscUrl, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
           body: JSON.stringify({
-            pagamento_status: "recusado",
-            atualizado_em: agora
+            pagamento_status: "recusado"
           })
         });
         if (resInsc.ok) supabaseUpdated = true;
@@ -1523,20 +1580,23 @@ async function rejectPayment({ identificador, usuario, motivo, ip, email, nome }
 
       const payFilters = [];
       if (isUuid) {
-        payFilters.push(`id.eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`id=eq.${encodeURIComponent(rawId)}`);
       } else {
-        payFilters.push(`txid.eq.${encodeURIComponent(rawId)}`);
-        payFilters.push(`gateway_transaction_id.eq.${encodeURIComponent(rawId)}`);
+        if (targetInscId) {
+          payFilters.push(`inscricao_id=eq.${encodeURIComponent(targetInscId)}`);
+        }
+        payFilters.push(`txid=eq.${encodeURIComponent(rawId)}`);
+        payFilters.push(`gateway_transaction_id=eq.${encodeURIComponent(rawId)}`);
         if (isPhone) {
-          payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(rawId)}`);
+          payFilters.push(`whatsapp_pagador=eq.${encodeURIComponent(rawId)}`);
           if (cleanTel !== rawId) {
-            payFilters.push(`whatsapp_pagador.eq.${encodeURIComponent(cleanTel)}`);
+            payFilters.push(`whatsapp_pagador=eq.${encodeURIComponent(cleanTel)}`);
           }
         }
       }
 
-      if (payFilters.length > 0) {
-        const payUrl = `${url}/rest/v1/pagamentos?${payFilters.length > 1 ? `or=(${payFilters.join(",")})` : payFilters[0]}`;
+      for (const filter of payFilters) {
+        const payUrl = `${url}/rest/v1/pagamentos?${filter}`;
         const resTx = await fetch(payUrl, {
           method: "PATCH",
           headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
@@ -1546,12 +1606,13 @@ async function rejectPayment({ identificador, usuario, motivo, ip, email, nome }
           })
         });
         if (resTx.ok) {
-          supabaseUpdated = true;
           const patchedTx = await resTx.json().catch(() => []);
           if (Array.isArray(patchedTx) && patchedTx.length > 0) {
+            supabaseUpdated = true;
             matchedEmail = matchedEmail || patchedTx[0].email;
             matchedNome = matchedNome || patchedTx[0].nome_pagador;
             matchedTxid = patchedTx[0].txid || matchedTxid;
+            break;
           }
         }
       }

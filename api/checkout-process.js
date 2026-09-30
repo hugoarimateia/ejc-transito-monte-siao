@@ -432,8 +432,7 @@ async function confirmarPagamentoResiliente({ txid, gateway = "manual", payload 
                 body: JSON.stringify({
                   pagamento_status: "confirmado",
                   pagamento_confirmado_em: agora,
-                  forma_pagamento: patched[0].metodo || "pix",
-                  atualizado_em: agora
+                  forma_pagamento: patched[0].metodo || "pix"
                 })
               }).catch(() => {});
             }
@@ -908,7 +907,7 @@ module.exports = async (req, res) => {
                         fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?id=eq.${encodeURIComponent(transactionFound.inscricao_id || targetTx)}`, {
                           method: "PATCH",
                           headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
-                          body: JSON.stringify({ pagamento_status: statusInsc, atualizado_em: agoraIso })
+                          body: JSON.stringify({ pagamento_status: statusInsc })
                         }).catch(() => {})
                       ]).catch(() => {});
                     }
@@ -1173,8 +1172,7 @@ module.exports = async (req, res) => {
               headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 comprovante_caminho: comprovanteUrlFinal,
-                pagamento_status: "aguardando_analise",
-                atualizado_em: agora
+                pagamento_status: "aguardando_analise"
               })
             }).catch(() => {});
           }
