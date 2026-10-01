@@ -25,54 +25,74 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="../css/style.css" rel="stylesheet">
   <link href="../css/all.min.css" rel="stylesheet">
+  <script src="../js/jszip.min.js"></script>
+  <script src="../js/jspdf.umd.min.js"></script>
+  <script>
+    if (typeof JSZip === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
+    }
+    if (typeof jspdf === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+    }
+  </script>
   <style>
     /* Estilos do Módulo: Dados dos Inscritos por Sub */
     .sub-tabs-bar {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
-      flex-wrap: wrap;
       margin-bottom: 20px;
     }
     .sub-tab-pill {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 18px;
-      border-radius: 9999px;
-      border: 1.5px solid var(--border);
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border-subtle, #e2e8f0);
       background: var(--card-bg, #ffffff);
       color: var(--ink, #1e293b);
       cursor: pointer;
       font-family: inherit;
       font-size: 0.92rem;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      box-sizing: border-box;
+      text-align: left;
     }
     .sub-tab-pill:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-      border-color: var(--blue, #087df9);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+      border-color: var(--sub-accent, #087df9);
     }
     .sub-tab-pill.active {
       border-color: var(--sub-accent, #087df9);
       background: var(--sub-active-bg, rgba(8, 125, 249, 0.08));
-      box-shadow: 0 4px 14px var(--sub-glow, rgba(8, 125, 249, 0.18));
+      box-shadow: 0 4px 16px var(--sub-glow, rgba(8, 125, 249, 0.2));
     }
     .sub-tab-pill[data-sub="verde"].active { --sub-accent: #24a764; --sub-active-bg: rgba(36, 167, 100, 0.12); --sub-glow: rgba(36, 167, 100, 0.25); }
     .sub-tab-pill[data-sub="vermelho"].active { --sub-accent: #e8333e; --sub-active-bg: rgba(232, 51, 62, 0.12); --sub-glow: rgba(232, 51, 62, 0.25); }
     .sub-tab-pill[data-sub="amarelo"].active { --sub-accent: #eab308; --sub-active-bg: rgba(234, 179, 8, 0.14); --sub-glow: rgba(234, 179, 8, 0.25); }
     .sub-tab-pill[data-sub="laranja"].active { --sub-accent: #f97316; --sub-active-bg: rgba(249, 115, 22, 0.14); --sub-glow: rgba(249, 115, 22, 0.25); }
     .sub-tab-pill .sub-dot {
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       display: inline-block;
       flex-shrink: 0;
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
+    }
+    .sub-tab-pill strong {
+      display: block;
+      font-size: 0.94rem;
+      line-height: 1.2;
     }
     .sub-tab-pill small {
       color: var(--muted, #64748b);
       font-size: 0.76rem;
       font-weight: 500;
+      display: block;
+      margin-top: 2px;
     }
     .inscrito-avatar-thumb {
       width: 44px;
@@ -144,68 +164,213 @@
       border-color: var(--blue, #087df9);
       background: rgba(8, 125, 249, 0.06);
     }
-    /* Estilos da Navegação Agrupada do Painel */
+    /* Estilos da Navegação Agrupada do Painel - Alinhada & Moderna */
     .admin-tab-nav {
-      display: flex;
-      gap: 16px;
-      align-items: stretch;
-      flex-wrap: wrap;
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      padding: 12px 16px;
-      border-radius: 16px;
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      padding: 16px 18px;
+      border-radius: 18px;
       margin-bottom: 24px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.04);
+      display: block !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .admin-nav-modules-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      align-items: stretch;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
     .admin-nav-group {
+      background: rgba(241, 245, 249, 0.6);
+      border: 1px solid var(--border-subtle, #e2e8f0);
+      border-radius: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+      height: 100%;
+    }
+    [data-theme="dark"] .admin-nav-group {
+      background: rgba(30, 41, 59, 0.4);
+      border-color: rgba(51, 65, 85, 0.7);
     }
     .admin-nav-group-title {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 800;
-      color: var(--text-muted);
-      letter-spacing: 0.6px;
+      color: var(--text-muted, #64748b);
+      letter-spacing: 0.7px;
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding-left: 4px;
+      gap: 6px;
+      padding: 0 4px;
+      text-transform: uppercase;
       user-select: none;
+    }
+    .admin-nav-group-title i {
+      font-size: 0.78rem;
+      color: var(--blue, #087df9);
     }
     .admin-nav-group-buttons {
       display: flex;
+      flex-direction: column;
       gap: 6px;
-      flex-wrap: wrap;
+      flex: 1;
     }
-    .admin-nav-divider {
-      width: 1px;
-      background: var(--border-subtle);
-      margin: 4px 0;
-      align-self: stretch;
+    .admin-tab-btn {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      background: var(--bg-card, #ffffff);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-main, #334155);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      text-decoration: none;
+      box-sizing: border-box;
     }
-    @media (max-width: 900px) {
-      .admin-nav-divider {
-        display: none;
-      }
-      .admin-nav-group {
-        width: 100%;
-      }
+    [data-theme="dark"] .admin-tab-btn {
+      background: rgba(15, 23, 42, 0.6);
+      color: #cbd5e1;
+    }
+    .admin-tab-btn:hover {
+      background: #ffffff;
+      border-color: rgba(8, 125, 249, 0.4);
+      color: var(--blue, #087df9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(8, 125, 249, 0.1);
+    }
+    [data-theme="dark"] .admin-tab-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .admin-tab-btn.active {
+      background: linear-gradient(135deg, #087df9 0%, #0252b8 100%) !important;
+      color: #ffffff !important;
+      border-color: #087df9 !important;
+      box-shadow: 0 4px 14px rgba(8, 125, 249, 0.35) !important;
+      font-weight: 700;
+    }
+    .admin-tab-btn.active i {
+      color: #ffffff !important;
     }
     .admin-tab-btn.btn-tab-cancelar {
       color: #dc2626;
     }
     .admin-tab-btn.btn-tab-cancelar:hover {
       background: rgba(220, 38, 38, 0.08);
+      border-color: rgba(220, 38, 38, 0.4);
       color: #b91c1c;
     }
     .admin-tab-btn.btn-tab-cancelar.active {
-      background: #dc2626 !important;
-      color: #fff !important;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+      color: #ffffff !important;
+      border-color: #dc2626 !important;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35) !important;
     }
     .admin-link-external {
       text-decoration: none;
+    }
+    @media (max-width: 1100px) {
+      .admin-nav-modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .admin-tab-nav {
+        padding: 12px;
+        border-radius: 16px;
+        margin-bottom: 18px;
+      }
+      .admin-nav-modules-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .admin-nav-group {
+        padding: 10px;
+      }
+      .admin-nav-group-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .admin-tab-btn {
+        min-height: 44px;
+        font-size: 0.8rem;
+        padding: 8px 10px;
+      }
+      .sub-tabs-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .sub-tab-pill {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+      }
+    }
+
+    /* Estilos do Modal de Edição de Inscritos */
+    #modalInscritoSub {
+      max-width: 620px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+      border-radius: 20px;
+      border: 1.5px solid var(--border-color, #dce1ed);
+      background: var(--bg-card, #ffffff);
+      color: var(--text-main, #17203b);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+      padding: 24px;
+    }
+    #modalInscritoSub input[type="text"],
+    #modalInscritoSub input[type="tel"],
+    #modalInscritoSub input[type="email"],
+    #modalInscritoSub input[type="number"],
+    #modalInscritoSub select,
+    #modalInscritoSub textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-color, #dce1ed) !important;
+      background: var(--bg-input, #fbfcff) !important;
+      color: var(--text-main, #17203b) !important;
+      font-family: inherit;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+    #modalInscritoSub input:focus,
+    #modalInscritoSub select:focus,
+    #modalInscritoSub textarea:focus {
+      outline: none;
+      border-color: #087df9 !important;
+      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.15) !important;
+      background: var(--bg-input-focus, #ffffff) !important;
+    }
+    [data-theme="dark"] #modalInscritoSub input[type="text"],
+    [data-theme="dark"] #modalInscritoSub input[type="tel"],
+    [data-theme="dark"] #modalInscritoSub input[type="email"],
+    [data-theme="dark"] #modalInscritoSub input[type="number"],
+    [data-theme="dark"] #modalInscritoSub select,
+    [data-theme="dark"] #modalInscritoSub textarea {
+      border-color: rgba(255, 255, 255, 0.18) !important;
+      background: #1a2749 !important;
+      color: #f1f5f9 !important;
     }
   </style>
 </head>
@@ -297,47 +462,43 @@
 
       <!-- BARRA DE NAVEGAÇÃO ENTRE ABAS REORGANIZADA POR MÓDULOS -->
       <div class="admin-tab-nav" id="adminTabNav">
-        <!-- GRUPO: INSCRIÇÕES -->
-        <div class="admin-nav-group">
-          <span class="admin-nav-group-title"><i class="fa-solid fa-users"></i> INSCRIÇÕES</span>
-          <div class="admin-nav-group-buttons">
-            <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-list-check"></i> Lista de Inscritos</button>
-            <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
-            <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
+        <div class="admin-nav-modules-grid">
+          <!-- GRUPO: INSCRIÇÕES -->
+          <div class="admin-nav-group">
+            <span class="admin-nav-group-title"><i class="fa-solid fa-users"></i> INSCRIÇÕES</span>
+            <div class="admin-nav-group-buttons">
+              <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-list-check"></i> Lista de Inscritos</button>
+              <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
+              <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
+            </div>
           </div>
-        </div>
 
-        <div class="admin-nav-divider"></div>
-
-        <!-- GRUPO: FINANCEIRO -->
-        <div class="admin-nav-group">
-          <span class="admin-nav-group-title"><i class="fa-solid fa-coins"></i> FINANCEIRO</span>
-          <div class="admin-nav-group-buttons">
-            <button type="button" class="admin-tab-btn" data-tab="financeiro"><i class="fa-solid fa-sliders"></i> Gestão Financeira & PIX</button>
-            <button type="button" class="admin-tab-btn" data-tab="pagamentos"><i class="fa-solid fa-credit-card"></i> Pagamentos & Checkout</button>
+          <!-- GRUPO: FINANCEIRO -->
+          <div class="admin-nav-group">
+            <span class="admin-nav-group-title"><i class="fa-solid fa-coins"></i> FINANCEIRO</span>
+            <div class="admin-nav-group-buttons">
+              <button type="button" class="admin-tab-btn" data-tab="financeiro"><i class="fa-solid fa-sliders"></i> Gestão Financeira & PIX</button>
+              <button type="button" class="admin-tab-btn" data-tab="pagamentos"><i class="fa-solid fa-credit-card"></i> Pagamentos & Checkout</button>
+            </div>
           </div>
-        </div>
 
-        <div class="admin-nav-divider"></div>
-
-        <!-- GRUPO: COMUNICAÇÃO -->
-        <div class="admin-nav-group">
-          <span class="admin-nav-group-title"><i class="fa-solid fa-bullhorn"></i> COMUNICAÇÃO</span>
-          <div class="admin-nav-group-buttons">
-            <button type="button" class="admin-tab-btn" data-tab="whatsapp"><i class="fa-brands fa-whatsapp"></i> Links de WhatsApp</button>
-            <a href="http://localhost:3333" target="_blank" class="admin-tab-btn admin-link-external" title="Abrir Central Seletiva de E-mails do EJC">
-              <i class="fa-solid fa-paper-plane"></i> Central de E-mails <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: .68rem; opacity: .7; margin-left: 2px;"></i>
-            </a>
+          <!-- GRUPO: COMUNICAÇÃO -->
+          <div class="admin-nav-group">
+            <span class="admin-nav-group-title"><i class="fa-solid fa-bullhorn"></i> COMUNICAÇÃO</span>
+            <div class="admin-nav-group-buttons">
+              <button type="button" class="admin-tab-btn" data-tab="whatsapp"><i class="fa-brands fa-whatsapp"></i> Links de WhatsApp</button>
+              <a href="http://localhost:3333" target="_blank" class="admin-tab-btn admin-link-external" title="Abrir Central Seletiva de E-mails do EJC">
+                <i class="fa-solid fa-paper-plane"></i> Central de E-mails <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: .68rem; opacity: .7; margin-left: auto;"></i>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div class="admin-nav-divider"></div>
-
-        <!-- GRUPO: VISÃO GERAL -->
-        <div class="admin-nav-group">
-          <span class="admin-nav-group-title"><i class="fa-solid fa-eye"></i> VISÃO GERAL</span>
-          <div class="admin-nav-group-buttons">
-            <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
+          <!-- GRUPO: VISÃO GERAL -->
+          <div class="admin-nav-group">
+            <span class="admin-nav-group-title"><i class="fa-solid fa-eye"></i> VISÃO GERAL</span>
+            <div class="admin-nav-group-buttons">
+              <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
+            </div>
           </div>
         </div>
       </div>
@@ -891,7 +1052,13 @@
             <span style="font-size: .86rem; color: var(--muted);">Gerenciamento de fichas, tamanhos de camisa e fotos dos participantes separados por Sub oficial</span>
           </div>
           <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn-refresh" id="btnRefreshInscritosSub" onclick="carregarSubAtivo(true)" title="Recarregar dados do Sub" style="padding: 8px 14px; font-size: .85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn-action-zip" id="btnDownloadZipSub" onclick="baixarZipSubAtual()" title="Baixar todas as fichas (PDF) e fotos dos participantes do Sub selecionado em um arquivo ZIP" style="padding: 9px 16px; font-size: .85rem; border-radius: 9px; border: 1.5px solid #24a764; background: rgba(36, 167, 100, 0.12); color: #166534; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+              <i class="fa-solid fa-file-zipper" style="color: #24a764; font-size: 1rem;"></i> Baixar Sub <span id="lblBtnZipSubNome">Verde</span> (ZIP)
+            </button>
+            <button type="button" class="btn-action-zip" id="btnDownloadZipTodos" onclick="baixarZipTodosOsSubs()" title="Baixar todas as fichas (PDF) e fotos de todos os 4 subs em um único arquivo ZIP organizado por pastas" style="padding: 9px 16px; font-size: .85rem; border-radius: 9px; border: 1.5px solid var(--blue, #087df9); background: var(--blue, #087df9); color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; transition: all .2s; box-shadow: 0 4px 12px rgba(8, 125, 249, 0.25);">
+              <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1rem;"></i> Baixar Todos os Subs (ZIP)
+            </button>
+            <button type="button" class="btn-refresh" id="btnRefreshInscritosSub" onclick="carregarSubAtivo(true)" title="Recarregar dados do Sub" style="padding: 9px 15px; font-size: .85rem; border-radius: 9px; border: 1px solid var(--border); background: var(--card-bg); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
               <i class="fa-solid fa-rotate"></i> Atualizar
             </button>
           </div>
@@ -901,23 +1068,31 @@
         <div class="sub-tabs-bar" id="subTabsBar">
           <button type="button" class="sub-tab-pill active" data-sub="verde" onclick="trocarSubInscritos('verde')">
             <span class="sub-dot" style="background-color: #24a764;"></span>
-            <strong>Sub Verde</strong>
-            <small>Abraão & Sara</small>
+            <div>
+              <strong>Sub Verde</strong>
+              <small>Abraão & Sara</small>
+            </div>
           </button>
           <button type="button" class="sub-tab-pill" data-sub="vermelho" onclick="trocarSubInscritos('vermelho')">
             <span class="sub-dot" style="background-color: #e8333e;"></span>
-            <strong>Sub Vermelho</strong>
-            <small>Kadmiel & Bia</small>
+            <div>
+              <strong>Sub Vermelho</strong>
+              <small>Kadmiel & Bia</small>
+            </div>
           </button>
           <button type="button" class="sub-tab-pill" data-sub="amarelo" onclick="trocarSubInscritos('amarelo')">
             <span class="sub-dot" style="background-color: #eab308;"></span>
-            <strong>Sub Amarelo</strong>
-            <small>Mateus & Gabriely</small>
+            <div>
+              <strong>Sub Amarelo</strong>
+              <small>Mateus & Gabriely</small>
+            </div>
           </button>
           <button type="button" class="sub-tab-pill" data-sub="laranja" onclick="trocarSubInscritos('laranja')">
             <span class="sub-dot" style="background-color: #f97316;"></span>
-            <strong>Sub Laranja</strong>
-            <small>Alan & Kallyne</small>
+            <div>
+              <strong>Sub Laranja</strong>
+              <small>Alan & Kallyne</small>
+            </div>
           </button>
         </div>
 
@@ -961,7 +1136,7 @@
                 <th>Contato</th>
                 <th>Camisa</th>
                 <th>Status do Cadastro</th>
-                <th style="text-align: right;">Ações</th>
+                <th style="text-align: right; min-width: 220px;">Ações</th>
               </tr>
             </thead>
             <tbody id="tbodyInscritosSub">
@@ -1059,86 +1234,184 @@
   </div>
 
   <!-- MODAL DE DETALHES E EDIÇÃO DO INSCRITO POR SUB -->
-  <dialog class="modal-detail" id="modalInscritoSub" style="max-width: 560px;">
+  <dialog class="modal-detail" id="modalInscritoSub" style="max-width: 620px; width: 95%; max-height: 88vh; overflow-y: auto; margin: auto; padding: 24px;">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
       <div>
         <h3 id="modalInscritoNome" style="margin: 0; font-family: 'Archivo Black', sans-serif; color: var(--blue-dark); font-size: 1.25rem;">Nome do Inscrito</h3>
-        <span id="modalInscritoSubBadge" class="badge-status" style="margin-top: 4px;">Sub</span>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
+          <span id="modalInscritoSubBadge" class="badge-status" style="margin: 0;">Sub</span>
+          <span id="modalInscritoStatusBadge" style="font-size: .8rem; font-weight: 700;">-</span>
+        </div>
       </div>
-      <button type="button" onclick="fecharModalInscrito()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer; color: var(--muted);">×</button>
+      <button type="button" onclick="fecharModalInscrito()" style="border: 0; background: none; font-size: 1.6rem; cursor: pointer; color: var(--muted); line-height: 1;">×</button>
     </div>
 
-    <div style="text-align: center; margin-bottom: 18px;">
-      <div class="photo-preview-large" id="modalFotoWrapper">
+    <!-- FOTO & PREVIEW -->
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div class="photo-preview-large" id="modalFotoWrapper" style="margin: 0 auto 6px;">
         <i class="fa-solid fa-user" style="font-size: 3rem; color: var(--muted);"></i>
       </div>
       <span id="modalFotoLabel" style="font-size: .8rem; color: var(--muted); font-weight: 600;">Foto não enviada</span>
     </div>
 
-    <div style="background: rgba(148, 163, 184, 0.08); border-radius: 12px; padding: 14px; margin-bottom: 18px; font-size: .88rem; line-height: 1.6;">
-      <div><strong>E-mail:</strong> <span id="modalInscritoEmail">-</span></div>
-      <div><strong>WhatsApp:</strong> <span id="modalInscritoWhatsapp">-</span></div>
-      <div><strong>Status do Cadastro:</strong> <span id="modalInscritoStatusBadge">-</span></div>
-      <div style="font-size: .78rem; color: var(--muted); margin-top: 4px;"><strong>Data de Inscrição:</strong> <span id="modalInscritoData">-</span></div>
-    </div>
-
-    <!-- FORMULÁRIO DE EDIÇÃO RÁPIDA -->
+    <!-- FORMULÁRIO DE EDIÇÃO COMPLETA -->
     <form id="formEditarInscrito" onsubmit="salvarEdicaoInscrito(event)">
       <input type="hidden" id="editInscritoId">
 
-      <div style="margin-bottom: 14px;">
-        <label for="editInscritoSub" style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Sub Equipe:</label>
-        <select id="editInscritoSub" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-weight: 600;">
-          <option value="Verde">Sub Verde</option>
-          <option value="Vermelho">Sub Vermelho</option>
-          <option value="Amarelo">Sub Amarelo</option>
-          <option value="Laranja">Sub Laranja</option>
-          <option value="">(Sem Sub / Desassociar)</option>
-        </select>
-        <small style="color: var(--muted); font-size: .75rem; display: block; margin-top: 4px;">Permite transferir o inscrito de Sub ou desassociar, com histórico preservado.</small>
+      <!-- NOME COMPLETO -->
+      <div style="margin-bottom: 12px;">
+        <label for="editInscritoNome" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+          <i class="fa-solid fa-user" style="color: var(--blue); margin-right: 4px;"></i> Nome Completo:
+        </label>
+        <input type="text" id="editInscritoNome" required placeholder="Nome e sobrenome" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-weight: 600; font-family: inherit; font-size: .9rem; box-sizing: border-box;">
       </div>
 
-      <div style="margin-bottom: 14px;">
-        <label for="editInscritoTamanhoCamisa" style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Tamanho da Camisa:</label>
-        <select id="editInscritoTamanhoCamisa" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink);">
-          <option value="">Selecione o tamanho...</option>
-          <option value="PP">PP</option>
-          <option value="P">P</option>
-          <option value="M">M</option>
-          <option value="G">G</option>
-          <option value="GG">GG</option>
-          <option value="XG">XG</option>
-          <option value="XXG">XXG</option>
-          <option value="Sob medida">Sob medida</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom: 14px;">
-        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Foto do Inscrito (Privada / Segura):</label>
-        <div class="photo-upload-dropzone" onclick="document.getElementById('editInscritoFotoInput').click()">
-          <input type="file" id="editInscritoFotoInput" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleFotoSelecionada(this)">
-          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.6rem; color: var(--blue); margin-bottom: 6px;"></i>
-          <div style="font-weight: 600; font-size: .85rem;" id="lblUploadFotoPrompt">Clique para selecionar nova foto</div>
-          <small style="color: var(--muted);">Formatos aceitos: JPG, PNG ou WebP (máx. 5MB)</small>
+      <!-- CONTATO: WHATSAPP E E-MAIL -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label for="editInscritoWhatsapp" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-brands fa-whatsapp" style="color: #25D366; margin-right: 4px;"></i> WhatsApp / Contato:
+          </label>
+          <input type="tel" id="editInscritoWhatsapp" required placeholder="(83) 98888-8888" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .88rem; box-sizing: border-box;">
+        </div>
+        <div>
+          <label for="editInscritoEmail" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-solid fa-envelope" style="color: var(--blue); margin-right: 4px;"></i> E-mail:
+          </label>
+          <input type="email" id="editInscritoEmail" placeholder="email@exemplo.com" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .88rem; box-sizing: border-box;">
         </div>
       </div>
 
-      <div style="margin-bottom: 18px;">
-        <label for="editInscritoObservacoes" style="display: block; font-weight: 700; margin-bottom: 6px; font-size: .88rem;">Observações Administrativas:</label>
-        <textarea id="editInscritoObservacoes" rows="2" placeholder="Observações sobre tamanho, foto ou orientações da equipe..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .85rem;"></textarea>
+      <!-- SUB EQUIPE E MODELO DA CAMISA -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label for="editInscritoSub" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-solid fa-layer-group" style="color: var(--blue); margin-right: 4px;"></i> Sub Equipe:
+          </label>
+          <select id="editInscritoSub" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-weight: 600; font-family: inherit; font-size: .88rem; box-sizing: border-box;">
+            <option value="Verde">Sub Verde</option>
+            <option value="Vermelho">Sub Vermelho</option>
+            <option value="Amarelo">Sub Amarelo</option>
+            <option value="Laranja">Sub Laranja</option>
+            <option value="">(Sem Sub / Desassociar)</option>
+          </select>
+        </div>
+        <div>
+          <label for="editInscritoModeloCamisa" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-solid fa-shirt" style="color: var(--blue); margin-right: 4px;"></i> Modelo da Camisa:
+          </label>
+          <select id="editInscritoModeloCamisa" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .88rem; box-sizing: border-box;">
+            <option value="Tradicional">Tradicional</option>
+            <option value="Baby Look">Baby Look</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TAMANHO DA CAMISA E TALENTO/DOM -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label for="editInscritoTamanhoCamisa" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-solid fa-ruler" style="color: var(--blue); margin-right: 4px;"></i> Tamanho da Camisa:
+          </label>
+          <select id="editInscritoTamanhoCamisa" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .88rem; box-sizing: border-box;">
+            <option value="">Selecione o tamanho...</option>
+            <option value="PP">PP</option>
+            <option value="P">P</option>
+            <option value="M">M</option>
+            <option value="G">G</option>
+            <option value="GG">GG</option>
+            <option value="XG">XG</option>
+            <option value="XXG">XXG</option>
+            <option value="Sob medida">Sob medida</option>
+          </select>
+        </div>
+        <div>
+          <label for="editInscritoTalento" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+            <i class="fa-solid fa-star" style="color: #eab308; margin-right: 4px;"></i> Dom / Talento:
+          </label>
+          <input type="text" id="editInscritoTalento" placeholder="Ex: Violão, Canto, Apoio..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .88rem; box-sizing: border-box;">
+        </div>
+      </div>
+
+      <!-- CAMISA ADICIONAL (EXPANSÍVEL) -->
+      <div style="margin-bottom: 12px; background: rgba(148, 163, 184, 0.08); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .86rem; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="editInscritoQuerAdicional" onchange="document.getElementById('boxCamisaAdicional').style.display = this.checked ? 'grid' : 'none'">
+          <span>Deseja Camisa Adicional?</span>
+        </label>
+        <div id="boxCamisaAdicional" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+          <div>
+            <label for="editInscritoQtdAdicional" style="display: block; font-size: .78rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Quantidade:</label>
+            <input type="number" id="editInscritoQtdAdicional" min="1" max="10" value="1" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--ink); box-sizing: border-box;">
+          </div>
+          <div>
+            <label for="editInscritoTamAdicional" style="display: block; font-size: .78rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Tamanho:</label>
+            <select id="editInscritoTamAdicional" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--ink); box-sizing: border-box;">
+              <option value="">Selecione...</option>
+              <option value="PP">PP</option>
+              <option value="P">P</option>
+              <option value="M">M</option>
+              <option value="G">G</option>
+              <option value="GG">GG</option>
+              <option value="XG">XG</option>
+              <option value="XXG">XXG</option>
+              <option value="Sob medida">Sob medida</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOTO DO INSCRITO (DROPZONE SEGURO) -->
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+          <i class="fa-solid fa-camera" style="color: var(--blue); margin-right: 4px;"></i> Foto do Inscrito (Privada / Segura):
+        </label>
+        <div class="photo-upload-dropzone" onclick="document.getElementById('editInscritoFotoInput').click()">
+          <input type="file" id="editInscritoFotoInput" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleFotoSelecionada(this)">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.5rem; color: var(--blue); margin-bottom: 4px;"></i>
+          <div style="font-weight: 600; font-size: .84rem;" id="lblUploadFotoPrompt">Clique para selecionar nova foto</div>
+          <small style="color: var(--muted); font-size: .74rem;">Formatos aceitos: JPG, PNG ou WebP (máx. 5MB)</small>
+        </div>
+      </div>
+
+      <!-- OBSERVAÇÕES ADMINISTRATIVAS -->
+      <div style="margin-bottom: 16px;">
+        <label for="editInscritoObservacoes" style="display: block; font-weight: 700; margin-bottom: 5px; font-size: .86rem;">
+          <i class="fa-solid fa-note-sticky" style="color: var(--muted); margin-right: 4px;"></i> Observações Administrativas:
+        </label>
+        <textarea id="editInscritoObservacoes" rows="2" placeholder="Observações sobre tamanho, foto ou orientações da equipe..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card-bg); color: var(--ink); font-family: inherit; font-size: .85rem; box-sizing: border-box;"></textarea>
       </div>
 
       <div id="editInscritoFeedback" style="display: none; margin-bottom: 14px; font-weight: 700; font-size: .86rem;"></div>
 
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button type="button" class="button button-secondary" onclick="fecharModalInscrito()" style="min-height: 40px; font-size: .85rem;">
-          Cancelar
+      <!-- BOTÕES DE AÇÃO DO MODAL -->
+      <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <button type="button" class="button button-secondary" id="btnModalBaixarIndividual" onclick="baixarInscritoDoModal()" style="min-height: 40px; font-size: .84rem; border-color: #087df9; color: #087df9; display: inline-flex; align-items: center; gap: 6px;" title="Baixar Ficha (PDF) e Foto deste inscrito em arquivo ZIP">
+          <i class="fa-solid fa-file-zipper"></i> Baixar Ficha & Foto (ZIP)
         </button>
-        <button type="submit" class="button button-primary" id="btnSalvarInscrito" style="min-height: 40px; font-size: .85rem;">
-          <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
-        </button>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="button button-secondary" onclick="fecharModalInscrito()" style="min-height: 40px; font-size: .85rem;">
+            Cancelar
+          </button>
+          <button type="submit" class="button button-primary" id="btnSalvarInscrito" style="min-height: 40px; font-size: .85rem;">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+          </button>
+        </div>
       </div>
     </form>
+  </dialog>
+
+  <!-- MODAL DE PROGRESSO DO DOWNLOAD ZIP -->
+  <dialog class="modal-detail" id="modalDownloadProgress" style="max-width: 440px; width: 90%; text-align: center; border-radius: 16px; padding: 24px;">
+    <div style="margin-bottom: 16px;">
+      <i class="fa-solid fa-file-zipper" id="progressZipIcon" style="font-size: 2.6rem; color: var(--blue, #087df9); animation: pulse 1.5s infinite;"></i>
+    </div>
+    <h3 id="progressZipTitle" style="margin: 0 0 6px; font-family: 'Archivo Black', sans-serif; font-size: 1.2rem; color: var(--blue-dark);">Gerando Arquivo ZIP...</h3>
+    <p id="progressZipSub" style="margin: 0 0 16px; font-size: .84rem; color: var(--muted); line-height: 1.4;">Baixando fotos privadas e compilando fichas individuais em PDF</p>
+    <div style="background: rgba(148, 163, 184, 0.18); border-radius: 9999px; height: 10px; overflow: hidden; margin-bottom: 12px; width: 100%;">
+      <div id="progressZipBar" style="background: linear-gradient(90deg, #087df9, #24a764); height: 100%; width: 0%; transition: width 0.2s ease;"></div>
+    </div>
+    <div id="progressZipStatus" style="font-size: .82rem; font-weight: 600; color: var(--ink);">Iniciando compilação...</div>
   </dialog>
 
   <!-- MODAL DE DETALHES DE INSCRIÇÃO -->
@@ -3666,14 +3939,15 @@
     // ==============================================================================
     let subAtivo = "verde";
     let cacheInscritosSub = [];
+    let inscritoModalAtual = null;
     let fotoUploadBase64 = null;
     let fotoUploadMime = null;
 
     const SUB_CONFIG_FRONT = {
-      verde: { nome: "Verde", cor: "#24a764", coordenadores: "Abraão e Sara" },
-      vermelho: { nome: "Vermelho", cor: "#e8333e", coordenadores: "Kadmiel e Bia" },
-      amarelo: { nome: "Amarelo", cor: "#eab308", coordenadores: "Mateus e Gabriely" },
-      laranja: { nome: "Laranja", cor: "#f97316", coordenadores: "Alan e Kallyne" }
+      verde: { nome: "Verde", cor: "#24a764", rgb: [36, 167, 100], coordenadores: "Abraão e Sara" },
+      vermelho: { nome: "Vermelho", cor: "#e8333e", rgb: [232, 51, 62], coordenadores: "Kadmiel e Bia" },
+      amarelo: { nome: "Amarelo", cor: "#eab308", rgb: [217, 119, 6], coordenadores: "Mateus e Gabriely" },
+      laranja: { nome: "Laranja", cor: "#f97316", rgb: [249, 115, 22], coordenadores: "Alan e Kallyne" }
     };
 
     function escapeHtml(str) {
@@ -3684,6 +3958,494 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    function sanitizarNomePasta(nome) {
+      return String(nome || "Participante").replace(/[\\/:*?"<>|]/g, "_").trim() || "Participante";
+    }
+
+    function sanitizarNomeArquivo(nome) {
+      return String(nome || "Inscrito")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+        .trim()
+        .replace(/\s+/g, "_") || "Inscrito";
+    }
+
+    function salvarBlobLocal(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 200);
+    }
+
+    function mostrarProgressoDownload(titulo, status, perc) {
+      const modal = document.getElementById("modalDownloadProgress");
+      const titleEl = document.getElementById("progressZipTitle");
+      const statusEl = document.getElementById("progressZipStatus");
+      const barEl = document.getElementById("progressZipBar");
+
+      if (titleEl) titleEl.textContent = titulo;
+      if (statusEl) statusEl.textContent = status;
+      if (barEl) barEl.style.width = `${perc || 10}%`;
+
+      if (modal && typeof modal.showModal === "function" && !modal.open) {
+        modal.showModal();
+      }
+    }
+
+    function atualizarProgressoDownload(perc, status) {
+      const statusEl = document.getElementById("progressZipStatus");
+      const barEl = document.getElementById("progressZipBar");
+      if (statusEl && status) statusEl.textContent = status;
+      if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, perc))}%`;
+    }
+
+    function fecharProgressoDownload() {
+      const modal = document.getElementById("modalDownloadProgress");
+      if (modal && typeof modal.close === "function" && modal.open) {
+        modal.close();
+      }
+    }
+
+    async function obterFotoBlob(fotoUrl) {
+      if (!fotoUrl) return null;
+      try {
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+        const res = await fetch(fotoUrl, {
+          headers: {
+            "x-admin-token": token,
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (!res.ok) return null;
+        return await res.blob();
+      } catch (e) {
+        console.warn("[Foto Download] Erro ao carregar foto:", e.message);
+        return null;
+      }
+    }
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve) => {
+        if (!blob) return resolve(null);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function gerarFichaPDF(inscrito, subConfig, photoDataUrl) {
+      if (typeof window.jspdf === "undefined" || !window.jspdf.jsPDF) {
+        throw new Error("Biblioteca jsPDF não carregada no navegador.");
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+      const primaryColor = (subConfig && subConfig.rgb) || [2, 50, 132];
+
+      // Header Banner Oficial EJC
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(14, 12, 182, 26, 3, 3, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("EJC MONTE SIÃO — EQUIPE DO TRÂNSITO", 20, 21);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.text("FICHA OFICIAL DE INSCRIÇÃO INDIVIDUAL DO PARTICIPANTE", 20, 28);
+
+      // Sub pill no topo direito
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(138, 17, 52, 16, 2, 2, 'F');
+      doc.setTextColor(...primaryColor);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.text("SUB " + String(inscrito.sub || subConfig.nome || "").toUpperCase(), 164, 25, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text((subConfig && subConfig.coordenadores) ? subConfig.coordenadores : "EJC 2026", 164, 30, { align: "center" });
+
+      // 1. Card de Dados Pessoais & Contato
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 44, 130, 56, 2, 2, 'FD');
+
+      // Barra vertical de acento na cor do Sub
+      doc.setFillColor(...primaryColor);
+      doc.rect(14, 44, 3, 56, 'F');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("DADOS PESSOAIS & CONTATO", 22, 52);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      const nomeCortado = doc.splitTextToSize(inscrito.nome_completo || "Nome não informado", 116);
+      doc.text(nomeCortado[0], 22, 60);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+
+      const telLimpo = String(inscrito.whatsapp || "").replace(/\D/g, "");
+      const telFormatado = telLimpo.length === 11
+        ? `(${telLimpo.slice(0, 2)}) ${telLimpo.slice(2, 7)}-${telLimpo.slice(7)}`
+        : (inscrito.whatsapp || "Não informado");
+
+      doc.text("WhatsApp / Contato: " + telFormatado, 22, 69);
+      doc.text("E-mail: " + (inscrito.email || "Não informado"), 22, 76);
+
+      const dataFmt = inscrito.criado_em
+        ? new Date(inscrito.criado_em).toLocaleString("pt-BR")
+        : "Não informada";
+      doc.text("Data da Inscrição: " + dataFmt, 22, 83);
+      doc.text("Status do Cadastro: " + (inscrito.status_cadastro === 'completo' ? '✓ Completo (Camisa e Foto ok)' : '⚠️ Incompleto / Pendente'), 22, 90);
+
+      // Foto Frame (Lado direito)
+      doc.setDrawColor(203, 213, 225);
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(148, 44, 48, 56, 2, 2, 'FD');
+
+      let fotoEmbutidaOk = false;
+      if (photoDataUrl) {
+        try {
+          doc.addImage(photoDataUrl, 'JPEG', 149, 45, 46, 54, undefined, 'FAST');
+          fotoEmbutidaOk = true;
+        } catch (eImg) {
+          try {
+            doc.addImage(photoDataUrl, 'PNG', 149, 45, 46, 54, undefined, 'FAST');
+            fotoEmbutidaOk = true;
+          } catch (ePng) {
+            console.warn("[PDF] Não foi possível embutir imagem:", ePng.message);
+          }
+        }
+      }
+
+      if (!fotoEmbutidaOk) {
+        doc.setTextColor(100, 116, 139);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.text("FOTO DO PARTICIPANTE", 172, 69, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.text(photoDataUrl ? "(Arquivo anexado no ZIP)" : "(Foto não anexada)", 172, 75, { align: "center" });
+      }
+
+      // 2. Card de Vestuário & Logística
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 106, 182, 38, 2, 2, 'FD');
+      doc.setFillColor(...primaryColor);
+      doc.rect(14, 106, 3, 38, 'F');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("VESTUÁRIO & LOGÍSTICA (CAMISAS)", 22, 114);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Modelo da Camisa: " + (inscrito.modelo_camisa || "Tradicional"), 22, 123);
+      doc.text("Tamanho da Camisa: " + (inscrito.tamanho_camisa || "Não informado"), 22, 132);
+
+      const infoAdicional = inscrito.quer_camisa_adicional
+        ? `Sim (${inscrito.quantidade_camisas_adicionais || 1}x - Tam: ${inscrito.tamanho_camisa_adicional || '-'})`
+        : "Não solicitada";
+      doc.text("Camisa Adicional: " + infoAdicional, 105, 123);
+      doc.text("Dom / Talento: " + (inscrito.talento || "Nenhum informado"), 105, 132);
+
+      // 3. Card de Sub Equipe & Coordenação
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 150, 182, 36, 2, 2, 'FD');
+      doc.setFillColor(...primaryColor);
+      doc.rect(14, 150, 3, 36, 'F');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("SUB EQUIPE & COORDENAÇÃO", 22, 158);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Sub Equipe Oficial: Sub " + (inscrito.sub || "Sem Sub"), 22, 167);
+      doc.text("Casal Coordenador: " + ((subConfig && subConfig.coordenadores) || "Não informado"), 22, 175);
+
+      const statusPag = String(inscrito.pagamento_status || "pendente").toUpperCase();
+      doc.text("Status do Pagamento: " + statusPag, 105, 167);
+      doc.text("Forma de Pagamento: " + (inscrito.forma_pagamento ? inscrito.forma_pagamento.toUpperCase() : "PIX"), 105, 175);
+
+      // 4. Card de Observações Administrativas
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 192, 182, 34, 2, 2, 'FD');
+      doc.setFillColor(...primaryColor);
+      doc.rect(14, 192, 3, 34, 'F');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("OBSERVAÇÕES ADMINISTRATIVAS", 22, 200);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      const obsTexto = inscrito.observacoes ? String(inscrito.observacoes) : "Nenhuma observação registrada para este participante.";
+      const linhasObs = doc.splitTextToSize(obsTexto, 168);
+      doc.text(linhasObs.slice(0, 2), 22, 208);
+
+      // 5. Identificador & Auditoria
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 232, 182, 26, 2, 2, 'FD');
+      doc.setTextColor(148, 163, 184);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.text("ID Único da Inscrição (UUID): " + (inscrito.id || "N/A"), 20, 240);
+      doc.text("Caminho no Storage: " + (inscrito.foto_caminho || "Nenhum arquivo enviado"), 20, 246);
+      doc.text("Data de Emissão da Ficha: " + new Date().toLocaleString("pt-BR"), 20, 252);
+
+      // 6. Rodapé
+      doc.setDrawColor(203, 213, 225);
+      doc.line(14, 275, 196, 275);
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7.5);
+      doc.text("Portal Oficial do Trânsito EJC • IEAD Monte Sião", 14, 281);
+      doc.text("Documento Oficial • Ficha de Inscrição Completa", 196, 281, { align: "right" });
+
+      return doc.output("arraybuffer");
+    }
+
+    async function baixarInscritoIndividual(id) {
+      if (typeof JSZip === "undefined") {
+        alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
+        return;
+      }
+      let item = (Array.isArray(cacheInscritosSub) ? cacheInscritosSub : []).find(i => String(i.id) === String(id));
+      if (!item && typeof cacheGeralInscricoes !== "undefined" && Array.isArray(cacheGeralInscricoes)) {
+        item = cacheGeralInscricoes.find(i => String(i.id) === String(id));
+      }
+      if (!item) {
+        try {
+          const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+          const res = await fetch(`/api/admin/inscritos-dados?sub=todos`, {
+            headers: { "x-admin-token": token, "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const list = data.inscritos || [];
+            item = list.find(i => String(i.id) === String(id));
+          }
+        } catch (e) {}
+      }
+      if (!item) {
+        alert("Inscrito não encontrado para download.");
+        return;
+      }
+
+      mostrarProgressoDownload("Preparando Download Individual...", `Processando ficha e foto de ${item.nome_completo}...`, 25);
+
+      try {
+        const subKey = (item.sub || "verde").toLowerCase();
+        const subConfig = SUB_CONFIG_FRONT[subKey] || { nome: item.sub || "Geral", cor: "#087df9", rgb: [8, 125, 249] };
+
+        let photoBlob = null;
+        let photoDataUrl = null;
+        if (item.foto_url) {
+          atualizarProgressoDownload(45, "Baixando foto individual...");
+          photoBlob = await obterFotoBlob(item.foto_url);
+          if (photoBlob) {
+            photoDataUrl = await blobToDataUrl(photoBlob);
+          }
+        }
+
+        atualizarProgressoDownload(70, "Gerando ficha individual em PDF...");
+        const pdfBuf = await gerarFichaPDF(item, subConfig, photoDataUrl);
+
+        atualizarProgressoDownload(85, "Montando arquivo ZIP organizado...");
+        const zip = new JSZip();
+        const folderName = sanitizarNomePasta(item.nome_completo);
+        const subFolderName = "Sub " + sanitizarNomePasta(item.sub || subConfig.nome);
+        const rootPath = `Dados dos participantes/${subFolderName}/${folderName}`;
+
+        zip.file(`${rootPath}/Dados.pdf`, pdfBuf);
+
+        if (photoBlob) {
+          const ext = photoBlob.type === "image/png" ? "png" : (photoBlob.type === "image/webp" ? "webp" : "jpg");
+          zip.file(`${rootPath}/Imagem.${ext}`, photoBlob);
+        } else {
+          zip.file(`${rootPath}/Foto_Pendente.txt`, "Participante ainda não enviou a foto individual no sistema.");
+        }
+
+        atualizarProgressoDownload(95, "Compactando e disparando download...");
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+
+        fecharProgressoDownload();
+        const downloadName = `${sanitizarNomeArquivo(item.nome_completo)}_Ficha_e_Foto.zip`;
+        salvarBlobLocal(zipBlob, downloadName);
+      } catch (err) {
+        console.error("[Download Individual]", err);
+        fecharProgressoDownload();
+        alert("Erro ao gerar download individual: " + err.message);
+      }
+    }
+
+    function baixarInscritoDoModal() {
+      const inscricaoId = document.getElementById("editInscritoId").value;
+      if (inscricaoId) {
+        baixarInscritoIndividual(inscricaoId);
+      }
+    }
+
+    async function baixarZipSubAtual() {
+      if (typeof JSZip === "undefined") {
+        alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
+        return;
+      }
+      const subConfig = SUB_CONFIG_FRONT[subAtivo] || { nome: "Sub", cor: "#087df9", rgb: [8, 125, 249] };
+      const subNome = subConfig.nome;
+
+      mostrarProgressoDownload(`Baixando Sub ${subNome} (ZIP)...`, "Carregando relação de participantes...", 10);
+
+      try {
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+        const res = await fetch(`/api/admin/inscritos-dados?sub=${encodeURIComponent(subAtivo)}`, {
+          headers: { "x-admin-token": token, "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Falha ao obter lista do Sub");
+
+        const inscritos = data.inscritos || [];
+        if (inscritos.length === 0) {
+          fecharProgressoDownload();
+          alert(`Nenhum inscrito encontrado no Sub ${subNome} para download.`);
+          return;
+        }
+
+        const zip = new JSZip();
+        const total = inscritos.length;
+
+        for (let idx = 0; idx < total; idx++) {
+          const item = inscritos[idx];
+          const perc = Math.round(15 + ((idx + 1) / total) * 75);
+          atualizarProgressoDownload(perc, `Gerando ficha ${idx + 1} de ${total}: ${item.nome_completo}...`);
+
+          let photoBlob = null;
+          let photoDataUrl = null;
+          if (item.foto_url) {
+            photoBlob = await obterFotoBlob(item.foto_url);
+            if (photoBlob) photoDataUrl = await blobToDataUrl(photoBlob);
+          }
+
+          const pdfBuf = await gerarFichaPDF(item, subConfig, photoDataUrl);
+
+          const folderName = sanitizarNomePasta(item.nome_completo);
+          const rootPath = `Dados dos participantes/Sub ${sanitizarNomePasta(subNome)}/${folderName}`;
+
+          zip.file(`${rootPath}/Dados.pdf`, pdfBuf);
+          if (photoBlob) {
+            const ext = photoBlob.type === "image/png" ? "png" : (photoBlob.type === "image/webp" ? "webp" : "jpg");
+            zip.file(`${rootPath}/Imagem.${ext}`, photoBlob);
+          } else {
+            zip.file(`${rootPath}/Foto_Pendente.txt`, "Participante ainda não enviou a foto individual no sistema.");
+          }
+        }
+
+        atualizarProgressoDownload(95, "Compactando arquivo ZIP final...");
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        fecharProgressoDownload();
+
+        salvarBlobLocal(zipBlob, `Inscritos_Sub_${sanitizarNomeArquivo(subNome)}.zip`);
+      } catch (err) {
+        console.error("[Baixar Sub ZIP]", err);
+        fecharProgressoDownload();
+        alert("Erro ao gerar arquivo ZIP do Sub: " + err.message);
+      }
+    }
+
+    async function baixarZipTodosOsSubs() {
+      if (typeof JSZip === "undefined") {
+        alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
+        return;
+      }
+
+      mostrarProgressoDownload("Baixando Todos os Subs (ZIP)...", "Carregando lista completa de todos os participantes...", 10);
+
+      try {
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+        const res = await fetch(`/api/admin/inscritos-dados?sub=todos`, {
+          headers: { "x-admin-token": token, "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Falha ao obter lista completa");
+
+        const inscritos = data.inscritos || [];
+        if (inscritos.length === 0) {
+          fecharProgressoDownload();
+          alert("Nenhum inscrito encontrado para download.");
+          return;
+        }
+
+        const zip = new JSZip();
+        const total = inscritos.length;
+
+        for (let idx = 0; idx < total; idx++) {
+          const item = inscritos[idx];
+          const subKey = (item.sub || "verde").toLowerCase();
+          const subConfig = SUB_CONFIG_FRONT[subKey] || { nome: item.sub || "Geral", cor: "#087df9", rgb: [8, 125, 249] };
+
+          const perc = Math.round(15 + ((idx + 1) / total) * 75);
+          atualizarProgressoDownload(perc, `[Sub ${item.sub}] ${idx + 1} de ${total}: ${item.nome_completo}...`);
+
+          let photoBlob = null;
+          let photoDataUrl = null;
+          if (item.foto_url) {
+            photoBlob = await obterFotoBlob(item.foto_url);
+            if (photoBlob) photoDataUrl = await blobToDataUrl(photoBlob);
+          }
+
+          const pdfBuf = await gerarFichaPDF(item, subConfig, photoDataUrl);
+
+          const folderName = sanitizarNomePasta(item.nome_completo);
+          const subFolderName = "Sub " + sanitizarNomePasta(item.sub || subConfig.nome);
+          const rootPath = `Dados dos participantes/${subFolderName}/${folderName}`;
+
+          zip.file(`${rootPath}/Dados.pdf`, pdfBuf);
+          if (photoBlob) {
+            const ext = photoBlob.type === "image/png" ? "png" : (photoBlob.type === "image/webp" ? "webp" : "jpg");
+            zip.file(`${rootPath}/Imagem.${ext}`, photoBlob);
+          } else {
+            zip.file(`${rootPath}/Foto_Pendente.txt`, "Participante ainda não enviou a foto individual no sistema.");
+          }
+        }
+
+        atualizarProgressoDownload(95, "Compactando arquivo ZIP de todos os subs...");
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        fecharProgressoDownload();
+
+        salvarBlobLocal(zipBlob, `Inscritos_Todos_os_Subs_EJC.zip`);
+      } catch (err) {
+        console.error("[Baixar Todos Subs ZIP]", err);
+        fecharProgressoDownload();
+        alert("Erro ao gerar arquivo ZIP de todos os subs: " + err.message);
+      }
     }
 
     function trocarSubInscritos(subKey) {
@@ -3700,6 +4462,13 @@
 
       const card = document.getElementById("cardTotalSub");
       if (card) card.style.borderLeftColor = SUB_CONFIG_FRONT[subKey].cor;
+
+      const lblZip = document.getElementById("lblBtnZipSubNome");
+      if (lblZip) lblZip.textContent = SUB_CONFIG_FRONT[subKey].nome;
+      const btnZip = document.getElementById("btnDownloadZipSub");
+      if (btnZip) {
+        btnZip.style.borderColor = SUB_CONFIG_FRONT[subKey].cor;
+      }
 
       // Limpa campo de busca ao trocar de Sub
       const searchInput = document.getElementById("searchInscritosSub");
@@ -3841,12 +4610,15 @@
             </td>
             <td>
               <strong style="color: var(--blue-dark); font-size: .9rem;">${escapeHtml(item.tamanho_camisa || 'Não informada')}</strong>
-              <div style="font-size: .75rem; color: var(--muted);">${escapeHtml(item.modelo_camisa || 'Tradicional')}</div>
+              <div style="font-size: .75rem; color: var(--muted);">${escapeHtml(item.modelo_camisa || 'Tradicional')}${item.quer_camisa_adicional ? ` (+${item.quantidade_camisas_adicionais} ${escapeHtml(item.tamanho_camisa_adicional || '')})` : ''}</div>
             </td>
             <td>${badgeHtml}</td>
-            <td style="text-align: right;">
-              <button type="button" class="action-btn" onclick="abrirModalInscrito('${item.id}')" title="Ver perfil e editar cadastro complementar">
-                <i class="fa-solid fa-eye"></i> Ver / Editar
+            <td style="text-align: right; white-space: nowrap;">
+              <button type="button" class="action-btn" onclick="abrirModalInscrito('${item.id}')" title="Ver perfil e editar cadastro completo">
+                <i class="fa-solid fa-pen-to-square"></i> Ver / Editar
+              </button>
+              <button type="button" class="action-btn" onclick="baixarInscritoIndividual('${item.id}')" title="Baixar Ficha (PDF) e Foto deste participante em ZIP" style="margin-left: 6px; color: var(--blue, #087df9); border-color: rgba(8, 125, 249, 0.3);">
+                <i class="fa-solid fa-file-arrow-down"></i> Ficha & Foto
               </button>
             </td>
           </tr>
@@ -3855,18 +4627,20 @@
     }
 
     function abrirModalInscrito(id) {
-      const item = cacheInscritosSub.find(i => i.id === id);
+      const list = (window.cacheInscritosSub && window.cacheInscritosSub.length) ? window.cacheInscritosSub : cacheInscritosSub;
+      const item = list.find(i => String(i.id) === String(id));
       if (!item) return;
 
+      inscritoModalAtual = item;
       fotoUploadBase64 = null;
       fotoUploadMime = null;
 
       const modal = document.getElementById("modalInscritoSub");
-      document.getElementById("modalInscritoNome").textContent = item.nome_completo;
+      document.getElementById("modalInscritoNome").textContent = item.nome_completo || "Participante";
 
       const subBadge = document.getElementById("modalInscritoSubBadge");
       if (subBadge) {
-        subBadge.textContent = `Sub ${item.sub}`;
+        subBadge.textContent = `Sub ${item.sub || 'Geral'}`;
         subBadge.className = `badge-status completo`;
         const cor = (SUB_CONFIG_FRONT[(item.sub || "").toLowerCase()] || {}).cor || "#087df9";
         subBadge.style.background = `${cor}22`;
@@ -3874,30 +4648,11 @@
         subBadge.style.borderColor = `${cor}55`;
       }
 
-      document.getElementById("modalInscritoEmail").textContent = item.email || "Não informado";
-
-      const telLimpo = String(item.whatsapp || "").replace(/\D/g, "");
-      const wppSpan = document.getElementById("modalInscritoWhatsapp");
-      if (wppSpan) {
-        if (telLimpo) {
-          wppSpan.innerHTML = `<a href="https://wa.me/55${telLimpo}" target="_blank" style="color: #25D366; font-weight: 700; text-decoration: none;"><i class="fa-brands fa-whatsapp"></i> (${telLimpo.slice(0, 2)}) ${telLimpo.slice(2, 7)}-${telLimpo.slice(7)}</a>`;
-        } else {
-          wppSpan.textContent = "Não informado";
-        }
-      }
-
       const statusSpan = document.getElementById("modalInscritoStatusBadge");
       if (statusSpan) {
         statusSpan.innerHTML = item.status_cadastro === "completo"
           ? `<span style="color: #10b981; font-weight: 700;">✓ Cadastro Completo</span>`
-          : `<span style="color: #f59e0b; font-weight: 700;">⚠️ Cadastro Incompleto (foto ou camisa pendente)</span>`;
-      }
-
-      const dataSpan = document.getElementById("modalInscritoData");
-      if (dataSpan) {
-        dataSpan.textContent = item.criado_em
-          ? new Date(item.criado_em).toLocaleString("pt-BR")
-          : "-";
+          : `<span style="color: #f59e0b; font-weight: 700;">⚠️ Cadastro Incompleto</span>`;
       }
 
       const wrapper = document.getElementById("modalFotoWrapper");
@@ -3912,11 +4667,27 @@
         }
       }
 
-      // Preenche formulário de edição
+      // Preenche formulário completo de edição
       document.getElementById("editInscritoId").value = item.id;
+      document.getElementById("editInscritoNome").value = item.nome_completo || "";
+      document.getElementById("editInscritoWhatsapp").value = item.whatsapp || "";
+      document.getElementById("editInscritoEmail").value = item.email || "";
+
       const subSelect = document.getElementById("editInscritoSub");
       if (subSelect) subSelect.value = item.sub || "";
+
+      const modSelect = document.getElementById("editInscritoModeloCamisa");
+      if (modSelect) modSelect.value = item.modelo_camisa || "Tradicional";
+
       document.getElementById("editInscritoTamanhoCamisa").value = item.tamanho_camisa || "";
+      document.getElementById("editInscritoTalento").value = item.talento || "";
+
+      const querAdicional = Boolean(item.quer_camisa_adicional);
+      document.getElementById("editInscritoQuerAdicional").checked = querAdicional;
+      document.getElementById("boxCamisaAdicional").style.display = querAdicional ? "grid" : "none";
+      document.getElementById("editInscritoQtdAdicional").value = item.quantidade_camisas_adicionais || 1;
+      document.getElementById("editInscritoTamAdicional").value = item.tamanho_camisa_adicional || "";
+
       document.getElementById("editInscritoObservacoes").value = item.observacoes || "";
 
       // Limpa upload input e prompt
@@ -3928,12 +4699,14 @@
       const fb = document.getElementById("editInscritoFeedback");
       if (fb) fb.style.display = "none";
 
-      if (modal) modal.showModal();
+      if (modal && typeof modal.showModal === "function") {
+        modal.showModal();
+      }
     }
 
     function fecharModalInscrito() {
       const modal = document.getElementById("modalInscritoSub");
-      if (modal) modal.close();
+      if (modal && typeof modal.close === "function") modal.close();
     }
 
     const modalInscritoEl = document.getElementById("modalInscritoSub");
@@ -3975,10 +4748,27 @@
       event.preventDefault();
 
       const inscricaoId = document.getElementById("editInscritoId").value;
+      const nomeCompleto = document.getElementById("editInscritoNome").value.trim();
+      const whatsapp = document.getElementById("editInscritoWhatsapp").value.trim();
+      const email = document.getElementById("editInscritoEmail").value.trim();
       const subEl = document.getElementById("editInscritoSub");
       const novaSub = subEl ? subEl.value : undefined;
+      const modeloCamisa = document.getElementById("editInscritoModeloCamisa").value;
       const tamanhoCamisa = document.getElementById("editInscritoTamanhoCamisa").value;
+      const talento = document.getElementById("editInscritoTalento").value.trim();
+      const querAdicional = document.getElementById("editInscritoQuerAdicional").checked;
+      const qtdAdicional = parseInt(document.getElementById("editInscritoQtdAdicional").value, 10) || 0;
+      const tamAdicional = document.getElementById("editInscritoTamAdicional").value;
       const observacoes = document.getElementById("editInscritoObservacoes").value;
+
+      if (!nomeCompleto) {
+        alert("O nome completo é obrigatório.");
+        return;
+      }
+      if (!whatsapp) {
+        alert("O WhatsApp / contato é obrigatório.");
+        return;
+      }
 
       const btn = document.getElementById("btnSalvarInscrito");
       const fb = document.getElementById("editInscritoFeedback");
@@ -4016,7 +4806,7 @@
           novaFotoCaminho = photoData.foto_caminho;
         }
 
-        // 2. Atualiza dados complementares (sub, tamanho camisa, observações)
+        // 2. Atualiza todos os dados do inscrito via API
         const updateRes = await fetch("/api/admin/inscritos-dados", {
           method: "PATCH",
           headers: {
@@ -4026,8 +4816,16 @@
           },
           body: JSON.stringify({
             inscricao_id: inscricaoId,
+            nome_completo: nomeCompleto,
+            whatsapp: whatsapp,
+            email: email,
             sub: novaSub !== undefined ? (novaSub || null) : undefined,
+            modelo_camisa: modeloCamisa,
             tamanho_camisa: tamanhoCamisa || null,
+            quer_camisa_adicional: querAdicional,
+            quantidade_camisas_adicionais: querAdicional ? qtdAdicional : 0,
+            tamanho_camisa_adicional: querAdicional ? (tamAdicional || null) : null,
+            talento: talento || null,
             foto_caminho: novaFotoCaminho,
             observacoes: observacoes || null
           })
@@ -4049,7 +4847,7 @@
           fecharModalInscrito();
           carregarSubAtivo(true);
           carregarDados();
-        }, 800);
+        }, 700);
       } catch (err) {
         console.error("[Salvar Inscrito]", err);
         if (fb) {

@@ -56,32 +56,36 @@ module.exports = async (req, res) => {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i";
 
   // ---------------------------------------------------------------------------
-  // GET: LISTAR INSCRITOS DE UM SUB COM CONTADORES E DADOS COMPLEMENTARES
+  // GET: LISTAR INSCRITOS DE UM SUB OU DE TODOS COM CONTADORES E DADOS COMPLEMENTARES
   // ---------------------------------------------------------------------------
   if (req.method === "GET") {
     const rawSub = String(req.query.sub || "").trim().toLowerCase();
     if (!rawSub) {
-      return res.status(400).json({ error: "Parâmetro 'sub' é obrigatório. Valores aceitos: verde, vermelho, amarelo, laranja." });
+      return res.status(400).json({ error: "Parâmetro 'sub' é obrigatório. Valores aceitos: verde, vermelho, amarelo, laranja ou todos." });
     }
 
-    const subConfig = VALID_SUBS[rawSub];
-    if (!subConfig) {
-      return res.status(400).json({ error: "Sub inválido. Valores aceitos: Verde, Vermelho, Amarelo, Laranja." });
+    const isAll = (rawSub === "all" || rawSub === "todos" || rawSub === "*");
+    const subConfig = !isAll ? VALID_SUBS[rawSub] : null;
+    if (!isAll && !subConfig) {
+      return res.status(400).json({ error: "Sub inválido. Valores aceitos: Verde, Vermelho, Amarelo, Laranja ou todos." });
     }
 
-    const officialSubName = subConfig.nome;
+    const officialSubName = subConfig ? subConfig.nome : "Todos";
 
     try {
-      // 1. Busca inscrições ativas do Sub na tabela principal
+      // 1. Busca inscrições ativas (do Sub ou de todos) na tabela principal
       let inscricoes = [];
       try {
-        const subQuery = (rawSub === "laranja")
-          ? `or=(sub.eq.Laranja,sub.eq.Azul)`
-          : `sub=eq.${encodeURIComponent(officialSubName)}`;
+        let subQuery = "";
+        if (!isAll) {
+          subQuery = (rawSub === "laranja")
+            ? `&or=(sub.eq.Laranja,sub.eq.Azul)`
+            : `&sub=eq.${encodeURIComponent(officialSubName)}`;
+        }
         inscricoes = await sbFetch(
           baseUrl,
           key,
-          `inscricoes?select=*&${subQuery}&arquivado=is.false&order=nome_completo.asc`
+          `inscricoes?select=*${subQuery}&arquivado=is.false&order=sub.asc,nome_completo.asc`
         );
       } catch (err) {
         console.warn("[Inscritos Dados API] Falha na consulta direta ao banco:", err.message);
@@ -89,8 +93,10 @@ module.exports = async (req, res) => {
           const local = settingsStore.loadLocalStore();
           if (Array.isArray(local.inscricoes)) {
             inscricoes = local.inscricoes.filter(i => {
+              if (i.arquivado) return false;
+              if (isAll) return true;
               const s = String(i.sub || "").toLowerCase();
-              return (s === rawSub || (rawSub === "laranja" && s === "azul")) && !i.arquivado;
+              return (s === rawSub || (rawSub === "laranja" && s === "azul"));
             });
           }
         } catch (e) {}
@@ -136,6 +142,8 @@ module.exports = async (req, res) => {
           quer_camisa_adicional: Boolean(i.quer_camisa_adicional),
           quantidade_camisas_adicionais: i.quantidade_camisas_adicionais || 0,
           tamanho_camisa_adicional: i.tamanho_camisa_adicional || null,
+          modelo_camisa_adicional: i.modelo_camisa_adicional || null,
+          talento: i.talento || "",
           foto_caminho: fotoCaminho || null,
           foto_url: fotoUrl,
           has_foto: Boolean(fotoCaminho),
@@ -147,16 +155,17 @@ module.exports = async (req, res) => {
         };
       });
 
-      // 4. Contadores oficiais do Sub
+      // 4. Contadores oficiais do Sub ou Geral
       const total = inscritos.length;
       const completos = inscritos.filter(i => i.status_cadastro === "completo").length;
       const pendentes = total - completos;
 
       return res.status(200).json({
         success: true,
-        sub: officialSubName,
-        coordenadores: subConfig.coordenadores,
-        cor: subConfig.cor,
+        sub: isAll ? "Todos" : officialSubName,
+        all: isAll,
+        coordenadores: subConfig ? subConfig.coordenadores : "Todos os Coordenadores",
+        cor: subConfig ? subConfig.cor : "#087df9",
         stats: {
           total,
           completos,
@@ -171,10 +180,26 @@ module.exports = async (req, res) => {
   }
 
   // ---------------------------------------------------------------------------
-  // PATCH / POST: ATUALIZAR DADOS COMPLEMENTARES (CAMISA, FOTO, SUB, OBSERVAÇÕES)
+  // PATCH / POST: ATUALIZAR DADOS DO INSCRITO (NOME, EMAIL, CONTATO, CAMISA, SUB, FOTO, TALENTO, ETC.)
   // ---------------------------------------------------------------------------
   if (req.method === "PATCH" || req.method === "POST") {
-    const { inscricao_id, tamanho_camisa, foto_caminho, observacoes, sub, nova_sub } = req.body || {};
+    const {
+      inscricao_id,
+      nome_completo,
+      email,
+      whatsapp,
+      modelo_camisa,
+      tamanho_camisa,
+      quer_camisa_adicional,
+      quantidade_camisas_adicionais,
+      tamanho_camisa_adicional,
+      modelo_camisa_adicional,
+      talento,
+      foto_caminho,
+      observacoes,
+      sub,
+      nova_sub
+    } = req.body || {};
 
     if (!inscricao_id || typeof inscricao_id !== "string") {
       return res.status(400).json({ error: "ID da inscrição é obrigatório." });
@@ -184,7 +209,7 @@ module.exports = async (req, res) => {
       // 1. Verifica se a inscrição realmente existe (Supabase ou LocalStore fallback)
       let inscricaoBase = null;
       try {
-        const existing = await sbFetch(baseUrl, key, `inscricoes?id=eq.${inscricao_id}&select=id,nome_completo,sub,tamanho_camisa,foto_caminho`);
+        const existing = await sbFetch(baseUrl, key, `inscricoes?id=eq.${inscricao_id}&select=*`);
         if (Array.isArray(existing) && existing.length > 0) {
           inscricaoBase = existing[0];
         }
@@ -203,9 +228,15 @@ module.exports = async (req, res) => {
       if (!inscricaoBase) {
         return res.status(404).json({ error: "Inscrição não encontrada." });
       }
+
+      const novoNome = nome_completo !== undefined ? String(nome_completo).trim() : inscricaoBase.nome_completo;
+      const novoEmail = email !== undefined ? String(email).trim().toLowerCase() : (inscricaoBase.email || "");
+      const novoWhatsapp = whatsapp !== undefined ? String(whatsapp).trim() : inscricaoBase.whatsapp;
+      const novoModeloCamisa = modelo_camisa !== undefined ? String(modelo_camisa).trim() : (inscricaoBase.modelo_camisa || "Tradicional");
       const novoTamanho = tamanho_camisa !== undefined ? String(tamanho_camisa).trim() : inscricaoBase.tamanho_camisa;
       const novaFoto = foto_caminho !== undefined ? String(foto_caminho).trim() : inscricaoBase.foto_caminho;
-      const statusCalculado = (novoTamanho && novaFoto) ? "completo" : "incompleto";
+      const novoTalento = talento !== undefined ? String(talento).trim() : (inscricaoBase.talento || "");
+      const statusCalculado = (novoTamanho && novaFoto && novoNome && novoWhatsapp) ? "completo" : "incompleto";
 
       // 1.5 Tratamento e Normalização da Sub (Transferência ou Remoção de Sub)
       const targetSubRaw = sub !== undefined ? sub : nova_sub;
@@ -257,14 +288,20 @@ module.exports = async (req, res) => {
         // Se a tabela ainda não existir, prossegue com atualização na tabela inscricoes
       }
 
-      // 3. Atualiza campos sincronizados na tabela inscricoes (tamanho_camisa e sub)
+      // 3. Atualiza campos na tabela principal inscricoes
       const patchInscricaoBody = {};
-      if (tamanho_camisa !== undefined) {
-        patchInscricaoBody.tamanho_camisa = novoTamanho || inscricaoBase.tamanho_camisa;
-      }
-      if (subAlterada) {
-        patchInscricaoBody.sub = subFinal;
-      }
+      if (nome_completo !== undefined && novoNome) patchInscricaoBody.nome_completo = novoNome;
+      if (email !== undefined) patchInscricaoBody.email = novoEmail;
+      if (whatsapp !== undefined && novoWhatsapp) patchInscricaoBody.whatsapp = novoWhatsapp;
+      if (modelo_camisa !== undefined) patchInscricaoBody.modelo_camisa = novoModeloCamisa;
+      if (tamanho_camisa !== undefined) patchInscricaoBody.tamanho_camisa = novoTamanho || inscricaoBase.tamanho_camisa;
+      if (quer_camisa_adicional !== undefined) patchInscricaoBody.quer_camisa_adicional = Boolean(quer_camisa_adicional);
+      if (quantidade_camisas_adicionais !== undefined) patchInscricaoBody.quantidade_camisas_adicionais = Math.max(0, parseInt(quantidade_camisas_adicionais, 10) || 0);
+      if (tamanho_camisa_adicional !== undefined) patchInscricaoBody.tamanho_camisa_adicional = tamanho_camisa_adicional ? String(tamanho_camisa_adicional).trim() : null;
+      if (modelo_camisa_adicional !== undefined) patchInscricaoBody.modelo_camisa_adicional = modelo_camisa_adicional ? String(modelo_camisa_adicional).trim() : null;
+      if (talento !== undefined) patchInscricaoBody.talento = novoTalento || null;
+      if (foto_caminho !== undefined && novaFoto) patchInscricaoBody.foto_caminho = novaFoto;
+      if (subAlterada) patchInscricaoBody.sub = subFinal;
 
       if (Object.keys(patchInscricaoBody).length > 0) {
         try {
@@ -274,6 +311,7 @@ module.exports = async (req, res) => {
           });
         } catch (e) {
           console.warn("[Inscritos Dados API] Erro ao atualizar inscricao:", e.message);
+          return res.status(500).json({ error: "Erro ao salvar dados no banco: " + e.message });
         }
       }
 
@@ -283,31 +321,34 @@ module.exports = async (req, res) => {
         if (Array.isArray(local.inscricoes)) {
           const idx = local.inscricoes.findIndex(i => i.id === inscricao_id);
           if (idx !== -1) {
-            if (tamanho_camisa !== undefined) local.inscricoes[idx].tamanho_camisa = novoTamanho;
-            if (subAlterada) local.inscricoes[idx].sub = subFinal;
-            if (novaFoto) local.inscricoes[idx].foto_caminho = novaFoto;
+            Object.assign(local.inscricoes[idx], patchInscricaoBody);
             local.inscricoes[idx].atualizado_em = new Date().toISOString();
             settingsStore.saveLocalStore(local);
           }
         }
       } catch (eStore) {}
 
-      // 5. Trilha de auditoria administrativa caso a Sub tenha sido alterada
-      if (subAlterada) {
+      // 5. Trilha de auditoria administrativa caso dados críticos tenham sido alterados
+      const camposAlterados = [];
+      if (novoNome !== inscricaoBase.nome_completo) camposAlterados.push(`nome: "${inscricaoBase.nome_completo}" -> "${novoNome}"`);
+      if (novoWhatsapp !== inscricaoBase.whatsapp) camposAlterados.push(`whatsapp: "${inscricaoBase.whatsapp}" -> "${novoWhatsapp}"`);
+      if (novoEmail !== (inscricaoBase.email || "")) camposAlterados.push(`email: "${inscricaoBase.email || ''}" -> "${novoEmail}"`);
+      if (subAlterada) camposAlterados.push(`sub: "${inscricaoBase.sub || 'Sem Sub'}" -> "${subFinal || 'Sem Sub'}"`);
+      if (novoTamanho !== inscricaoBase.tamanho_camisa) camposAlterados.push(`camisa: "${inscricaoBase.tamanho_camisa}" -> "${novoTamanho}"`);
+
+      if (camposAlterados.length > 0) {
         try {
           await sbFetch(baseUrl, key, "auditoria_transacoes", {
             method: "POST",
             body: {
-              transacao_id: `sub-transfer-${Date.now()}`,
-              acao: "SUB_TRANSFERRED",
+              transacao_id: `edit-inscrito-${Date.now()}`,
+              acao: subAlterada ? "SUB_TRANSFERRED" : "INSCRITO_EDITADO",
               status_anterior: inscricaoBase.sub || "Sem Sub",
               status_novo: subFinal || "Sem Sub",
               executado_por: auth.label || "admin",
               detalhes: {
                 inscricao_id,
-                nome_completo: inscricaoBase.nome_completo,
-                sub_anterior: inscricaoBase.sub || "Sem Sub",
-                sub_novo: subFinal || "Sem Sub",
+                alteracoes: camposAlterados.join(", "),
                 data: new Date().toISOString()
               }
             }
@@ -320,9 +361,17 @@ module.exports = async (req, res) => {
         message: "Dados do inscrito atualizados com sucesso.",
         item: {
           inscricao_id,
+          nome_completo: novoNome,
+          email: novoEmail,
+          whatsapp: novoWhatsapp,
           sub: subFinal,
           sub_alterada: subAlterada,
+          modelo_camisa: novoModeloCamisa,
           tamanho_camisa: novoTamanho,
+          quer_camisa_adicional: patchInscricaoBody.quer_camisa_adicional,
+          quantidade_camisas_adicionais: patchInscricaoBody.quantidade_camisas_adicionais,
+          tamanho_camisa_adicional: patchInscricaoBody.tamanho_camisa_adicional,
+          talento: novoTalento,
           foto_caminho: novaFoto,
           status_cadastro: statusCalculado,
           observacoes: payload.observacoes
@@ -330,7 +379,7 @@ module.exports = async (req, res) => {
       });
     } catch (err) {
       console.error("[Inscritos Dados API] Erro ao salvar dados:", err.message);
-      return res.status(500).json({ error: "Erro interno ao atualizar dados do inscrito." });
+      return res.status(500).json({ error: "Erro interno ao atualizar dados do inscrito: " + err.message });
     }
   }
 
