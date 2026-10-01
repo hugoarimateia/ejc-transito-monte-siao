@@ -39,7 +39,7 @@ function isPagamentoConfirmado(status) {
 // Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas e PAGAS
 function calcularContagensOficiais(localStore) {
   const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-  const capacities = { Verde: 70, Vermelho: 70, Amarelo: 70, Laranja: 70 };
+  const capacities = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
   
   // Mapa de pessoas únicas: identificador único -> sub
   // Fonte Única: apenas inscrições não arquivadas (arquivado = false) e com pagamento confirmado
@@ -212,13 +212,13 @@ module.exports = async (req, res) => {
       localStore.inscricoes = [];
     }
 
-    // Valida capacidade máxima de 70 vagas confirmadas para a Sub
+    // Valida capacidade máxima de 85 vagas confirmadas para a Sub
     const { counts: currentCounts } = calcularContagensOficiais(localStore);
     const existingIndex = localStore.inscricoes.findIndex(i => normalizarTelefone(i.whatsapp) === whatsapp);
-    if ((currentCounts[sub] || 0) >= 70 && existingIndex < 0) {
+    if ((currentCounts[sub] || 0) >= 85 && existingIndex < 0) {
       return res.status(400).json({
         success: false,
-        error: `Limite máximo de 70 vagas atingido para a Sub ${sub}. Por favor, escolha outra Sub.`
+        error: `Limite máximo de 85 vagas atingido para a Sub ${sub}. Por favor, escolha outra Sub.`
       });
     }
 

@@ -291,7 +291,7 @@ async function updateSubCounts() {
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;
-    const capacity = Number(button.dataset.capacity || 70);
+    const capacity = Number(button.dataset.capacity || 85);
     const current = Number(counts[sub] || 0);
     const countEl = document.querySelector(`[data-count-for="${sub}"]`);
     const progressEl = document.querySelector(`[data-progress-for="${sub}"]`);
