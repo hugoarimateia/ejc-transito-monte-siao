@@ -26,3 +26,33 @@ window.EJC_WHATSAPP_SUBS = window.EJC_WHATSAPP_SUBS || {
   "Laranja": "",
   "Geral": ""
 };
+
+// ==============================================================================
+// 4. CUTOVER E ESTRATÉGIA DE ROLLBACK CENTRALIZADO (ETAPA 1C)
+// Modo "supabase": consome as Supabase Edge Functions homologadas
+// Modo "vercel": reverte instantaneamente para as Serverless Functions legadas (/api/*)
+// ==============================================================================
+window.EJC_BACKEND_MODE = window.EJC_BACKEND_MODE || "supabase";
+
+window.EJC_ENDPOINTS = {
+  config: function() {
+    return window.EJC_BACKEND_MODE === "supabase"
+      ? "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/public-config"
+      : "/api/config";
+  },
+  subCounts: function() {
+    return window.EJC_BACKEND_MODE === "supabase"
+      ? "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/sub-counts"
+      : "/api/sub-counts";
+  },
+  whatsapp: function(token) {
+    const base = window.EJC_BACKEND_MODE === "supabase"
+      ? "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/whatsapp"
+      : "/api/whatsapp";
+    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  },
+  r2PresignedUrl: function() {
+    return "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/r2-presigned-url";
+  }
+};
+

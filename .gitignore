@@ -12,6 +12,8 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.r2
+.env*
 *.env
 
 # Generated Environment in build

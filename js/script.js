@@ -236,17 +236,18 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
   });
 }
 
-// Contagem unificada de vagas por Sub (Fonte Única Centralizada)
 let latestCountRequestId = 0;
 
 async function updateSubCounts() {
   const currentRequestId = ++latestCountRequestId;
   let counts = null;
+  let capacities = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
   let remoteLoaded = false;
 
-  // 1. Consulta o endpoint central oficial com anti-cache estrito
+  // 1. Consulta o endpoint central oficial com anti-cache estrito (suporte a Edge Functions e Rollback)
   try {
-    const res = await fetch(`/api/sub-counts?_t=${Date.now()}`, {
+    const scEndpoint = window.EJC_ENDPOINTS.subCounts();
+    const res = await fetch(`${scEndpoint}?_t=${Date.now()}`, {
       headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
       cache: "no-store"
     });
@@ -254,11 +255,14 @@ async function updateSubCounts() {
       const data = await res.json();
       if (data && data.success && data.counts) {
         counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0, ...data.counts };
+        if (data.capacities) {
+          capacities = { ...capacities, ...data.capacities };
+        }
         remoteLoaded = true;
       }
     }
   } catch (errApi) {
-    console.warn("[updateSubCounts] Falha ao consultar /api/sub-counts:", errApi);
+    console.warn("[updateSubCounts] Falha ao consultar endpoint de contagens:", errApi);
   }
 
   // 2. Se a API não respondeu e Supabase estiver configurado, tenta Supabase
@@ -291,7 +295,7 @@ async function updateSubCounts() {
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;
-    const capacity = Number(button.dataset.capacity || 85);
+    const capacity = Number((capacities && capacities[sub]) || button.dataset.capacity || 85);
     const current = Number(counts[sub] || 0);
     const countEl = document.querySelector(`[data-count-for="${sub}"]`);
     const progressEl = document.querySelector(`[data-progress-for="${sub}"]`);
@@ -339,6 +343,72 @@ async function uploadFile(folder, file) {
     .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
   if (error) throw new Error(error.message);
   return path;
+}
+
+// Helpers para upload de foto de participantes direto para Cloudflare R2
+async function obterPresignedUrlFotoR2(sub, file) {
+  const endpoint = window.EJC_ENDPOINTS?.r2PresignedUrl
+    ? window.EJC_ENDPOINTS.r2PresignedUrl()
+    : "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/r2-presigned-url";
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "get_upload_url",
+      sub: sub,
+      extension: ext,
+      mimeType: file.type || "image/jpeg"
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success || !data.uploadUrl || !data.storageKey) {
+    throw new Error(data.error || "Não foi possível obter autorização para envio da foto para o R2.");
+  }
+
+  return data;
+}
+
+async function uploadFotoDiretoR2(uploadUrl, file) {
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type || "image/jpeg"
+    },
+    body: file
+  });
+
+  if (!res.ok) {
+    throw new Error(`Falha no upload direto para Cloudflare R2: HTTP ${res.status}`);
+  }
+
+  return true;
+}
+
+async function cleanupFotoR2(storageKey, cleanupToken) {
+  if (!storageKey || !cleanupToken) return;
+  const endpoint = window.EJC_ENDPOINTS?.r2PresignedUrl
+    ? window.EJC_ENDPOINTS.r2PresignedUrl()
+    : "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/r2-presigned-url";
+
+  try {
+    await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "cleanup",
+        storageKey,
+        cleanupToken
+      })
+    });
+  } catch (err) {
+    console.warn("[Cleanup R2] Erro na tentativa de cleanup:", err);
+  }
 }
 
 // Submissão do Formulário com Fallback Resiliente
@@ -414,6 +484,7 @@ if (signupForm) {
 
     // 1. Tenta envio pelo Supabase se disponível
     if (supabaseClient) {
+      let r2UploadData = null;
       try {
         const { data: canRegister } = await supabaseClient.rpc("pode_realizar_inscricao", {
           p_nome_completo: normalizedName,
@@ -426,7 +497,22 @@ if (signupForm) {
           return;
         }
 
-        photoPath = await uploadFile(`participantes/${chosenSub.toLowerCase()}`, photo);
+        // Upload de Foto de Participante: Direto para Cloudflare R2 via Presigned URL
+        try {
+          setFeedback("Obtendo autorização segura de envio de foto...", "loading");
+          r2UploadData = await obterPresignedUrlFotoR2(chosenSub, photo);
+
+          setFeedback("Enviando foto para armazenamento seguro...", "loading");
+          await uploadFotoDiretoR2(r2UploadData.uploadUrl, photo);
+          photoPath = r2UploadData.storageKey;
+        } catch (r2Err) {
+          console.error("[Signup] Erro no upload R2:", r2Err);
+          setFeedback(`Erro no envio da foto: ${r2Err.message || "Falha no armazenamento seguro."}`, "error");
+          if (submitSignup) submitSignup.disabled = false;
+          return;
+        }
+
+        // Upload de Comprovante: Supabase Storage inalterado
         if (paymentReported && paymentMethod === "pix" && proof instanceof File && proof.size) {
           proofPath = await uploadFile(`comprovantes/${chosenSub.toLowerCase()}`, proof);
         }
@@ -450,6 +536,17 @@ if (signupForm) {
           p_justificativa_pagamento: String(formData.get("justificativa_pagamento") || "").trim() || null,
           p_observacao_pagamento: paymentObservation
         });
+
+        if (insertError) {
+          // CONSISTÊNCIA / CLEANUP (PARTE 6): RPC falhou após upload no R2
+          console.warn("[Signup] RPC falhou após upload no R2. Acionando cleanup imediato:", insertError.message);
+          if (r2UploadData?.storageKey && r2UploadData?.cleanupToken) {
+            await cleanupFotoR2(r2UploadData.storageKey, r2UploadData.cleanupToken).catch(err => {
+              console.error("[Signup] Falha no cleanup do R2:", err);
+            });
+          }
+          throw new Error(insertError.message);
+        }
 
         if (!insertError) {
           registrationSuccess = true;
@@ -611,7 +708,7 @@ if (signupForm) {
           whatsappGroupButton.style.pointerEvents = "auto";
           whatsappGroupButton.style.opacity = "1";
         } else if (tokenAcessoParam) {
-          whatsappGroupButton.href = `/api/whatsapp?token=${encodeURIComponent(tokenAcessoParam)}`;
+          whatsappGroupButton.href = window.EJC_ENDPOINTS.whatsapp(tokenAcessoParam);
           whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
           whatsappGroupButton.style.pointerEvents = "auto";
           whatsappGroupButton.style.opacity = "1";
@@ -818,7 +915,9 @@ function carregarConfiguracaoPublica() {
     headers["x-client-version"] = String(window.EJC_ACTIVE_VERSION);
   }
 
-  fetch(`/api/config?_t=${Date.now()}`, {
+  const cfgEndpoint = window.EJC_ENDPOINTS.config();
+
+  fetch(`${cfgEndpoint}?_t=${Date.now()}`, {
     cache: "no-store",
     headers: headers
   })
@@ -828,7 +927,7 @@ function carregarConfiguracaoPublica() {
         aplicarConfiguracaoNaPagina(data);
       }
     })
-    .catch(err => console.warn("[Config Publica] Erro ao carregar /api/config:", err));
+    .catch(err => console.warn("[Config Publica] Erro ao carregar configuração:", err));
 }
 
 // Ouvinte para atualização em tempo real entre abas no mesmo navegador
@@ -900,18 +999,36 @@ if (btnSubmitContributionCheckout) {
   });
 }
 
+// Sincronização dinâmica de links do WhatsApp com base na configuração central
+function sincronizarLinksWhatsApp() {
+  if (!window.EJC_ENDPOINTS || typeof window.EJC_ENDPOINTS.whatsapp !== "function") return;
+  const defaultHref = window.EJC_ENDPOINTS.whatsapp();
+  document.querySelectorAll('a[data-whatsapp-target="geral"], .whatsapp-float, .nav-cta, #whatsapp-group-button').forEach(el => {
+    const currentHref = el.getAttribute("href");
+    if (!currentHref || currentHref === "#" || currentHref.includes("/api/whatsapp") || currentHref.includes("/functions/v1/whatsapp")) {
+      el.href = defaultHref;
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", sincronizarLinksWhatsApp);
+} else {
+  sincronizarLinksWhatsApp();
+}
+
 // Garantidor dinâmico e resiliente de redirecionamento para o Grupo Geral do WhatsApp
 document.addEventListener("click", (e) => {
   const target = e.target.closest('[data-whatsapp-target="geral"], .whatsapp-float, .nav-cta');
   if (!target || target.id === "whatsapp-group-button") return;
   const currentHref = target.getAttribute("href");
-  if (!currentHref || currentHref === "#" || currentHref.trim() === "") {
+  if (!currentHref || currentHref === "#" || currentHref.trim() === "" || currentHref.includes("/api/whatsapp") || currentHref.includes("/functions/v1/whatsapp")) {
     e.preventDefault();
     const liveGeral = (window.EJC_WHATSAPP_SUBS && (window.EJC_WHATSAPP_SUBS["Geral"] || window.EJC_WHATSAPP_SUBS["geral"])) || "";
     if (liveGeral && liveGeral.startsWith("http")) {
       window.open(liveGeral, "_blank", "noopener,noreferrer");
     } else {
-      window.open("/api/whatsapp", "_blank", "noopener,noreferrer");
+      window.open(window.EJC_ENDPOINTS.whatsapp(), "_blank", "noopener,noreferrer");
     }
   }
 });
