@@ -113,6 +113,12 @@
       height: 100%;
       object-fit: cover;
     }
+    .inscrito-avatar-thumb.avatar-lazy-placeholder:hover {
+      background: rgba(8, 125, 249, 0.22) !important;
+      border-color: var(--blue, #087df9) !important;
+      transform: scale(1.08);
+      box-shadow: 0 2px 8px rgba(8, 125, 249, 0.25);
+    }
     .badge-status {
       display: inline-flex;
       align-items: center;
@@ -2233,7 +2239,13 @@
         <p><strong>Status do Pagamento:</strong> <span class="status-badge status-${item.pagamento_status}">${item.pagamento_status}</span></p>
         <p><strong>Forma Informada:</strong> ${item.forma_pagamento || '-'}</p>
         ${item.justificativa_pagamento ? `<p><strong>Justificativa/Obs:</strong> ${item.justificativa_pagamento}</p>` : ''}
-        ${item.foto_caminho ? `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${item.foto_url || item.foto_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>` : ''}
+        ${(() => {
+          if (!item.foto_caminho && !item.foto_url) return '';
+          const ref = item.foto_url || item.foto_caminho;
+          const res = typeof resolverFotoParticipante === "function" ? resolverFotoParticipante(ref, item.sub) : null;
+          const href = (res && (res.primaryUrl || res.fallbackUrl)) || ref;
+          return `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${href}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>`;
+        })()}
         ${item.comprovante_caminho ? `<div style="margin-top: 10px;"><strong>Comprovante de Pagamento:</strong><br><a href="${item.comprovante_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver comprovante anexo</a></div>` : ''}
       `;
       document.getElementById("detailModal").showModal();
@@ -4015,22 +4027,190 @@
       }
     }
 
-    async function obterFotoBlob(fotoUrl) {
-      if (!fotoUrl) return null;
-      try {
-        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
-        const res = await fetch(fotoUrl, {
-          headers: {
-            "x-admin-token": token,
-            "Authorization": `Bearer ${token}`
+    // ==============================================================================
+    // RESOLUÇÃO DE FOTOS — CLOUDFLARE R2 (ORIGEM PRINCIPAL) COM SUPABASE (FALLBACK)
+    // ETAPA R2.6 — CUTOVER CONTROLADO DE LEITURA
+    // Garante ZERO persistência em disco/localStorage e ZERO download duplicado
+    // ==============================================================================
+    const R2_FOTOS_DOMAIN = "https://fotos.transitoejc.site";
+    const SUPABASE_STORAGE_FOTOS_BASE = "https://guppedddwnuvluhiaaas.supabase.co/storage/v1/object/public/fotos";
+
+    const adminPhotoBlobCache = new Map(); // cacheKey -> Blob
+    const adminPhotoObjectUrlCache = new Map(); // cacheKey -> objectUrl (blob:...)
+    const adminPhotoPendingRequests = new Map(); // cacheKey -> Promise<Blob>
+
+    /**
+     * Normaliza e extrai a chave canônica do Cloudflare R2 (ex: participantes/verde/uuid.jpg).
+     * Retorna null para objetos não migrados (comprovantes, fotos privadas, etc).
+     */
+    function extrairChaveR2Participante(referencia, sub) {
+      if (!referencia || typeof referencia !== "string") return null;
+      let str = referencia.trim();
+
+      // 1. Se vier como rota assinada de proxy: /api/admin/inscritos-foto?path=participantes%2F...
+      if (str.includes("/inscritos-foto") || str.includes("path=")) {
+        try {
+          const urlObj = new URL(str, "https://dummy.local");
+          const pathParam = urlObj.searchParams.get("path");
+          if (pathParam) {
+            str = decodeURIComponent(pathParam).trim();
           }
-        });
-        if (!res.ok) return null;
-        return await res.blob();
-      } catch (e) {
-        console.warn("[Foto Download] Erro ao carregar foto:", e.message);
-        return null;
+        } catch (e) {
+          const match = str.match(/[?&]path=([^&]+)/);
+          if (match) str = decodeURIComponent(match[1]).trim();
+        }
       }
+
+      // 2. Se vier como URL completa do Supabase Storage
+      if (str.includes("/storage/v1/object/public/fotos/")) {
+        str = str.split("/storage/v1/object/public/fotos/")[1] || "";
+      } else if (str.includes("/fotos/participantes/")) {
+        str = str.split("/fotos/")[1] || "";
+      }
+
+      // 3. Remove barras iniciais e query strings residuais
+      str = str.replace(/^\/+/, "").split("?")[0].trim();
+
+      // 4. Se começar com "participantes/<sub_ou_cor>/<arquivo>"
+      const matchParticipante = str.match(/^participantes\/([^/]+)\/(.+\.(?:jpg|jpeg|png|webp|gif|jfif|avif))$/i);
+      if (matchParticipante) {
+        const corOuSub = matchParticipante[1].toLowerCase();
+        const arquivo = matchParticipante[2];
+        const subsValidas = ["verde", "vermelho", "amarelo", "laranja", "azul"];
+        if (subsValidas.includes(corOuSub)) {
+          const subNormalizada = corOuSub === "azul" ? "laranja" : corOuSub;
+          return `participantes/${subNormalizada}/${arquivo}`;
+        }
+        return `participantes/${corOuSub}/${arquivo}`;
+      }
+
+      // 5. Se for apenas o nome do arquivo e o sub for fornecido
+      if (sub && !str.includes("/")) {
+        const subClean = String(sub).toLowerCase().trim();
+        const subNormalizada = subClean === "azul" ? "laranja" : subClean;
+        if (/\.(?:jpg|jpeg|png|webp|gif|jfif|avif)$/i.test(str)) {
+          return `participantes/${subNormalizada}/${str}`;
+        }
+      }
+
+      return null;
+    }
+
+    /**
+     * Helper centralizado para resolver a foto do participante.
+     * Retorna URL primária (R2) para fotos migradas e URL de fallback (Supabase).
+     */
+    function resolverFotoParticipante(referencia, sub) {
+      const r2Key = extrairChaveR2Participante(referencia, sub);
+
+      if (r2Key) {
+        const r2Url = `${R2_FOTOS_DOMAIN}/${r2Key}`;
+        let fallbackUrl = typeof referencia === "string" && referencia.startsWith("http")
+          ? referencia
+          : (typeof referencia === "string" && referencia.startsWith("/api")
+              ? referencia
+              : `${SUPABASE_STORAGE_FOTOS_BASE}/${r2Key}`);
+
+        return {
+          isMigratedCandidate: true,
+          r2Key,
+          primaryUrl: r2Url,
+          fallbackUrl
+        };
+      }
+
+      let fallbackUrl = referencia;
+      if (referencia && typeof referencia === "string" && !referencia.startsWith("http") && !referencia.startsWith("/")) {
+        fallbackUrl = `${SUPABASE_STORAGE_FOTOS_BASE}/${referencia.replace(/^\/+/, "")}`;
+      }
+
+      return {
+        isMigratedCandidate: false,
+        r2Key: null,
+        primaryUrl: fallbackUrl,
+        fallbackUrl
+      };
+    }
+
+    async function obterFotoBlob(fotoUrl, sub) {
+      if (!fotoUrl) return null;
+
+      const resolution = resolverFotoParticipante(fotoUrl, sub);
+      const cacheKey = resolution.r2Key || fotoUrl;
+
+      // 1. Reutiliza da memória da sessão se já foi baixado (Zero novo download)
+      if (adminPhotoBlobCache.has(cacheKey)) {
+        return adminPhotoBlobCache.get(cacheKey);
+      }
+      if (adminPhotoBlobCache.has(fotoUrl)) {
+        return adminPhotoBlobCache.get(fotoUrl);
+      }
+
+      // 2. Se já existe uma requisição em andamento para esta mesma foto, aguarda a mesma Promise
+      if (adminPhotoPendingRequests.has(cacheKey)) {
+        return await adminPhotoPendingRequests.get(cacheKey);
+      }
+
+      // 3. Dispara requisição única controlada (R2 como principal, Supabase como fallback)
+      const fetchPromise = (async () => {
+        try {
+          // A) Tentativa R2 (Origem principal para fotos de participantes migradas)
+          if (resolution.isMigratedCandidate && resolution.primaryUrl) {
+            try {
+              const resR2 = await fetch(resolution.primaryUrl);
+              if (resR2.ok) {
+                const blob = await resR2.blob();
+                adminPhotoBlobCache.set(cacheKey, blob);
+                adminPhotoBlobCache.set(fotoUrl, blob);
+                const objUrl = URL.createObjectURL(blob);
+                adminPhotoObjectUrlCache.set(cacheKey, objUrl);
+                adminPhotoObjectUrlCache.set(fotoUrl, objUrl);
+                return blob;
+              }
+              console.warn(`[R2 Fallback] Foto não encontrada no R2 (${resR2.status}). Acionando fallback Supabase...`);
+            } catch (r2Err) {
+              console.warn(`[R2 Fallback] Erro de rede ao conectar no R2 (${r2Err.message}). Acionando fallback Supabase...`);
+            }
+          }
+
+          // B) Fallback Supabase Storage (Preservado integralmente)
+          if (resolution.fallbackUrl) {
+            const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+            const headers = {};
+            if (token) {
+              headers["x-admin-token"] = token;
+              headers["Authorization"] = `Bearer ${token}`;
+            }
+            const resSupa = await fetch(resolution.fallbackUrl, { headers });
+            if (resSupa.ok) {
+              const blob = await resSupa.blob();
+              adminPhotoBlobCache.set(cacheKey, blob);
+              adminPhotoBlobCache.set(fotoUrl, blob);
+              const objUrl = URL.createObjectURL(blob);
+              adminPhotoObjectUrlCache.set(cacheKey, objUrl);
+              adminPhotoObjectUrlCache.set(fotoUrl, objUrl);
+              return blob;
+            }
+          }
+
+          return null;
+        } catch (e) {
+          console.warn("[Foto Download] Falha ao carregar foto por todas as origens:", e.message);
+          return null;
+        } finally {
+          adminPhotoPendingRequests.delete(cacheKey);
+        }
+      })();
+
+      adminPhotoPendingRequests.set(cacheKey, fetchPromise);
+      return await fetchPromise;
+    }
+
+    function obterFotoObjectUrl(fotoUrl, sub) {
+      if (!fotoUrl) return null;
+      const resolution = resolverFotoParticipante(fotoUrl, sub);
+      const cacheKey = resolution.r2Key || fotoUrl;
+      return adminPhotoObjectUrlCache.get(cacheKey) || adminPhotoObjectUrlCache.get(fotoUrl) || null;
     }
 
     function blobToDataUrl(blob) {
@@ -4231,11 +4411,19 @@
       return doc.output("arraybuffer");
     }
 
+    // Flag de controle de concorrência para exportações ZIP
+    let isZipProcessing = false;
+
     async function baixarInscritoIndividual(id) {
+      if (isZipProcessing) {
+        alert("Já existe uma operação de download ou geração de ZIP em andamento. Aguarde a conclusão.");
+        return;
+      }
       if (typeof JSZip === "undefined") {
         alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
         return;
       }
+      isZipProcessing = true;
       let item = (Array.isArray(cacheInscritosSub) ? cacheInscritosSub : []).find(i => String(i.id) === String(id));
       if (!item && typeof cacheGeralInscricoes !== "undefined" && Array.isArray(cacheGeralInscricoes)) {
         item = cacheGeralInscricoes.find(i => String(i.id) === String(id));
@@ -4254,6 +4442,7 @@
         } catch (e) {}
       }
       if (!item) {
+        isZipProcessing = false;
         alert("Inscrito não encontrado para download.");
         return;
       }
@@ -4266,9 +4455,10 @@
 
         let photoBlob = null;
         let photoDataUrl = null;
-        if (item.foto_url) {
-          atualizarProgressoDownload(45, "Baixando foto individual...");
-          photoBlob = await obterFotoBlob(item.foto_url);
+        const fotoRef = item.foto_url || item.foto_caminho;
+        if (fotoRef) {
+          atualizarProgressoDownload(45, "Obtendo foto individual...");
+          photoBlob = await obterFotoBlob(fotoRef, item.sub);
           if (photoBlob) {
             photoDataUrl = await blobToDataUrl(photoBlob);
           }
@@ -4295,13 +4485,14 @@
         atualizarProgressoDownload(95, "Compactando e disparando download...");
         const zipBlob = await zip.generateAsync({ type: "blob" });
 
-        fecharProgressoDownload();
         const downloadName = `${sanitizarNomeArquivo(item.nome_completo)}_Ficha_e_Foto.zip`;
         salvarBlobLocal(zipBlob, downloadName);
       } catch (err) {
         console.error("[Download Individual]", err);
-        fecharProgressoDownload();
         alert("Erro ao gerar download individual: " + err.message);
+      } finally {
+        fecharProgressoDownload();
+        isZipProcessing = false;
       }
     }
 
@@ -4313,10 +4504,21 @@
     }
 
     async function baixarZipSubAtual() {
+      if (isZipProcessing) {
+        alert("Já existe uma operação de download ou geração de ZIP em andamento. Aguarde a conclusão.");
+        return;
+      }
       if (typeof JSZip === "undefined") {
         alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
         return;
       }
+
+      isZipProcessing = true;
+      const btnSub = document.getElementById("btnDownloadZipSub");
+      const btnTodos = document.getElementById("btnDownloadZipTodos");
+      if (btnSub) { btnSub.disabled = true; btnSub.style.opacity = "0.5"; }
+      if (btnTodos) { btnTodos.disabled = true; btnTodos.style.opacity = "0.5"; }
+
       const subConfig = SUB_CONFIG_FRONT[subAtivo] || { nome: "Sub", cor: "#087df9", rgb: [8, 125, 249] };
       const subNome = subConfig.nome;
 
@@ -4333,7 +4535,6 @@
 
         const inscritos = data.inscritos || [];
         if (inscritos.length === 0) {
-          fecharProgressoDownload();
           alert(`Nenhum inscrito encontrado no Sub ${subNome} para download.`);
           return;
         }
@@ -4348,8 +4549,9 @@
 
           let photoBlob = null;
           let photoDataUrl = null;
-          if (item.foto_url) {
-            photoBlob = await obterFotoBlob(item.foto_url);
+          const fotoRef = item.foto_url || item.foto_caminho;
+          if (fotoRef) {
+            photoBlob = await obterFotoBlob(fotoRef, item.sub);
             if (photoBlob) photoDataUrl = await blobToDataUrl(photoBlob);
           }
 
@@ -4369,21 +4571,34 @@
 
         atualizarProgressoDownload(95, "Compactando arquivo ZIP final...");
         const zipBlob = await zip.generateAsync({ type: "blob" });
-        fecharProgressoDownload();
 
         salvarBlobLocal(zipBlob, `Inscritos_Sub_${sanitizarNomeArquivo(subNome)}.zip`);
       } catch (err) {
         console.error("[Baixar Sub ZIP]", err);
-        fecharProgressoDownload();
         alert("Erro ao gerar arquivo ZIP do Sub: " + err.message);
+      } finally {
+        fecharProgressoDownload();
+        isZipProcessing = false;
+        if (btnSub) { btnSub.disabled = false; btnSub.style.opacity = "1"; }
+        if (btnTodos) { btnTodos.disabled = false; btnTodos.style.opacity = "1"; }
       }
     }
 
     async function baixarZipTodosOsSubs() {
+      if (isZipProcessing) {
+        alert("Já existe uma operação de download ou geração de ZIP em andamento. Aguarde a conclusão.");
+        return;
+      }
       if (typeof JSZip === "undefined") {
         alert("Biblioteca de compressão ZIP ainda inicializando. Aguarde 2 segundos e tente novamente.");
         return;
       }
+
+      isZipProcessing = true;
+      const btnSub = document.getElementById("btnDownloadZipSub");
+      const btnTodos = document.getElementById("btnDownloadZipTodos");
+      if (btnSub) { btnSub.disabled = true; btnSub.style.opacity = "0.5"; }
+      if (btnTodos) { btnTodos.disabled = true; btnTodos.style.opacity = "0.5"; }
 
       mostrarProgressoDownload("Baixando Todos os Subs (ZIP)...", "Carregando lista completa de todos os participantes...", 10);
 
@@ -4398,7 +4613,6 @@
 
         const inscritos = data.inscritos || [];
         if (inscritos.length === 0) {
-          fecharProgressoDownload();
           alert("Nenhum inscrito encontrado para download.");
           return;
         }
@@ -4416,8 +4630,9 @@
 
           let photoBlob = null;
           let photoDataUrl = null;
-          if (item.foto_url) {
-            photoBlob = await obterFotoBlob(item.foto_url);
+          const fotoRef = item.foto_url || item.foto_caminho;
+          if (fotoRef) {
+            photoBlob = await obterFotoBlob(fotoRef, item.sub);
             if (photoBlob) photoDataUrl = await blobToDataUrl(photoBlob);
           }
 
@@ -4438,13 +4653,16 @@
 
         atualizarProgressoDownload(95, "Compactando arquivo ZIP de todos os subs...");
         const zipBlob = await zip.generateAsync({ type: "blob" });
-        fecharProgressoDownload();
 
         salvarBlobLocal(zipBlob, `Inscritos_Todos_os_Subs_EJC.zip`);
       } catch (err) {
         console.error("[Baixar Todos Subs ZIP]", err);
-        fecharProgressoDownload();
         alert("Erro ao gerar arquivo ZIP de todos os subs: " + err.message);
+      } finally {
+        fecharProgressoDownload();
+        isZipProcessing = false;
+        if (btnSub) { btnSub.disabled = false; btnSub.style.opacity = "1"; }
+        if (btnTodos) { btnTodos.disabled = false; btnTodos.style.opacity = "1"; }
       }
     }
 
@@ -4585,13 +4803,31 @@
           ? new Date(item.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
           : "-";
 
-        const fotoHtml = item.foto_url
-          ? `<div class="inscrito-avatar-thumb">
-               <img src="${item.foto_url}" alt="${escapeHtml(item.nome_completo)}" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\'></i>';">
-             </div>`
-          : `<div class="inscrito-avatar-thumb" title="Foto não enviada">
-               <i class="fa-solid fa-user"></i>
-             </div>`;
+        let fotoHtml = '';
+        const fotoRef = item.foto_url || item.foto_caminho;
+        if (fotoRef) {
+          const cachedUrl = typeof obterFotoObjectUrl === "function" ? obterFotoObjectUrl(fotoRef, item.sub) : null;
+          if (cachedUrl) {
+            fotoHtml = `
+              <div class="inscrito-avatar-thumb" title="Clique para ver detalhes" onclick="abrirModalInscrito('${item.id}')" style="cursor: pointer;">
+                <img src="${cachedUrl}" alt="${escapeHtml(item.nome_completo)}">
+              </div>`;
+          } else {
+            fotoHtml = `
+              <div class="inscrito-avatar-thumb avatar-lazy-placeholder" 
+                   id="thumb_avatar_${item.id}"
+                   onclick="carregarFotoThumbnail('${item.id}', event)" 
+                   title="Foto enviada. Clique para visualizar" 
+                   style="cursor: pointer; background: rgba(8, 125, 249, 0.1); color: var(--blue, #087df9); border: 1.5px dashed var(--blue, #087df9);">
+                <i class="fa-solid fa-camera" style="font-size: .95rem;"></i>
+              </div>`;
+          }
+        } else {
+          fotoHtml = `
+            <div class="inscrito-avatar-thumb" title="Foto não enviada" style="background: rgba(148, 163, 184, 0.15); color: var(--muted); border: 1.5px solid var(--border);">
+              <i class="fa-solid fa-user"></i>
+            </div>`;
+        }
 
         const badgeHtml = item.status_cadastro === "completo"
           ? `<span class="badge-status completo"><i class="fa-solid fa-circle-check"></i> Completo</span>`
@@ -4626,6 +4862,33 @@
       }).join("");
     }
 
+    window.carregarFotoThumbnail = async function(id, event) {
+      if (event) event.stopPropagation();
+      const list = (window.cacheInscritosSub && window.cacheInscritosSub.length) ? window.cacheInscritosSub : cacheInscritosSub;
+      const item = list.find(i => String(i.id) === String(id));
+      if (!item) return;
+      const fotoRef = item.foto_url || item.foto_caminho;
+      if (!fotoRef) return;
+
+      const thumbElem = document.getElementById(`thumb_avatar_${id}`);
+      if (thumbElem) {
+        thumbElem.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size: .9rem;"></i>`;
+      }
+
+      await obterFotoBlob(fotoRef, item.sub);
+      const objUrl = typeof obterFotoObjectUrl === "function" ? obterFotoObjectUrl(fotoRef, item.sub) : null;
+
+      if (thumbElem && objUrl) {
+        thumbElem.style.border = "2px solid var(--border)";
+        thumbElem.style.background = "transparent";
+        thumbElem.setAttribute("onclick", `abrirModalInscrito('${item.id}')`);
+        thumbElem.setAttribute("title", "Clique para ver detalhes");
+        thumbElem.innerHTML = `<img src="${objUrl}" alt="${escapeHtml(item.nome_completo)}" style="width: 100%; height: 100%; object-fit: cover;">`;
+      } else if (thumbElem) {
+        thumbElem.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444; font-size: .9rem;" title="Erro ao carregar"></i>`;
+      }
+    };
+
     function abrirModalInscrito(id) {
       const list = (window.cacheInscritosSub && window.cacheInscritosSub.length) ? window.cacheInscritosSub : cacheInscritosSub;
       const item = list.find(i => String(i.id) === String(id));
@@ -4658,9 +4921,36 @@
       const wrapper = document.getElementById("modalFotoWrapper");
       const label = document.getElementById("modalFotoLabel");
       if (wrapper && label) {
-        if (item.foto_url) {
-          wrapper.innerHTML = `<img src="${item.foto_url}" alt="${escapeHtml(item.nome_completo)}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'font-size: 3rem; color: var(--muted);\\'></i>';">`;
-          label.textContent = "Foto Cadastrada";
+        const fotoRef = item.foto_url || item.foto_caminho;
+        if (fotoRef) {
+          const cachedUrl = typeof obterFotoObjectUrl === "function" ? obterFotoObjectUrl(fotoRef, item.sub) : null;
+          if (cachedUrl) {
+            wrapper.innerHTML = `<img src="${cachedUrl}" alt="${escapeHtml(item.nome_completo)}" style="max-height: 240px; border-radius: 8px; object-fit: cover;">`;
+            label.textContent = "Foto Cadastrada (Sessão)";
+          } else {
+            wrapper.innerHTML = `
+              <div style="padding: 24px; text-align: center; color: var(--blue, #087df9);">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
+                <small style="color: var(--muted); font-size: .8rem;">Carregando imagem sob demanda...</small>
+              </div>`;
+            label.textContent = "Carregando foto...";
+            obterFotoBlob(fotoRef, item.sub).then(blob => {
+              const url = typeof obterFotoObjectUrl === "function" ? obterFotoObjectUrl(fotoRef, item.sub) : null;
+              if (url && inscritoModalAtual && String(inscritoModalAtual.id) === String(item.id)) {
+                wrapper.innerHTML = `<img src="${url}" alt="${escapeHtml(item.nome_completo)}" style="max-height: 240px; border-radius: 8px; object-fit: cover;">`;
+                label.textContent = "Foto Cadastrada";
+                const tElem = document.getElementById(`thumb_avatar_${item.id}`);
+                if (tElem) {
+                  tElem.style.border = "2px solid var(--border)";
+                  tElem.style.background = "transparent";
+                  tElem.innerHTML = `<img src="${url}" alt="${escapeHtml(item.nome_completo)}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+              } else if (!url && inscritoModalAtual && String(inscritoModalAtual.id) === String(item.id)) {
+                wrapper.innerHTML = `<i class="fa-solid fa-user" style="font-size: 3rem; color: var(--muted);"></i>`;
+                label.textContent = "Erro ao carregar foto";
+              }
+            });
+          }
         } else {
           wrapper.innerHTML = `<i class="fa-solid fa-user" style="font-size: 3rem; color: var(--muted);"></i>`;
           label.textContent = "Foto não enviada";
