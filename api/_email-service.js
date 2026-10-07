@@ -959,6 +959,64 @@ async function sendManualProofReceivedEmail({ paymentRecord }) {
 async function sendAdminManualProofAlertEmail({ paymentRecord, comprovanteUrl }) {
   if (!paymentRecord) return { success: false, error: "Registro ausente." };
 
+  const flag = (process.env.EMAIL_SEND_EMAIL_ADMIN_MANUAL_PROOF_ALERT || "OFF").trim().toUpperCase();
+
+  // ----------------------------------------------------------------------------
+  // NOVO CAMINHO CANÁRIO: SUPABASE EDGE FUNCTION send-email
+  // Ativado estritamente quando a feature flag for 'ON'
+  // ----------------------------------------------------------------------------
+  if (flag === "ON") {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://guppedddwnuvluhiaaas.supabase.co";
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const cleanBaseUrl = String(supabaseUrl).replace(/\/+$/, "");
+
+    try {
+      const response = await fetch(`${cleanBaseUrl}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceKey}`
+        },
+        body: JSON.stringify({
+          event_type: "admin_manual_proof_alert",
+          txid: paymentRecord.txid,
+          proof_url: comprovanteUrl || paymentRecord.comprovante_caminho || paymentRecord.metadata?.comprovante_url
+        }),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          messageId: data.message_id,
+          already_sent: Boolean(data.already_sent),
+          edge_send_email: true
+        };
+      }
+
+      console.warn(`[send-email CANARY] Erro no envio via Edge Function (HTTP ${response.status}):`, data.error || data);
+      // REGRA CRÍTICA DE IDEMPOTÊNCIA: nunca chamar legado após possível envio/falha ambígua
+      return {
+        success: false,
+        error: data.error || `Edge send-email HTTP ${response.status}`,
+        edge_send_email: true
+      };
+    } catch (err) {
+      console.error("[send-email CANARY] Exceção de rede/timeout na Edge Function:", err.message);
+      // Resposta ambígua: nunca chamar legado para evitar duplo envio
+      return {
+        success: false,
+        error: `Edge send-email network error: ${err.message}`,
+        edge_send_email: true
+      };
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // CAMINHO LEGADO (PRESERVADO INTACTO — ATIVO SE FLAG != 'ON')
+  // ----------------------------------------------------------------------------
   const adminEmail = brevoProvider.getAdminEmail();
   if (!adminEmail) return { success: false, error: "E-mail do administrador não configurado." };
 

@@ -229,32 +229,38 @@ module.exports = async (req, res) => {
             }
           }
 
-          // 2. Atualiza status na tabela inscricoes se vinculado
-          const filterParam = inscIdVinculada 
-            ? `id=eq.${encodeURIComponent(inscIdVinculada)}` 
-            : (whatsappPagador ? `whatsapp=eq.${encodeURIComponent(whatsappPagador)}` : null);
+          if (!inscIdVinculada && whatsappPagador) {
+            const findInscRes = await fetch(`${sbUrl}/rest/v1/inscricoes?whatsapp=eq.${encodeURIComponent(whatsappPagador)}&select=id&order=criado_em.desc&limit=1`, {
+              headers: { "apikey": sbKey, "Authorization": `Bearer ${sbKey}` }
+            });
+            if (findInscRes.ok) {
+              const rows = await findInscRes.json().catch(() => []);
+              if (rows.length > 0) inscIdVinculada = rows[0].id;
+            }
+          }
 
-          if (filterParam) {
-            await fetch(`${sbUrl}/rest/v1/inscricoes?${filterParam}`, {
-              method: "PATCH",
+          if (inscIdVinculada) {
+            await fetch(`${sbUrl}/rest/v1/rpc/reconciliar_status_inscricao_pagamento`, {
+              method: "POST",
               headers: {
                 "apikey": sbKey,
                 "Authorization": `Bearer ${sbKey}`,
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal"
+                "Content-Type": "application/json"
               },
               body: JSON.stringify({
-                pagamento_status: statusInscricao
+                p_inscricao_id: inscIdVinculada,
+                p_status_proposto: statusInscricao,
+                p_origem: "webhook"
               }),
               signal: AbortSignal.timeout(4000)
-            }).catch(e => console.warn("[Webhook] Aviso ao atualizar inscricao:", e.message));
+            }).catch(e => console.warn("[Webhook Legacy] Aviso ao reconciliar inscricao:", e.message));
           }
         }
       } catch (ePatch) {
         console.warn("[Webhook] Aviso ao atualizar status não-aprovado no Supabase:", ePatch.message);
       }
 
-      // 3. Atualiza também no store local para consistência em memória
+      // 3. Atualiza também no store local para consistência em memória (respeitando regra canônica)
       try {
         const localData = settingsStore.loadLocalStore();
         if (Array.isArray(localData.pagamentos)) {
@@ -270,8 +276,14 @@ module.exports = async (req, res) => {
             (localData.pagamentos && localData.pagamentos.find(p => p.txid === String(txid) && (p.inscricao_id === i.id || p.whatsapp_pagador === i.whatsapp)))
           );
           if (iIdx !== -1) {
-            localData.inscricoes[iIdx].pagamento_status = statusInscricao;
-            localData.inscricoes[iIdx].atualizado_em = agoraIso;
+            const hasApproved = localData.pagamentos?.some(p => 
+              (p.inscricao_id === localData.inscricoes[iIdx].id || p.whatsapp_pagador === localData.inscricoes[iIdx].whatsapp) && 
+              (p.status === 'approved' || p.status === 'confirmado')
+            );
+            if (!hasApproved && localData.inscricoes[iIdx].pagamento_status !== 'confirmado') {
+              localData.inscricoes[iIdx].pagamento_status = statusInscricao;
+              localData.inscricoes[iIdx].atualizado_em = agoraIso;
+            }
           }
         }
         settingsStore.saveLocalStore(localData);

@@ -13,6 +13,7 @@ node_modules/
 .env.test.local
 .env.production.local
 .env.r2
+.env.webhook-rotate
 .env*
 *.env
 
@@ -49,3 +50,15 @@ temp_zip_inspect/
 # Backups e dados sensíveis
 data/backup*.json
 data/*backup*
+*.backup_*
+
+# Arquivos locais/gerados
+.wrangler/
+supabase/.temp/
+
+# Builds gerados do Cloudflare
+cloudflare-admin-dist/
+cloudflare-public-dist/
+
+# Backups locais de produção
+backups/

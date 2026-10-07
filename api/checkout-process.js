@@ -20,9 +20,9 @@ function getPublicBaseUrl() {
 }
 
 function getWebhookNotificationUrl() {
-  const base = `${getPublicBaseUrl()}/api/pix-webhook`;
-  const secret = process.env.PIX_WEBHOOK_SECRET;
-  return secret ? `${base}?secret=${encodeURIComponent(secret)}` : base;
+  // REGRA DE SEGURANÇA (ENV.11.2):
+  // Retorna estritamente o endpoint canônico da Edge Function pix-webhook SEM query string nem segredos.
+  return "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/pix-webhook";
 }
 
 function safeUuidOrNull(val) {
@@ -957,14 +957,18 @@ module.exports = async (req, res) => {
         }
       }
 
-      // 3. Obtém link do grupo do WhatsApp da configuração oficial ativa
+      // 3. Obtém link do grupo do WhatsApp exclusivo da Sub (REGRA OP10 FASE 11: Sem fallback para Geral quando existe Sub válida)
       const sub = transactionFound.metadata?.sub || transactionFound.sub || "Geral";
       let whatsappLink = "";
       try {
         const activeData = await settingsStore.getActiveSettings();
         if (activeData?.whatsapp) {
-          const subKey = String(sub).toLowerCase();
-          whatsappLink = activeData.whatsapp[subKey] || activeData.whatsapp[sub] || activeData.whatsapp["geral"] || activeData.whatsapp["Geral"] || "";
+          const subKey = String(sub).toLowerCase().trim();
+          if (["verde", "vermelho", "amarelo", "laranja"].includes(subKey)) {
+            whatsappLink = activeData.whatsapp[subKey] || activeData.whatsapp[sub] || "";
+          } else {
+            whatsappLink = activeData.whatsapp["geral"] || activeData.whatsapp["Geral"] || "";
+          }
         }
       } catch (eWpp) {}
 
@@ -1001,7 +1005,8 @@ module.exports = async (req, res) => {
         comprovante_email_enviado: Boolean(transactionFound.comprovante_email_enviado),
         comprovante_email_em: transactionFound.comprovante_email_em || null,
         comprovante_email_erro: transactionFound.comprovante_email_erro || null,
-        whatsapp_link: whatsappLink
+        whatsapp_link: whatsappLink,
+        whatsapp_sub_url: whatsappLink
       };
       responsePayload.payment = { ...responsePayload };
       return res.status(200).json(responsePayload);
@@ -1329,6 +1334,47 @@ module.exports = async (req, res) => {
       // 1. Validação obrigatória de Sub: NÃO permitir null, vazio ou omitido, nem fallback automático para Verde!
       let rawSub = sub ? String(sub).trim() : "";
       if (rawSub.toLowerCase() === "azul") rawSub = "Laranja";
+
+      // Validação autoritativa da inscrição no banco contra adulteração de Sub (Anti-Tampering)
+      const validUuid = safeUuidOrNull(inscricao_id);
+      if (validUuid && supabaseUrl && supabaseKey) {
+        try {
+          const inscCheckUrl = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?id=eq.${encodeURIComponent(validUuid)}&select=id,sub,nome_completo,email,pagamento_status,arquivado&limit=1`;
+          const inscCheckRes = await fetch(inscCheckUrl, {
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+            signal: AbortSignal.timeout(4000)
+          });
+          if (inscCheckRes.ok) {
+            const inscRows = await inscCheckRes.json();
+            if (!inscRows || inscRows.length === 0) {
+              return res.status(404).json({
+                error: "Inscrição não localizada no sistema. Verifique o identificador ou realize uma nova inscrição."
+              });
+            }
+            const inscRecord = inscRows[0];
+            if (inscRecord.arquivado) {
+              return res.status(400).json({
+                error: "Esta inscrição está arquivada e não pode receber pagamentos."
+              });
+            }
+            const inscStatus = String(inscRecord.pagamento_status || "").toLowerCase().trim();
+            if (inscStatus === "approved" || inscStatus === "confirmado" || inscStatus === "pago") {
+              return res.status(400).json({
+                error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."
+              });
+            }
+            if (rawSub && rawSub.toLowerCase() !== String(inscRecord.sub || "").toLowerCase()) {
+              return res.status(400).json({
+                error: `O Sub informado (${rawSub}) diverge do Sub registrado na inscrição (${inscRecord.sub}). Alteração não permitida no checkout.`
+              });
+            }
+            rawSub = inscRecord.sub;
+          }
+        } catch (eInscCheck) {
+          console.warn("[Checkout Process] Checagem de inscrição no banco:", eInscCheck.message);
+        }
+      }
+
       const matchedSub = VALID_SUBS.find(s => s.toLowerCase() === rawSub.toLowerCase());
       if (!matchedSub) {
         return res.status(400).json({

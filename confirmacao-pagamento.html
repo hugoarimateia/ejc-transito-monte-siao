@@ -525,6 +525,7 @@
   </main>
 
   <script src="js/theme.js"></script>
+  <script src="js/supabase-config.js"></script>
   <script>
     // ==============================================================================
     // CONTROLADOR DA PÁGINA DE CONFIRMAÇÃO DE PAGAMENTO
@@ -708,7 +709,10 @@
         wppBtn.style.pointerEvents = "auto";
       } else {
         const subName = data.sub || "Geral";
-        fetch(`/api/config?_t=${Date.now()}`)
+        const cfgEndpoint = window.EJC_ENDPOINTS.config();
+        const waEndpoint = window.EJC_ENDPOINTS.whatsapp();
+
+        fetch(`${cfgEndpoint}?_t=${Date.now()}`)
           .then(r => r.ok ? r.json() : null)
           .then(cfg => {
             if (cfg && cfg.whatsapp) {
@@ -720,12 +724,12 @@
                 return;
               }
             }
-            wppBtn.href = "/api/whatsapp";
+            wppBtn.href = waEndpoint;
             wppBtn.style.opacity = "1";
             wppBtn.style.pointerEvents = "auto";
           })
           .catch(() => {
-            wppBtn.href = "/api/whatsapp";
+            wppBtn.href = waEndpoint;
             wppBtn.style.opacity = "1";
             wppBtn.style.pointerEvents = "auto";
           });

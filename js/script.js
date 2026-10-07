@@ -247,8 +247,10 @@ async function updateSubCounts() {
   // 1. Consulta o endpoint central oficial com anti-cache estrito (suporte a Edge Functions e Rollback)
   try {
     const scEndpoint = window.EJC_ENDPOINTS.subCounts();
+    const isCrossSc = String(scEndpoint).startsWith("http");
+    const scHeaders = isCrossSc ? {} : { "Cache-Control": "no-cache", "Pragma": "no-cache" };
     const res = await fetch(`${scEndpoint}?_t=${Date.now()}`, {
-      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+      headers: scHeaders,
       cache: "no-store"
     });
     if (res.ok) {
@@ -362,7 +364,7 @@ async function obterPresignedUrlFotoR2(sub, file) {
       action: "get_upload_url",
       sub: sub,
       extension: ext,
-      mimeType: file.type || "image/jpeg"
+      mimeType: (file.type || "image/jpeg").toLowerCase().trim()
     })
   });
 
@@ -378,7 +380,8 @@ async function uploadFotoDiretoR2(uploadUrl, file) {
   const res = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
-      "Content-Type": file.type || "image/jpeg"
+      "Content-Type": (file.type || "image/jpeg").toLowerCase().trim(),
+      "If-None-Match": "*"
     },
     body: file
   });
@@ -388,6 +391,31 @@ async function uploadFotoDiretoR2(uploadUrl, file) {
   }
 
   return true;
+}
+
+async function validarUploadFotoR2(storageKey, operationToken) {
+  const endpoint = window.EJC_ENDPOINTS?.r2PresignedUrl
+    ? window.EJC_ENDPOINTS.r2PresignedUrl()
+    : "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/r2-presigned-url";
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "validate_upload",
+      storageKey,
+      operationToken
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success || data.state !== "VALIDATED") {
+    throw new Error(data.error || "A foto enviada não passou na validação de segurança do servidor.");
+  }
+
+  return data;
 }
 
 async function cleanupFotoR2(storageKey, cleanupToken) {
@@ -504,6 +532,17 @@ if (signupForm) {
 
           setFeedback("Enviando foto para armazenamento seguro...", "loading");
           await uploadFotoDiretoR2(r2UploadData.uploadUrl, photo);
+
+          setFeedback("Validando integridade e formato da foto no servidor...", "loading");
+          const validationData = await validarUploadFotoR2(
+            r2UploadData.storageKey,
+            r2UploadData.operationToken || r2UploadData.cleanupToken
+          );
+
+          if (validationData?.operationToken) {
+            r2UploadData.cleanupToken = validationData.operationToken;
+          }
+
           photoPath = r2UploadData.storageKey;
         } catch (r2Err) {
           console.error("[Signup] Erro no upload R2:", r2Err);
@@ -614,25 +653,7 @@ if (signupForm) {
 
       if (!registeredId) registeredId = newRegistration.id;
 
-      // 2.1 Sincronização direta com a base persistente central (/api/sub-counts)
-      try {
-        const syncRes = await fetch("/api/sub-counts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newRegistration)
-        });
-        if (syncRes.ok) {
-          const syncJson = await syncRes.json();
-          if (syncJson && syncJson.success) {
-            registrationSuccess = true;
-            if (syncJson.id) registeredId = syncJson.id;
-          }
-        }
-      } catch (errSync) {
-        console.warn("[Signup] Sync central indisponível no momento, mantendo gravação local:", errSync);
-      }
-
-      // 2.2 Gravação local apenas com confirmação efetiva do backend
+      // Gravação local resiliente (apenas com confirmação efetiva da gravação autoritativa)
       if (registrationSuccess) {
         localInscricoes.push(newRegistration);
         localStorage.setItem("ejc_inscricoes", JSON.stringify(localInscricoes));
@@ -906,16 +927,16 @@ function carregarConfiguracaoPublica() {
     }
   } catch (e) {}
 
-  // 2. Busca remota no servidor com headers anti-cache estritos e versão do cliente
-  const headers = {
+  // 2. Busca remota no servidor com headers anti-cache e versão do cliente
+  const cfgEndpoint = window.EJC_ENDPOINTS.config();
+  const isCrossCfg = String(cfgEndpoint).startsWith("http");
+  const headers = isCrossCfg ? {} : {
     "Cache-Control": "no-cache",
     "Pragma": "no-cache"
   };
-  if (window.EJC_ACTIVE_VERSION) {
+  if (window.EJC_ACTIVE_VERSION && !isCrossCfg) {
     headers["x-client-version"] = String(window.EJC_ACTIVE_VERSION);
   }
-
-  const cfgEndpoint = window.EJC_ENDPOINTS.config();
 
   fetch(`${cfgEndpoint}?_t=${Date.now()}`, {
     cache: "no-store",

@@ -48,8 +48,10 @@ function calcularContagensOficiais(localStore) {
   if (Array.isArray(localStore.inscricoes)) {
     localStore.inscricoes.forEach(insc => {
       if (insc.arquivado) return;
-      // REGRA OFICIAL EJC: inscrições pendentes, rejeitadas, canceladas ou estornadas NÃO são contabilizadas!
-      if (!isPagamentoConfirmado(insc.pagamento_status)) return;
+      // NOVA REGRA OFICIAL LANDING: conta todas as inscrições concluídas e ativas, independente do pagamento.
+      // Apenas inscrições canceladas ou arquivadas são excluídas da contagem da landing.
+      const statusNorm = String(insc.pagamento_status || "").trim().toLowerCase();
+      if (statusNorm === "cancelado") return;
 
       const sub = normalizarSub(insc.sub);
       if (!sub) return;

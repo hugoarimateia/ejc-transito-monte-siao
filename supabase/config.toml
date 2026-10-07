@@ -32,3 +32,9 @@ site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = false
+
+[functions.checkout-process]
+verify_jwt = false
+
+[functions.pix-webhook]
+verify_jwt = false

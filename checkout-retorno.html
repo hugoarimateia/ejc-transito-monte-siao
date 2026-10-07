@@ -272,11 +272,12 @@
                 document.getElementById("recTxid").textContent = data.txid || queryTarget;
 
                 // REGRA 27: Somente status = approved libera grupo específico
-                if (data.whatsapp_sub_url) {
+                const targetWppUrl = data.whatsapp_sub_url || data.whatsapp_link;
+                if (targetWppUrl && String(targetWppUrl).startsWith("http")) {
                   const boxWpp = document.getElementById("boxWhatsappLink");
                   const linkWpp = document.getElementById("btnLinkWhatsapp");
                   if (boxWpp && linkWpp) {
-                    linkWpp.href = data.whatsapp_sub_url;
+                    linkWpp.href = targetWppUrl;
                     boxWpp.style.display = "block";
                   }
                 }

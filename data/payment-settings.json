@@ -1,12 +1,12 @@
 {
   "settings": {
-    "versao": 30,
+    "versao": 38,
     "ativo": false,
     "configurado": true,
     "lote_atual": "1º Lote",
     "valor_inscricao": 50,
     "valor_promocional": null,
-    "taxa_adicional": 0,
+    "taxa_adicional": 30,
     "max_parcelas": 6,
     "modalidade_pix": "api_webhook",
     "pix_mode": "api_webhook",
@@ -20,84 +20,84 @@
     "pix_permite_comprovante": true,
     "motivo_alteracao": "Remove promoção",
     "atualizado_por": "superadmin",
-    "atualizado_em": "2026-09-30T00:00:06.668Z",
-    "id": "f9910886-d5a9-405d-b053-58627d2abb01",
+    "atualizado_em": "2026-10-01T02:39:04.710Z",
+    "id": "ac4b01b7-3e67-472f-b523-f949e31fec82",
     "criado_em": "2026-09-29T16:45:04.942104+00:00",
     "preco_efetivo": 50,
     "card_installment_mode": "mercado_pago",
     "card_max_installments": 6,
     "card_installment_rates": [
       {
-        "installment": 1,
         "rate": 0,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 1
       },
       {
-        "installment": 2,
         "rate": 4.5,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 2
       },
       {
-        "installment": 3,
         "rate": 5.5,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 3
       },
       {
-        "installment": 4,
         "rate": 7,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 4
       },
       {
-        "installment": 5,
         "rate": 8.5,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 5
       },
       {
-        "installment": 6,
         "rate": 10,
+        "enabled": true,
         "rate_type": "percentage",
-        "enabled": true
+        "installment": 6
       },
       {
-        "installment": 7,
         "rate": 11.5,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 7
       },
       {
-        "installment": 8,
         "rate": 13,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 8
       },
       {
-        "installment": 9,
         "rate": 14.5,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 9
       },
       {
-        "installment": 10,
         "rate": 16,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 10
       },
       {
-        "installment": 11,
         "rate": 17.5,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 11
       },
       {
-        "installment": 12,
         "rate": 19,
+        "enabled": false,
         "rate_type": "percentage",
-        "enabled": false
+        "installment": 12
       }
     ],
     "mp_public_key": "APP_USR-39960bc1-2b08-4885-8090-31eaa38ba04b",
@@ -116,328 +116,338 @@
   ],
   "historico": [
     {
-      "id": "audit-1790726406668-imvh",
+      "id": "7c0a245f-a05c-4e69-86d7-56047ae05c53",
       "acao": "PRICE_UPDATED",
       "usuario": "superadmin",
       "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 100.00 (1º Lote)",
-      "valor_novo": "R$ 50.00 (1º Lote)",
-      "motivo": "Remove promoção",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-30T00:00:06.668Z",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "Atualização de preços no painel administrativo",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-30T02:36:05.431961+00:00",
       "detalhes": {
-        "versao": 30,
-        "lote": "1º Lote",
-        "valor_promocional": null
-      }
-    },
-    {
-      "id": "audit-1790726402529-aqf5",
-      "acao": "PRICE_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (1º Lote)",
-      "valor_novo": "R$ 100.00 (1º Lote)",
-      "motivo": "Teste unitário preço",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-30T00:00:02.529Z",
-      "detalhes": {
-        "versao": 29,
-        "lote": "1º Lote",
-        "valor_promocional": 80
-      }
-    },
-    {
-      "id": "audit-1790726365904-vib9",
-      "acao": "PRICE_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 100.00 (1º Lote)",
-      "valor_novo": "R$ 50.00 (1º Lote)",
-      "motivo": "Remove promoção",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T23:59:25.904Z",
-      "detalhes": {
-        "versao": 28,
-        "lote": "1º Lote",
-        "valor_promocional": null
-      }
-    },
-    {
-      "id": "audit-1790726360919-r9oe",
-      "acao": "PRICE_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
-      "valor_novo": "R$ 100.00 (1º Lote)",
-      "motivo": "Teste unitário preço",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T23:59:20.919Z",
-      "detalhes": {
-        "versao": 27,
-        "lote": "1º Lote",
-        "valor_promocional": 80
-      }
-    },
-    {
-      "id": "audit-1790700973263-tsvd",
-      "acao": "PRICE_UPDATED",
-      "usuario": "tester",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
-      "valor_novo": "R$ 50.00 (1º Lote - Oficial)",
-      "motivo": "Teste de não-regressão de cartão ao atualizar preço",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T16:56:13.263Z",
-      "detalhes": {
-        "versao": 27,
         "lote": "1º Lote - Oficial",
+        "versao": 36,
         "valor_promocional": null
       }
     },
     {
-      "id": "audit-1790700948155-ef1l",
+      "id": "6d5d84e5-2307-4eba-96bd-e414aa49a111",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "Atualização de preços no painel administrativo",
+      "ip_origem": "187.19.130.113",
+      "criado_em": "2026-09-30T02:28:36.742102+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 35,
+        "valor_promocional": 50
+      }
+    },
+    {
+      "id": "0340ca8f-307e-4cd4-a94b-4aae6e4f44f9",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "teste",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-30T00:08:43.971392+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 34,
+        "valor_promocional": 0.01
+      }
+    },
+    {
+      "id": "89e767a0-b986-4563-b87b-d015c6be9e58",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "Restaurando preco oficial 50 sem promocao",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-30T00:02:31.356954+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 33,
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "479f8685-86d3-45d2-a393-c6b7f358da96",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "Teste promocao 40",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-30T00:02:17.802433+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 32,
+        "valor_promocional": 40
+      }
+    },
+    {
+      "id": "913533d8-fa0c-47f5-a743-e60289d413c9",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50",
+      "valor_novo": "50",
+      "motivo": "Teste cirurgico de persistencia de preco",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-30T00:02:05.887858+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 31,
+        "valor_promocional": null
+      }
+    },
+    {
+      "id": "5aff35c6-5599-4e32-af94-3baf9a1b1f61",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "1.00",
+      "valor_novo": "50",
+      "motivo": "teste preço",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T16:45:04.942104+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 26
+      }
+    },
+    {
+      "id": "f2ab1efc-2488-4a37-b633-ae697c6dd818",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "49.00",
+      "valor_novo": "1",
+      "motivo": "teste",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T16:40:20.401488+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 23
+      }
+    },
+    {
+      "id": "b1bfa68b-ec60-419a-8666-9dddb9b5f26c",
       "acao": "CARD_SETTINGS_UPDATED",
-      "usuario": "admin_restoration",
+      "usuario": "superadmin",
       "campo_afetado": "card_installment_settings",
       "valor_anterior": "{\"mode\":\"mercado_pago\",\"max\":6}",
       "valor_novo": "{\"mode\":\"mercado_pago\",\"max\":6,\"ratesCount\":12}",
-      "motivo": "Restauração da Public Key oficial do Mercado Pago pós-regressão",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T16:55:48.155Z",
+      "motivo": "Configuração oficial da Public Key do Mercado Pago",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T16:15:02.122726+00:00",
       "detalhes": {
         "mode": "mercado_pago",
-        "max_installments": 6,
         "rates": [
           {
-            "installment": 1,
             "rate": 0,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 1
           },
           {
-            "installment": 2,
             "rate": 4.5,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 2
           },
           {
-            "installment": 3,
             "rate": 5.5,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 3
           },
           {
-            "installment": 4,
             "rate": 7,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 4
           },
           {
-            "installment": 5,
             "rate": 8.5,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 5
           },
           {
-            "installment": 6,
             "rate": 10,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 6
           },
           {
-            "installment": 7,
             "rate": 11.5,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 7
           },
           {
-            "installment": 8,
             "rate": 13,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 8
           },
           {
-            "installment": 9,
             "rate": 14.5,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 9
           },
           {
-            "installment": 10,
             "rate": 16,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 10
           },
           {
-            "installment": 11,
             "rate": 17.5,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 11
           },
           {
-            "installment": 12,
             "rate": 19,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 12
           }
-        ]
+        ],
+        "max_installments": 6
       }
     },
     {
-      "id": "audit-1790663505922-19ny",
+      "id": "1bfedcdb-3c9e-4c5c-999d-3f2e6d0d4e9d",
       "acao": "CARD_SETTINGS_UPDATED",
-      "usuario": "admin_tester",
-      "campo_afetado": "card_installment_settings",
-      "valor_anterior": "{\"mode\":\"manual\",\"max\":4}",
-      "valor_novo": "{\"mode\":\"mercado_pago\",\"max\":6,\"ratesCount\":6}",
-      "motivo": "Restauração do modo automático oficial MP",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T06:31:45.922Z",
-      "detalhes": {
-        "mode": "mercado_pago",
-        "max_installments": 6,
-        "rates": [
-          {
-            "installment": 1,
-            "rate": 0,
-            "rate_type": "percentage",
-            "enabled": true
-          },
-          {
-            "installment": 2,
-            "rate": 4,
-            "rate_type": "percentage",
-            "enabled": true
-          },
-          {
-            "installment": 3,
-            "rate": 6,
-            "rate_type": "percentage",
-            "enabled": true
-          },
-          {
-            "installment": 4,
-            "rate": 8,
-            "rate_type": "percentage",
-            "enabled": true
-          },
-          {
-            "installment": 5,
-            "rate": 10,
-            "rate_type": "percentage",
-            "enabled": false
-          },
-          {
-            "installment": 6,
-            "rate": 12,
-            "rate_type": "percentage",
-            "enabled": false
-          }
-        ]
-      }
-    },
-    {
-      "id": "audit-1790663503593-1txr",
-      "acao": "PRICE_UPDATED",
-      "usuario": "admin_tester",
-      "campo_afetado": "valor_inscricao",
-      "valor_anterior": "R$ 50.00 (1º Lote - Oficial)",
-      "valor_novo": "R$ 100.00 (1º Lote)",
-      "motivo": "Alteração de valor da taxa de inscrição",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T06:31:43.593Z",
-      "detalhes": {
-        "versao": 19,
-        "lote": "1º Lote",
-        "valor_promocional": null
-      }
-    },
-    {
-      "id": "audit-1790663500815-se02",
-      "acao": "CARD_SETTINGS_UPDATED",
-      "usuario": "admin_tester",
+      "usuario": "superadmin",
       "campo_afetado": "card_installment_settings",
       "valor_anterior": "{\"mode\":\"mercado_pago\",\"max\":6}",
-      "valor_novo": "{\"mode\":\"manual\",\"max\":4,\"ratesCount\":6}",
-      "motivo": "Teste de política comercial de parcelamento",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T06:31:40.815Z",
+      "valor_novo": "{\"mode\":\"mercado_pago\",\"max\":6,\"ratesCount\":12}",
+      "motivo": "Restauração do Modo Automático (Mercado Pago)",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T15:20:36.028813+00:00",
       "detalhes": {
-        "mode": "manual",
-        "max_installments": 4,
+        "mode": "mercado_pago",
         "rates": [
           {
-            "installment": 1,
             "rate": 0,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 1
           },
           {
-            "installment": 2,
-            "rate": 4,
+            "rate": 4.5,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 2
           },
           {
-            "installment": 3,
-            "rate": 6,
+            "rate": 5.5,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 3
           },
           {
-            "installment": 4,
-            "rate": 8,
+            "rate": 7,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": true
+            "installment": 4
           },
           {
-            "installment": 5,
+            "rate": 8.5,
+            "enabled": true,
+            "rate_type": "percentage",
+            "installment": 5
+          },
+          {
             "rate": 10,
+            "enabled": true,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 6
           },
           {
-            "installment": 6,
-            "rate": 12,
+            "rate": 11.5,
+            "enabled": false,
             "rate_type": "percentage",
-            "enabled": false
+            "installment": 7
+          },
+          {
+            "rate": 13,
+            "enabled": false,
+            "rate_type": "percentage",
+            "installment": 8
+          },
+          {
+            "rate": 14.5,
+            "enabled": false,
+            "rate_type": "percentage",
+            "installment": 9
+          },
+          {
+            "rate": 16,
+            "enabled": false,
+            "rate_type": "percentage",
+            "installment": 10
+          },
+          {
+            "rate": 17.5,
+            "enabled": false,
+            "rate_type": "percentage",
+            "installment": 11
+          },
+          {
+            "rate": 19,
+            "enabled": false,
+            "rate_type": "percentage",
+            "installment": 12
           }
-        ]
+        ],
+        "max_installments": 6
       }
     },
     {
-      "id": "audit-1790652517578-hm3m",
-      "acao": "WHATSAPP_LINKS_UPDATED",
+      "id": "39181d87-7e35-499d-ba58-654eb1c8743c",
+      "acao": "PRICE_UPDATED",
+      "usuario": "superadmin",
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "50.00",
+      "valor_novo": "49",
+      "motivo": "teste",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T14:18:08.610131+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 20
+      }
+    },
+    {
+      "id": "33d87dc1-95fe-404e-bf2c-222f24cc3839",
+      "acao": "PRICE_UPDATED",
       "usuario": "financeiro",
-      "campo_afetado": "configuracoes_whatsapp",
-      "valor_anterior": null,
-      "valor_novo": "{\"Vermelho\":\"https://chat.whatsapp.com/teste_vermelho\",\"vermelho\":\"https://chat.whatsapp.com/teste_vermelho\"}",
-      "motivo": "Atualização dos links dos grupos WhatsApp",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T03:28:37.564Z"
-    },
-    {
-      "id": "audit-1790652516123-x75h",
-      "acao": "WHATSAPP_LINKS_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "configuracoes_whatsapp",
-      "valor_anterior": null,
-      "valor_novo": "{\"Verde\":\"https://chat.whatsapp.com/teste_verde\",\"verde\":\"https://chat.whatsapp.com/teste_verde\"}",
-      "motivo": "Atualização dos links dos grupos WhatsApp",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T03:28:36.121Z"
-    },
-    {
-      "id": "audit-1790652319150-439o",
-      "acao": "WHATSAPP_LINKS_UPDATED",
-      "usuario": "superadmin",
-      "campo_afetado": "configuracoes_whatsapp",
-      "valor_anterior": null,
-      "valor_novo": "{\"Verde\":\"https://chat.whatsapp.com/test\",\"verde\":\"https://chat.whatsapp.com/test\"}",
-      "motivo": "Atualização dos links dos grupos WhatsApp",
-      "ip_origem": "127.0.0.1",
-      "criado_em": "2026-09-29T03:25:19.119Z"
+      "campo_afetado": "valor_inscricao",
+      "valor_anterior": "190.00",
+      "valor_novo": "50",
+      "motivo": "teste 00:07",
+      "ip_origem": "168.205.110.22",
+      "criado_em": "2026-09-29T03:07:24.152047+00:00",
+      "detalhes": {
+        "lote": "1º Lote - Oficial",
+        "versao": 18
+      }
     },
     {
       "id": "dc4b5b22-1472-4871-8609-89f0f215bc81",
@@ -543,6 +553,49 @@
     "geral": "https://chat.whatsapp.com/DbOLDVcXTal2YJmDuTexqX?mode=gi_t"
   },
   "pagamentos": [
+    {
+      "txid": "PIXMUSS2P9C1K2R",
+      "payment_id": "PAY181225454393",
+      "order_id": "ORDMUSS2P9C1K2R",
+      "external_reference": "PIXMUSS2P9C1K2R",
+      "gateway_transaction_id": "PAY181225454393",
+      "nome_pagador": "Participante",
+      "email": "hugoariamteiab@gmail.com",
+      "whatsapp_pagador": null,
+      "valor": 50,
+      "metodo": "pix",
+      "modalidade_pix": "api_webhook",
+      "status": "pending",
+      "status_analise_manual": null,
+      "tipo": "inscricao",
+      "pix_copia_e_cola": "00020126580014br.gov.bcb.pix013628d7b1e8-cbd8-49b6-9316-5782e0f40ef0520400005303986540550.005802BR5916PO202501080939136009Sao Paulo62250521mpqrinter18122545439363047DDC",
+      "qr_code_base64": "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",
+      "ticket_url": "https://www.mercadopago.com.br/payments/181225454393/ticket?caller_id=3727238992&hash=68d4251a-b6f0-4d8f-8582-b2a4efea843d",
+      "provedor": "mercadopago",
+      "inscricao_id": null,
+      "sub": "Vermelho",
+      "metadata": {
+        "order_id": "ORDMUSS2P9C1K2R",
+        "payment_id": "PAY181225454393",
+        "external_reference": "PIXMUSS2P9C1K2R",
+        "modalidade_pix": "api_webhook",
+        "status_analise_manual": null,
+        "sub": "Vermelho",
+        "ticket_url": "https://www.mercadopago.com.br/payments/181225454393/ticket?caller_id=3727238992&hash=68d4251a-b6f0-4d8f-8582-b2a4efea843d",
+        "lote": "1º Lote",
+        "emails_enviados": [
+          {
+            "evento": "order_created",
+            "destinatario": "hugoariamteiab@gmail.com",
+            "sucesso": true,
+            "messageId": "simulated-1791055291284-hxtdhh",
+            "erro": null,
+            "data": "2026-10-03T19:21:31.285Z"
+          }
+        ]
+      },
+      "criado_em": "2026-10-03T19:21:31.158Z"
+    },
     {
       "txid": "CARDMUMY5Y12OI0G",
       "payment_id": "CARDMUMY5Y12OI0G",
@@ -683,5 +736,53 @@
       "criado_em": "2026-09-29T06:31:45.117Z"
     }
   ],
-  "inscricoes": []
+  "inscricoes": [
+    {
+      "id": "152809ab-8be8-470e-9b24-099d801d9d20",
+      "nome_completo": "Teste",
+      "whatsapp": "83999998888",
+      "email": "",
+      "sub": "Verde",
+      "tamanho_camisa": null,
+      "quer_camisa_adicional": false,
+      "quantidade_camisas_adicionais": 0,
+      "modelo_camisa_adicional": null,
+      "tamanho_camisa_adicional": null,
+      "talento": null,
+      "forma_pagamento": "checkout",
+      "pagamento_informado": false,
+      "pagamento_status": "pendente",
+      "justificativa_pagamento": null,
+      "token_acesso": null,
+      "criado_em": "2026-09-29T15:09:14.437Z",
+      "atualizado_em": "2026-09-29T23:14:10.462Z"
+    },
+    {
+      "id": "test-sub-management-uuid",
+      "nome_completo": "Teste Auditoria Sub",
+      "sub": "Verde",
+      "whatsapp": "83999999999",
+      "atualizado_em": "2026-09-29T23:16:35.450Z"
+    },
+    {
+      "id": "c8c3cc75-655d-4718-9168-3d55517fe9d0",
+      "nome_completo": "Participante Teste Unitário",
+      "whatsapp": "83988887777",
+      "email": "teste@exemplo.com",
+      "sub": "Verde",
+      "tamanho_camisa": null,
+      "quer_camisa_adicional": false,
+      "quantidade_camisas_adicionais": 0,
+      "modelo_camisa_adicional": null,
+      "tamanho_camisa_adicional": null,
+      "talento": null,
+      "forma_pagamento": "checkout",
+      "pagamento_informado": false,
+      "pagamento_status": "pendente",
+      "justificativa_pagamento": null,
+      "token_acesso": null,
+      "criado_em": "2026-09-29T23:45:17.833Z",
+      "atualizado_em": "2026-10-01T02:39:05.757Z"
+    }
+  ]
 }

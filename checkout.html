@@ -1915,15 +1915,14 @@
     }
 
     async function carregarConfiguracaoAtiva() {
-      configLoadingState = "LOADING";
-      // Busca configuração ativa do servidor com versão do cliente
-      const headers = { "Cache-Control": "no-cache", "Pragma": "no-cache" };
-      if (activePixConfig.versao) {
+      const cfgEndpoint = window.EJC_ENDPOINTS.config();
+      const isCrossCfg = String(cfgEndpoint).startsWith("http");
+      const headers = isCrossCfg ? {} : { "Cache-Control": "no-cache", "Pragma": "no-cache" };
+      if (activePixConfig.versao && !isCrossCfg) {
         headers["x-client-version"] = String(activePixConfig.versao);
       }
-
       try {
-        const res = await fetch(`/api/config?_t=${Date.now()}`, {
+        const res = await fetch(`${cfgEndpoint}?_t=${Date.now()}`, {
           cache: "no-store",
           headers: headers
         });
@@ -1938,7 +1937,7 @@
           }
         }
       } catch (e) {
-        console.warn("Falha ao buscar /api/config, usando fallback:", e);
+        console.warn("Falha ao carregar configuração pública:", e);
         configLoadingState = "ERROR";
         if (currentMethod === "credit_card" && typeof atualizarDisplayValorCartaoPro === "function") {
           atualizarDisplayValorCartaoPro();
@@ -2276,8 +2275,8 @@
       console.log(`[CHECKOUT_PRO_RETURN] Retorno detectado. Retorno: ${retornoMp}, Payment ID: ${collectionId}, TXID: ${paramTxid}`);
 
       // Ativa etapa 2 e aba Cartão
-      const step1 = document.getElementById("step1Container");
-      const step2 = document.getElementById("step2Container");
+      const step1 = document.getElementById("checkoutStep1") || document.getElementById("step1Container");
+      const step2 = document.getElementById("checkoutStep2") || document.getElementById("step2Container");
       if (step1 && step2) {
         step1.style.display = "none";
         step2.style.display = "block";
@@ -2422,13 +2421,6 @@
       feedbackBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
-    async function reiniciarTentativaCartao() {
-      isProcessingCard = false;
-      const feedback = document.getElementById("cardFeedbackMsg");
-      if (feedback) feedback.style.display = "none";
-      await montarCardPaymentBrick(true);
-    }
-    window.reiniciarTentativaCartao = reiniciarTentativaCartao;
 
     function exibirCardEmAnalise(data) {
       const feedbackBox = document.getElementById("cardFeedbackMsg");
@@ -2668,9 +2660,10 @@
       const cleanSub = String(sub || "Geral").trim();
       const subCap = cleanSub.charAt(0).toUpperCase() + cleanSub.slice(1).toLowerCase();
 
-      // 1. Consulta a API central /api/config oficial
+      // 1. Consulta a API central de configuração oficial (suporte a Edge Functions e Rollback)
       try {
-        const cfgRes = await fetch(`/api/config?_t=${Date.now()}`);
+        const cfgEndpoint = window.EJC_ENDPOINTS.config();
+        const cfgRes = await fetch(`${cfgEndpoint}?_t=${Date.now()}`);
         if (cfgRes.ok) {
           const cfg = await cfgRes.json();
           if (cfg && cfg.whatsapp) {
@@ -2695,8 +2688,8 @@
         } catch(e) {}
       }
 
-      // 3. Fallback seguro para o redirecionador de WhatsApp oficial
-      return `/api/whatsapp`;
+      // 3. Fallback seguro para o redirecionador de WhatsApp oficial (Edge Function / Rollback)
+      return window.EJC_ENDPOINTS.whatsapp();
     }
 
     // Inicialização da configuração ativa

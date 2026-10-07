@@ -378,7 +378,36 @@
       background: #1a2749 !important;
       color: #f1f5f9 !important;
     }
-  </style>
+  
+    /* OP13.7: Diferenciação Administrativa de Status */
+    .status-badge.status-expired {
+      background: rgba(100, 116, 139, 0.16);
+      color: #475569;
+      border: 1px solid rgba(100, 116, 139, 0.3);
+    }
+    [data-theme="dark"] .status-badge.status-expired {
+      background: rgba(148, 163, 184, 0.18);
+      color: #cbd5e1;
+      border-color: rgba(148, 163, 184, 0.3);
+    }
+    .badge-vaga-liberada {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .72rem;
+      font-weight: 700;
+      color: #d97706;
+      background: rgba(245, 158, 11, 0.12);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    [data-theme="dark"] .badge-vaga-liberada {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+</style>
 </head>
 <body>
 
@@ -434,19 +463,19 @@
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
-          <strong id="statSubVerde">0 / 85</strong>
+          <strong id="statSubVerde">0 / 70</strong>
         </div>
         <div class="stat-box red">
           <span>Sub Vermelho</span>
-          <strong id="statSubVermelho">0 / 85</strong>
+          <strong id="statSubVermelho">0 / 70</strong>
         </div>
         <div class="stat-box yellow">
           <span>Sub Amarelo</span>
-          <strong id="statSubAmarelo">0 / 85</strong>
+          <strong id="statSubAmarelo">0 / 70</strong>
         </div>
         <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
-          <strong id="statSubLaranja">0 / 85</strong>
+          <strong id="statSubLaranja">0 / 70</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -1644,6 +1673,11 @@
   <script>
     const ROLE_MAP = {};
 
+    // FEATURE FLAGS - TRANSIÇÃO CONTROLADA PARA SUPABASE EDGE
+    // Estado nesta etapa (ENV.15.2): ON (true) para canary controlado
+    const FEATURE_FLAG_ADMIN_WRITE_EDGE = true;
+    const ADMIN_WRITE_EDGE_URL = "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
+
     let currentUserRole = "admin";
     let currentAdminPass = "";
     let canUserEditFinance = false;
@@ -1911,7 +1945,7 @@
       // Limpa dados legados locais para garantir Fonte Única de Verdade do Servidor
       try { localStorage.removeItem("ejc_inscricoes"); } catch (e) {}
 
-      // Busca oficial autenticada no servidor via /api/admin (service_role)
+      // Busca oficial autenticada no servidor via /api/admin (backend oficial)
       if (currentAdminPass) {
         fetch("/api/admin", {
           headers: {
@@ -1959,6 +1993,91 @@
       renderizarTabelaCancelarInscricao();
     }
 
+    // OP13.7: Derivação de Status Administrativo (Inscrição × Pagamento × Vaga)
+    function obterStatusAdministrativo(inscricao) {
+      if (!inscricao) {
+        return {
+          tipo: "pendente",
+          inscricaoStatus: "Ativa",
+          inscricaoBadgeClass: "status-approved",
+          pagamentoStatus: "Pendente",
+          pagamentoBadgeClass: "status-pendente",
+          ocupaVaga: true,
+          vagaBadgeHtml: `<span style="font-size: .72rem; color: #b45309; font-weight: 700;"><i class="fa-solid fa-clock"></i> Vaga ocupada</span>`
+        };
+      }
+
+      // 1. Inscrição Arquivada / Cancelada Administrativamente
+      if (inscricao.arquivado === true) {
+        return {
+          tipo: "arquivado",
+          inscricaoStatus: "Arquivada",
+          inscricaoBadgeClass: "status-recusado",
+          pagamentoStatus: "Cancelado / Histórico",
+          pagamentoBadgeClass: "status-recusado",
+          ocupaVaga: false,
+          vagaBadgeHtml: `<span class="badge-vaga-liberada" style="color: #dc2626; border-color: rgba(220, 38, 38, 0.25); background: rgba(220, 38, 38, 0.1);"><i class="fa-solid fa-ban"></i> Não ocupa vaga</span>`
+        };
+      }
+
+      const pagStatusRaw = String(inscricao.pagamento_status || "").trim().toLowerCase();
+
+      // 2. Pagamento Confirmado / Aprovado
+      if (["approved", "confirmado", "pago"].includes(pagStatusRaw)) {
+        return {
+          tipo: "confirmado",
+          inscricaoStatus: "Ativa",
+          inscricaoBadgeClass: "status-approved",
+          pagamentoStatus: "Confirmado / Pago",
+          pagamentoBadgeClass: "status-approved",
+          ocupaVaga: true,
+          vagaBadgeHtml: `<span style="font-size: .72rem; color: #10b981; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Vaga ocupada</span>`
+        };
+      }
+
+      // 3. Pix Expirado (expiração automática no gateway após 24h sem pagamento)
+      const pagRelacionado = (typeof pagamentosData !== "undefined" && Array.isArray(pagamentosData))
+        ? pagamentosData.find(p => p.inscricao_id === inscricao.id || (p.whatsapp_pagador && p.whatsapp_pagador === inscricao.whatsapp))
+        : null;
+      const isPixExp = (pagStatusRaw === "cancelado") || (pagRelacionado && (pagRelacionado.status === "cancelled" || pagRelacionado.status === "expired"));
+
+      if (isPixExp) {
+        return {
+          tipo: "pix_expirado",
+          inscricaoStatus: "Ativa",
+          inscricaoBadgeClass: "status-approved",
+          pagamentoStatus: "Pix Expirado",
+          pagamentoBadgeClass: "status-expired",
+          ocupaVaga: false,
+          vagaBadgeHtml: `<span class="badge-vaga-liberada"><i class="fa-solid fa-clock-rotate-left"></i> Vaga liberada (Pix expirado)</span>`
+        };
+      }
+
+      // 4. Comprovante Informado
+      if (pagStatusRaw === "informado" || inscricao.comprovante_caminho) {
+        return {
+          tipo: "informado",
+          inscricaoStatus: "Ativa",
+          inscricaoBadgeClass: "status-approved",
+          pagamentoStatus: "Comprovante Enviado",
+          pagamentoBadgeClass: "status-pendente",
+          ocupaVaga: true,
+          vagaBadgeHtml: `<span style="font-size: .72rem; color: #b45309; font-weight: 700;"><i class="fa-solid fa-clock"></i> Vaga ocupada</span>`
+        };
+      }
+
+      // 5. Pendente
+      return {
+        tipo: "pendente",
+        inscricaoStatus: "Ativa",
+        inscricaoBadgeClass: "status-approved",
+        pagamentoStatus: "Pendente",
+        pagamentoBadgeClass: "status-pendente",
+        ocupaVaga: true,
+        vagaBadgeHtml: `<span style="font-size: .72rem; color: #b45309; font-weight: 700;"><i class="fa-solid fa-clock"></i> Vaga ocupada</span>`
+      };
+    }
+
     function isApproved(status) {
       const s = String(status || "").trim().toLowerCase();
       return s === "approved" || s === "confirmado" || s === "pago";
@@ -1985,10 +2104,10 @@
       });
 
       document.getElementById("statTotalInscritos").textContent = totalConfirmados;
-      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 85`;
-      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 85`;
-      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 85`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 85`;
+      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 70`;
+      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 70`;
+      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 70`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 70`;
 
       // Cálculos financeiros
       let totalGeral = 0;
@@ -2104,7 +2223,7 @@
             <td>
               ${p.email || '<span style="color:var(--muted); font-style:italic;">Não informado</span>'}
               <br><small style="color:${p.comprovante_email_enviado ? '#10b981' : '#f59e0b'}; font-weight:600;"><i class="fa-solid ${p.comprovante_email_enviado ? 'fa-circle-check' : 'fa-clock'}"></i> ${p.comprovante_email_enviado ? 'Comprovante Enviado' : 'E-mail Pendente'}</small>
-              ${proofUrl ? `<br><a href="${proofUrl}" target="_blank" style="color:var(--blue); font-size:.76rem; font-weight:700;"><i class="fa-solid fa-paperclip"></i> Ver Comprovante</a>` : ''}
+              ${proofUrl ? `<br><button type="button" onclick="abrirComprovanteSeguro('${proofUrl}', this)" style="background:none; border:none; padding:0; color:var(--blue); font-size:.76rem; font-weight:700; cursor:pointer; text-decoration:underline; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-shield-halved" style="color:#10b981;"></i> Ver Comprovante</button>` : ''}
             </td>
             <td>${methodBadge}</td>
             <td><span style="font-size:.78rem; text-transform:uppercase; font-weight:700; color:var(--muted);">${p.tipo || 'Inscrição'}</span></td>
@@ -2181,6 +2300,43 @@
       feedback.style.display = "none";
 
       try {
+        if (FEATURE_FLAG_ADMIN_WRITE_EDGE) {
+          const res = await fetch(ADMIN_WRITE_EDGE_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${currentAdminPass}`,
+              "x-admin-token": currentAdminPass
+            },
+            body: JSON.stringify({
+              action: "update_whatsapp",
+              subs: payloadSubs
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            if (data.whatsapp) {
+              preencherPainelWhatsApp(data.whatsapp);
+            }
+            try {
+              localStorage.setItem("ejc_whatsapp_links", JSON.stringify(wppLinksData));
+            } catch (eStore) {}
+            if (data.changed === false) {
+              feedback.textContent = "✓ Links do WhatsApp já estão atualizados (nenhuma alteração necessária).";
+            } else {
+              feedback.textContent = "✓ Links do WhatsApp atualizados e persistidos no Supabase!";
+            }
+            feedback.style.color = "#16a34a";
+            feedback.style.display = "block";
+            setTimeout(() => { feedback.style.display = "none"; }, 5000);
+          } else {
+            feedback.textContent = `Erro: ${data.error || data.message || 'Falha ao salvar no servidor'}`;
+            feedback.style.color = "#dc2626";
+            feedback.style.display = "block";
+          }
+          return;
+        }
+
         const res = await fetch("/api/payment-settings", {
           method: "POST",
           headers: {
@@ -2223,6 +2379,44 @@
       }
     });
 
+    // Resolução e Abertura Segura de Comprovantes com Autenticação Server-Side (OP07)
+    window.abrirComprovanteSeguro = async function(caminho, btnEl) {
+      if (!caminho) return;
+      const originalHtml = btnEl ? btnEl.innerHTML : "";
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Carregando...';
+      }
+      try {
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_pass") || sessionStorage.getItem("ejc_admin_token") || "";
+        const res = await fetch("/api/admin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": token,
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: "get_comprovante_url",
+            path: caminho
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.url) {
+          throw new Error(data.error || "Não foi possível carregar a URL segura do comprovante.");
+        }
+        window.open(data.url, "_blank", "noopener,noreferrer");
+      } catch (err) {
+        console.error("[Comprovante Seguro]", err);
+        alert(`Erro ao abrir comprovante: ${err.message || 'Falha de autorização'}`);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = originalHtml;
+        }
+      }
+    };
+
     window.verDetalhes = function(whatsapp) {
       const item = inscricoesData.find(i => i.whatsapp === whatsapp);
       if (!item) return;
@@ -2246,7 +2440,14 @@
           const href = (res && (res.primaryUrl || res.fallbackUrl)) || ref;
           return `<div style="margin-top: 10px;"><strong>Foto do Inscrito:</strong><br><a href="${href}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver imagem / arquivo anexo</a></div>`;
         })()}
-        ${item.comprovante_caminho ? `<div style="margin-top: 10px;"><strong>Comprovante de Pagamento:</strong><br><a href="${item.comprovante_caminho}" target="_blank" style="color: var(--blue); font-weight: 700;">Ver comprovante anexo</a></div>` : ''}
+        ${item.comprovante_caminho ? `
+          <div style="margin-top: 10px;">
+            <strong>Comprovante de Pagamento:</strong><br>
+            <button type="button" class="button button-secondary" onclick="abrirComprovanteSeguro('${item.comprovante_caminho}', this)" style="margin-top: 5px; font-size: .82rem; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Ver Comprovante Seguro
+            </button>
+          </div>
+        ` : ''}
       `;
       document.getElementById("detailModal").showModal();
     };
@@ -2359,6 +2560,36 @@
       }
 
       try {
+        if (FEATURE_FLAG_ADMIN_WRITE_EDGE) {
+          const res = await fetch(ADMIN_WRITE_EDGE_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-token": currentAdminPass
+            },
+            body: JSON.stringify({
+              action: "resend_receipt",
+              txid: p.txid,
+              force_resend: true
+            })
+          });
+          const data = await res.json();
+          if (res.ok && (data.success || data.ok)) {
+            alert(`✓ Comprovante reenviado com sucesso para ${p.email}!`);
+            p.comprovante_email_enviado = true;
+            auditoriaData.unshift({
+              transacao_id: txid,
+              acao: "comprovante_enviado",
+              executado_por: currentUserRole || "admin_coordenacao",
+              criado_em: new Date().toISOString()
+            });
+            renderizarTudo();
+          } else {
+            alert(`Aviso: ${data.message || data.error || 'Não foi possível confirmar a entrega do e-mail'}`);
+          }
+          return;
+        }
+
         const res = await fetch("/api/email-comprovante", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -4064,6 +4295,8 @@
       // 2. Se vier como URL completa do Supabase Storage
       if (str.includes("/storage/v1/object/public/fotos/")) {
         str = str.split("/storage/v1/object/public/fotos/")[1] || "";
+      } else if (str.includes("/storage/v1/object/authenticated/inscritos-fotos/")) {
+        str = str.split("/storage/v1/object/authenticated/inscritos-fotos/")[1] || "";
       } else if (str.includes("/fotos/participantes/")) {
         str = str.split("/fotos/")[1] || "";
       }
@@ -4082,6 +4315,12 @@
           return `participantes/${subNormalizada}/${arquivo}`;
         }
         return `participantes/${corOuSub}/${arquivo}`;
+      }
+
+      // 4b. Se começar com "inscritos/<inscricao_id>/<arquivo>" (OP06: R2 suporte completo para todas as fotos)
+      const matchInscrito = str.match(/^inscritos\/([0-9a-fA-F-]+)\/(.+\.(?:jpg|jpeg|png|webp|gif|jfif|avif))$/i);
+      if (matchInscrito) {
+        return `inscritos/${matchInscrito[1]}/${matchInscrito[2]}`;
       }
 
       // 5. Se for apenas o nome do arquivo e o sub for fornecido

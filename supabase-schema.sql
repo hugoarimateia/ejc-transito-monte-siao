@@ -104,17 +104,43 @@ BEGIN
     END IF;
 END $$;
 
--- 4. FUNÇÃO RPC: CONTAGEM DE INSCRIÇÕES POR SUB
+-- 3.1 FUNÇÃO RPC: OBTER VAGAS OCUPADAS POR SUB (NOVA REGRA: INSCRIÇÃO CONCLUÍDA NÃO CANCELADA E NÃO ARQUIVADA)
+CREATE OR REPLACE FUNCTION public.obter_vagas_ocupadas_sub(p_sub text)
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+    SELECT COUNT(*)::INTEGER
+    FROM public.inscricoes
+    WHERE sub = p_sub
+      AND (arquivado IS NULL OR arquivado = false)
+      AND LOWER(TRIM(COALESCE(pagamento_status, ''))) != 'cancelado';
+$function$;
+
+GRANT EXECUTE ON FUNCTION public.obter_vagas_ocupadas_sub(text) TO anon, authenticated, service_role;
+
+-- 4. FUNÇÃO RPC: CONTAGEM DE INSCRIÇÕES POR SUB (NOVA REGRA LANDING: CONCLUÍDA NÃO CANCELADA E NÃO ARQUIVADA)
 CREATE OR REPLACE FUNCTION public.contagem_inscricoes_por_sub()
 RETURNS TABLE(sub TEXT, total BIGINT) 
 LANGUAGE sql
+STABLE
 SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
 AS $$
-    SELECT s.nome AS sub, COUNT(i.id)::BIGINT AS total
+    SELECT 
+        s.nome AS sub, 
+        COUNT(i.id)::BIGINT AS total
     FROM public.subs s
-    LEFT JOIN public.inscricoes i ON i.sub = s.nome AND i.arquivado = false
+    LEFT JOIN public.inscricoes i 
+        ON i.sub = s.nome 
+       AND (i.arquivado IS NULL OR i.arquivado = false)
+       AND LOWER(TRIM(COALESCE(i.pagamento_status, ''))) != 'cancelado'
     GROUP BY s.nome;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.contagem_inscricoes_por_sub() TO anon, authenticated, service_role;
 
 -- 5. FUNÇÃO RPC: PODE REALIZAR INSCRIÇÃO (VALIDAÇÃO PRÉVIA)
 CREATE OR REPLACE FUNCTION public.pode_realizar_inscricao(
@@ -124,26 +150,30 @@ CREATE OR REPLACE FUNCTION public.pode_realizar_inscricao(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
 AS $$
 DECLARE
     v_total_sub INT;
     v_capacidade INT;
     v_existe_nome INT;
 BEGIN
-    -- Verifica capacidade do sub
     SELECT s.capacidade INTO v_capacidade FROM public.subs s WHERE s.nome = p_sub;
     IF NOT FOUND THEN
         RETURN json_build_object('allowed', false, 'message', 'Sub Grupo não encontrado.');
     END IF;
 
-    SELECT COUNT(*) INTO v_total_sub FROM public.inscricoes WHERE sub = p_sub;
+    -- Conta apenas vagas com pagamento confirmado e não arquivadas
+    v_total_sub := public.obter_vagas_ocupadas_sub(p_sub);
+
     IF v_total_sub >= v_capacidade THEN
         RETURN json_build_object('allowed', false, 'message', 'As vagas deste Sub foram encerradas.');
     END IF;
 
     -- Verifica se o nome já está cadastrado
     SELECT COUNT(*) INTO v_existe_nome FROM public.inscricoes 
-    WHERE LOWER(TRIM(nome_completo)) = LOWER(TRIM(p_nome_completo));
+    WHERE LOWER(TRIM(nome_completo)) = LOWER(TRIM(p_nome_completo))
+      AND (arquivado IS NULL OR arquivado = false);
+
     IF v_existe_nome > 0 THEN
         RETURN json_build_object('allowed', false, 'message', 'Este nome já possui uma inscrição realizada.');
     END IF;
@@ -151,6 +181,8 @@ BEGIN
     RETURN json_build_object('allowed', true, 'message', 'Inscrição liberada.');
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.pode_realizar_inscricao(text, text) TO anon, authenticated, service_role;
 
 -- 6. FUNÇÃO RPC: REALIZAR INSCRIÇÃO COM LINK PROTEGIDO
 CREATE OR REPLACE FUNCTION public.realizar_inscricao_com_link(
@@ -183,20 +215,16 @@ DECLARE
     v_total_sub INT;
     v_capacidade INT;
 BEGIN
-    -- Checa limite de vagas com bloqueio de linha: conta APENAS inscrições com pagamento confirmado
-    SELECT capacidade INTO v_capacidade FROM public.subs WHERE nome = p_sub FOR SHARE;
+    SELECT capacidade INTO v_capacidade FROM public.subs WHERE nome = p_sub FOR UPDATE;
     IF v_capacidade IS NULL THEN
         v_capacidade := 85;
     END IF;
 
-    SELECT COUNT(*) INTO v_total_sub 
-    FROM public.inscricoes 
-    WHERE sub = p_sub 
-      AND arquivado = false 
-      AND LOWER(TRIM(COALESCE(pagamento_status, ''))) IN ('approved', 'confirmado', 'pago');
+    -- Conta apenas vagas com pagamento confirmado e não arquivadas
+    v_total_sub := public.obter_vagas_ocupadas_sub(p_sub);
     
     IF v_total_sub >= v_capacidade THEN
-        RAISE EXCEPTION 'limite de vagas atingido para este Sub (85 vagas preenchidas)';
+        RAISE EXCEPTION 'limite de vagas atingido para este Sub (% vagas preenchidas)', v_capacidade;
     END IF;
 
     -- Geração segura de token com fallback
@@ -230,6 +258,53 @@ BEGIN
     );
 END;
 $$;
+
+-- 6.1 TRIGGER DE PROTEÇÃO DE CAPACIDADE NA TABELA INSCRICOES
+CREATE OR REPLACE FUNCTION public.validar_capacidade_inscricao()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+    v_capacidade INT;
+    v_total_sub INT;
+BEGIN
+    IF NEW.arquivado THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT capacidade
+    INTO v_capacidade
+    FROM public.subs
+    WHERE nome = NEW.sub
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Sub Grupo não encontrado.';
+    END IF;
+
+    -- Conta apenas inscrições com pagamento confirmado e não arquivadas via função única
+    v_total_sub := public.obter_vagas_ocupadas_sub(NEW.sub);
+
+    IF v_total_sub >= v_capacidade THEN
+        RAISE EXCEPTION 'limite de vagas atingido para este Sub (% vagas preenchidas)', v_capacidade;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_validar_capacidade_inscricao'
+    ) THEN
+        CREATE TRIGGER trg_validar_capacidade_inscricao
+        BEFORE INSERT OR UPDATE OF sub, arquivado ON public.inscricoes
+        FOR EACH ROW EXECUTE FUNCTION public.validar_capacidade_inscricao();
+    END IF;
+END $$;
 
 -- 7. FUNÇÃO RPC: REGISTRAR PAGAMENTO PIX
 CREATE OR REPLACE FUNCTION public.registrar_pagamento_pix(
