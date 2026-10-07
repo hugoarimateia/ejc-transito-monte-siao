@@ -1,0 +1,38 @@
+name: Deploy EJC Public
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ejc-public
+  cancel-in-progress: true
+
+jobs:
+  deploy-public:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout do projeto
+        uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar bundle público
+        run: node scripts/build-public-dist.js
+
+      - name: Publicar no Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy cloudflare-public-dist --project-name=ejc-public
