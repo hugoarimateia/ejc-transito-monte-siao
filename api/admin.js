@@ -502,6 +502,8 @@ module.exports = async (req, res) => {
     canApprovePayments: auth.canApprovePayments,
     canEditWhatsapp: auth.canEditWhatsapp,
     inscricoes: [],
+    inscricoes_arquivadas: [],
+    capacities: { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 },
     pagamentos: [],
     auditoria: [],
     whatsapp: {},
@@ -512,6 +514,20 @@ module.exports = async (req, res) => {
   try {
     const jobs = [
       sbSelect(baseUrl, key, "inscricoes?select=*&arquivado=is.false&order=criado_em.desc").then((d) => { result.inscricoes = d; }),
+      sbSelect(baseUrl, key, "inscricoes?select=*&arquivado=is.true&order=criado_em.desc").then((d) => { result.inscricoes_arquivadas = d; }).catch(() => { result.inscricoes_arquivadas = []; }),
+      sbSelect(baseUrl, key, "subs?select=nome,capacidade").then((rows) => {
+        if (Array.isArray(rows)) {
+          rows.forEach((r) => {
+            const str = String(r.nome || "").trim().toLowerCase();
+            let s = null;
+            if (str.includes("verd")) s = "Verde";
+            else if (str.includes("verm")) s = "Vermelho";
+            else if (str.includes("amar")) s = "Amarelo";
+            else if (str.includes("laran") || str.includes("azul")) s = "Laranja";
+            if (s && r.capacidade !== undefined && r.capacidade !== null) result.capacities[s] = Number(r.capacidade);
+          });
+        }
+      }).catch(() => {}),
       sbSelect(baseUrl, key, "pagamentos?select=*&order=criado_em.desc").then((d) => { result.pagamentos = d; }),
       sbSelect(baseUrl, key, "auditoria_transacoes?select=*&order=criado_em.desc&limit=500").then((d) => { result.auditoria = d; }),
       sbSelect(baseUrl, key, "configuracoes_whatsapp?select=*").then((rows) => {
@@ -527,6 +543,7 @@ module.exports = async (req, res) => {
         const local = settingsStore.loadLocalStore();
         if (!result.inscricoes.length && local.inscricoes) {
           result.inscricoes = local.inscricoes.filter(i => !i.arquivado);
+          result.inscricoes_arquivadas = local.inscricoes.filter(i => Boolean(i.arquivado));
         }
         if (!result.pagamentos.length && local.pagamentos) result.pagamentos = local.pagamentos;
         if (!Object.keys(result.whatsapp).length && local.whatsapp) result.whatsapp = local.whatsapp;

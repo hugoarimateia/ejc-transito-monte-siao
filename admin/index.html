@@ -463,19 +463,19 @@
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
-          <strong id="statSubVerde">0 / 70</strong>
+          <strong id="statSubVerde">0 / 85</strong>
         </div>
         <div class="stat-box red">
           <span>Sub Vermelho</span>
-          <strong id="statSubVermelho">0 / 70</strong>
+          <strong id="statSubVermelho">0 / 85</strong>
         </div>
         <div class="stat-box yellow">
           <span>Sub Amarelo</span>
-          <strong id="statSubAmarelo">0 / 70</strong>
+          <strong id="statSubAmarelo">0 / 85</strong>
         </div>
         <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
-          <strong id="statSubLaranja">0 / 70</strong>
+          <strong id="statSubLaranja">0 / 85</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -505,6 +505,7 @@
               <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-list-check"></i> Lista de Inscritos</button>
               <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
               <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
+              <button type="button" class="admin-tab-btn" data-tab="arquivados" id="tabBtnArquivados"><i class="fa-solid fa-box-archive"></i> Histórico / Arquivados</button>
             </div>
           </div>
 
@@ -559,6 +560,8 @@
               <option value="confirmado">Confirmado</option>
               <option value="informado">Informado</option>
               <option value="pendente">Pendente</option>
+              <option value="cancelado">Cancelado</option>
+              <option value="pix_expirado">Pix Expirado</option>
             </select>
           </div>
         </div>
@@ -1265,6 +1268,67 @@
         </div>
       </div>
 
+      <!-- SEÇÃO 6: HISTÓRICO / ARQUIVADOS -->
+      <div class="table-container" id="sectionArquivados" style="display: none;">
+        <div class="table-toolbar" style="border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
+          <div>
+            <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.35rem; color: var(--blue-dark); display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-box-archive" style="color: var(--blue);"></i> Histórico / Inscrições Arquivadas
+            </h3>
+            <span style="font-size: .86rem; color: var(--muted);">Registro histórico e auditoria forense de inscrições arquivadas e testes expurgados (somente leitura)</span>
+          </div>
+        </div>
+
+        <div style="background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+          <i class="fa-solid fa-shield-halved" style="color: #dc2626; font-size: 1.2rem;"></i>
+          <span style="font-size: .85rem; color: #991b1b; font-weight: 500;">
+            <strong>Aviso de Auditoria:</strong> As inscrições listadas nesta seção estão arquivadas. Elas <strong>NÃO ocupam vaga</strong> oficial em nenhum Sub e não afetam as contagens operacionais de inscritos ativos.
+          </span>
+        </div>
+
+        <div class="table-toolbar">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+            <input type="text" id="searchArquivadosInput" placeholder="Buscar arquivados por nome, e-mail, telefone ou motivo..." style="flex: 1; min-width: 250px;" oninput="renderizarTabelaArquivados()">
+            <select id="subFilterArquivados" onchange="renderizarTabelaArquivados()">
+              <option value="">Todos os Subs</option>
+              <option value="Verde">Sub Verde</option>
+              <option value="Vermelho">Sub Vermelho</option>
+              <option value="Amarelo">Sub Amarelo</option>
+              <option value="Laranja">Sub Laranja</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+          <span style="font-size: .84rem; font-weight: 600; color: var(--muted);" id="arquivadosCountLabel">0 inscrições arquivadas</span>
+          <span style="font-size: .78rem; color: #dc2626; font-weight: 700;"><i class="fa-solid fa-ban"></i> Registros fora da contagem de vagas</span>
+        </div>
+
+        <div style="overflow-x: auto; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
+          <table class="data-table" id="tableArquivados" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Data Criação</th>
+                <th>Nome Completo</th>
+                <th>Sub</th>
+                <th>Contato</th>
+                <th>Status Pagamento</th>
+                <th>Motivo do Arquivamento</th>
+                <th>Impacto na Vaga</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyArquivados">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 35px;">
+                  <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando inscrições arquivadas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
     </div>
   </div>
 
@@ -1712,6 +1776,8 @@
     const logoutBtn = document.getElementById("logoutBtn");
 
     let inscricoesData = [];
+    let inscricoesArquivadasData = [];
+    let serverCapacities = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
     let pagamentosData = [];
     let auditoriaData = [];
     let wppLinksData = {
@@ -1868,6 +1934,7 @@
       const secWpp = document.getElementById("sectionWhatsapp");
       const secInscDados = document.getElementById("sectionInscritosDados");
       const secCancelar = document.getElementById("sectionCancelarInscricao");
+      const secArquivados = document.getElementById("sectionArquivados");
 
       tabBtns.forEach(b => {
         if (b.getAttribute("data-tab") === targetTab) {
@@ -1884,6 +1951,7 @@
         if (secWpp) secWpp.style.display = "block";
         if (secInscDados) secInscDados.style.display = "none";
         if (secCancelar) secCancelar.style.display = "none";
+        if (secArquivados) secArquivados.style.display = "none";
       } else {
         if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
         if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
@@ -1891,12 +1959,15 @@
         if (secWpp) secWpp.style.display = (targetTab === "whatsapp") ? "block" : "none";
         if (secInscDados) secInscDados.style.display = (targetTab === "inscritos-dados") ? "block" : "none";
         if (secCancelar) secCancelar.style.display = (targetTab === "cancelar-inscricao") ? "block" : "none";
+        if (secArquivados) secArquivados.style.display = (targetTab === "arquivados") ? "block" : "none";
       }
 
       if (targetTab === "inscritos-dados") {
         carregarSubAtivo();
       } else if (targetTab === "cancelar-inscricao") {
         renderizarTabelaCancelarInscricao();
+      } else if (targetTab === "arquivados") {
+        renderizarTabelaArquivados();
       }
     }
 
@@ -1933,6 +2004,8 @@
           autoTab = "inscritos-dados";
         } else if (path.endsWith("/cancelar-inscricao") || hash === "cancelar-inscricao" || hash === "cancelar" || hash === "remover") {
           autoTab = "cancelar-inscricao";
+        } else if (path.endsWith("/arquivados") || hash === "arquivados" || hash === "historico") {
+          autoTab = "arquivados";
         }
         ativarAba(autoTab);
       }
@@ -1964,6 +2037,12 @@
           if (Array.isArray(d.inscricoes)) {
             inscricoesData = d.inscricoes.filter(i => i.arquivado !== true);
           }
+          if (Array.isArray(d.inscricoes_arquivadas)) {
+            inscricoesArquivadasData = d.inscricoes_arquivadas;
+          }
+          if (d.capacities && typeof d.capacities === "object") {
+            serverCapacities = d.capacities;
+          }
           if (Array.isArray(d.pagamentos)) {
             pagamentosData = d.pagamentos;
           }
@@ -1991,6 +2070,7 @@
       renderizarTabelaPagamentos();
       renderizarPainelWhatsApp();
       renderizarTabelaCancelarInscricao();
+      renderizarTabelaArquivados();
     }
 
     // OP13.7: Derivação de Status Administrativo (Inscrição × Pagamento × Vaga)
@@ -2104,10 +2184,10 @@
       });
 
       document.getElementById("statTotalInscritos").textContent = totalConfirmados;
-      document.getElementById("statSubVerde").textContent = `${subs.Verde} / 70`;
-      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / 70`;
-      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / 70`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / 70`;
+      document.getElementById("statSubVerde").textContent = `${subs.Verde} / ${(serverCapacities && serverCapacities.Verde) || 85}`;
+      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 85}`;
+      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 85}`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 85}`;
 
       // Cálculos financeiros
       let totalGeral = 0;
@@ -2143,7 +2223,12 @@
           (item.email || "").toLowerCase().includes(search);
         const itemSubNorm = (item.sub === "Azul") ? "Laranja" : item.sub;
         const matchSub = !subFilter || itemSubNorm === subFilter;
-        const matchStatus = !statusFilter || item.pagamento_status === statusFilter;
+        const adm = obterStatusAdministrativo(item);
+        const matchStatus = !statusFilter ||
+          item.pagamento_status === statusFilter ||
+          adm.tipo === statusFilter ||
+          (statusFilter === "cancelado" && (item.pagamento_status === "cancelado" || adm.tipo === "cancelado" || adm.tipo === "pix_expirado")) ||
+          (statusFilter === "pix_expirado" && adm.tipo === "pix_expirado");
         return matchSearch && matchSub && matchStatus;
       });
 
@@ -2164,7 +2249,10 @@
           <td><span class="sub-tag ${displaySub}">${displaySub}</span></td>
           <td>${item.whatsapp || '-'}</td>
           <td>${item.tamanho_camisa || '-'} (${item.modelo_camisa || 'Tradicional'})</td>
-          <td><span class="status-badge status-${item.pagamento_status || 'pendente'}">${item.pagamento_status || 'pendente'}</span></td>
+          <td>
+            <span class="status-badge ${adm.pagamentoBadgeClass}">${adm.pagamentoStatus}</span>
+            <div style="margin-top: 4px;">${adm.vagaBadgeHtml}</div>
+          </td>
           <td>
             <button class="action-btn view" onclick="verDetalhes('${item.whatsapp}')"><i class="fa-regular fa-eye"></i> Detalhes</button>
             ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')"><i class="fa-solid fa-check"></i> Aprovar</button>` : ''}
@@ -2173,6 +2261,59 @@
       `;
       }).join("");
     }
+
+
+    function renderizarTabelaArquivados() {
+      const tbody = document.getElementById("tbodyArquivados");
+      if (!tbody) return;
+      const search = (document.getElementById("searchArquivadosInput")?.value || "").toLowerCase();
+      const subFilter = document.getElementById("subFilterArquivados")?.value || "";
+
+      const filtered = inscricoesArquivadasData.filter(item => {
+        const matchSearch = (item.nome_completo || "").toLowerCase().includes(search) ||
+          (item.whatsapp || "").includes(search) ||
+          (item.email || "").toLowerCase().includes(search) ||
+          (item.motivo_cancelamento || "").toLowerCase().includes(search);
+        const itemSubNorm = (item.sub === "Azul") ? "Laranja" : item.sub;
+        const matchSub = !subFilter || itemSubNorm === subFilter;
+        return matchSearch && matchSub;
+      });
+
+      const countEl = document.getElementById("arquivadosCountLabel");
+      if (countEl) {
+        countEl.textContent = `${filtered.length} de ${inscricoesArquivadasData.length} inscrições arquivadas`;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--muted); padding: 30px;">Nenhuma inscrição arquivada encontrada com os filtros selecionados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
+        const dataCriacao = item.criado_em ? new Date(item.criado_em).toLocaleDateString("pt-BR") : "-";
+        const motivo = item.motivo_cancelamento || item.observacoes_cancelamento || "Histórico / Expurgado de testes";
+        return `
+        <tr style="opacity: 0.9;">
+          <td>${dataCriacao}</td>
+          <td>
+            <strong>${item.nome_completo || "Sem nome"}</strong>
+            ${item.email ? `<br><small style="color:var(--muted);">${item.email}</small>` : ''}
+          </td>
+          <td><span class="sub-tag ${displaySub}">${displaySub}</span></td>
+          <td>${item.whatsapp || '-'}</td>
+          <td><span class="status-badge status-recusado">${item.pagamento_status || 'Cancelado'}</span></td>
+          <td style="max-width: 250px; font-size: .82rem; color: var(--muted); word-break: break-word;">${motivo}</td>
+          <td>
+            <span class="badge-vaga-liberada" style="color: #dc2626; border-color: rgba(220, 38, 38, 0.25); background: rgba(220, 38, 38, 0.1);">
+              <i class="fa-solid fa-ban"></i> Não ocupa vaga
+            </span>
+          </td>
+        </tr>
+      `;
+      }).join("");
+    }
+
 
     function renderizarTabelaPagamentos() {
       const tbody = document.getElementById("payTableBody");

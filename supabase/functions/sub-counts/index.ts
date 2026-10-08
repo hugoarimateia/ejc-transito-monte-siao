@@ -102,7 +102,7 @@ serve(async (req: Request) => {
           });
         }
       } catch (_subsErr) {
-        // Mantém capacidades padrão (70)
+        // Mantém capacidades padrão (85)
       }
 
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -167,7 +167,21 @@ serve(async (req: Request) => {
         });
       }
 
-      // Validação de capacidade (70 vagas por sub)
+      // Validação de capacidade (85 vagas por sub, consultando public.subs com fallback 85)
+      let maxCapacidade = 85;
+      try {
+        const { data: subRow } = await supabase
+          .from("subs")
+          .select("capacidade")
+          .ilike("nome", sub)
+          .maybeSingle();
+        if (subRow && typeof subRow.capacidade === "number" && subRow.capacidade > 0) {
+          maxCapacidade = subRow.capacidade;
+        }
+      } catch (_capErr) {
+        maxCapacidade = 85;
+      }
+
       const { data: rpcData } = await supabase.rpc("contagem_inscricoes_por_sub");
       let subTotal = 0;
       if (Array.isArray(rpcData)) {
@@ -184,10 +198,10 @@ serve(async (req: Request) => {
 
       const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
 
-      if (!existing && subTotal >= 70) {
+      if (!existing && subTotal >= maxCapacidade) {
         return new Response(JSON.stringify({
           success: false,
-          error: `Limite máximo de 70 vagas atingido para a Sub ${sub}. Por favor, escolha outra Sub.`
+          error: `Limite máximo de ${maxCapacidade} vagas atingido para a Sub ${sub}. Por favor, escolha outra Sub.`
         }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }

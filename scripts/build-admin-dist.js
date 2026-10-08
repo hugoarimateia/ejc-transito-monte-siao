@@ -187,7 +187,7 @@ const ADMIN_READ_ADAPTER = `
       const targetUrl =
         ADMIN_READ_URL +
         "?view=inscritos-dados&" +
-        query.replace(/^\?/, "");
+        (query.startsWith("?") ? query.slice(1) : query);
 
       return originalFetch(targetUrl, init);
     }
