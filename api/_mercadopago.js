@@ -353,18 +353,17 @@ async function criarPreferenciaCheckoutPro({
   const lastName = nomePartes.slice(1).join(" ") || "EJC";
   const cleanPhone = telefone ? String(telefone).replace(/\D/g, "") : "";
 
+  // Para garantir a experiência oficial de pagamento como convidado (guest checkout) sem forçar
+  // o comprador a realizar login na conta do Mercado Pago/Mercado Livre caso o e-mail
+  // ou telefone pertença a uma conta já cadastrada, enviamos dados nominais na preferência
+  // sem vincular credenciais de login (e-mail/telefone).
+  // Os dados de contato do comprador (e-mail, WhatsApp/telefone e CPF) permanecem registrados
+  // de forma autoritativa no banco de dados do EJC (tabelas inscricoes e pagamentos) e conciliados
+  // com total integridade via external_reference (txid).
   const payerObj = {
     name: firstName,
-    surname: lastName,
-    email: String(email).trim().toLowerCase()
+    surname: lastName
   };
-
-  if (cleanPhone && cleanPhone.length >= 10) {
-    payerObj.phone = {
-      area_code: cleanPhone.substring(0, 2),
-      number: cleanPhone.substring(2)
-    };
-  }
 
   const preferencePayload = {
     items: [
