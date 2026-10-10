@@ -91,7 +91,6 @@ const redirectsContent = `# Cloudflare Pages Redirects - EJC Trânsito Público
 # Redirecionamento da área administrativa para o Cloudflare Pages do Admin já publicado
 /admin/*  https://ejc-admin.pages.dev/admin/:splat  302
 /admin    https://ejc-admin.pages.dev/admin/        302
-/verificar-inscricao  /verificar-inscricao.html    200
 `;
 fs.writeFileSync(path.join(DIST_DIR, '_redirects'), redirectsContent, 'utf8');
 console.log(`✓ Gerado: _redirects`);
@@ -146,11 +145,6 @@ const workerContent = `export default {
       if (cleanRes.status === 200) {
         return cleanRes;
       }
-    }
-
-    if (url.pathname === '/verificar-inscricao' || url.pathname === '/verificar-inscricao/') {
-      const cleanUrl = new URL('/verificar-inscricao.html' + url.search, request.url);
-      return env.ASSETS.fetch(new Request(cleanUrl, request));
     }
 
     // 3. /api/checkout-process com suporte a Feature Flag
