@@ -864,10 +864,11 @@ serve(async (req: Request) => {
       const digitos = termo.replace(/\D/g, "");
       const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(cleanTermo);
       const ehWhatsapp = !ehEmail && /^[\d\s()+\-]+$/.test(termo) && digitos.length >= 10;
+      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
 
-      if (!ehEmail && !ehWhatsapp) {
+      if (!ehEmail && !ehWhatsapp && !ehUuid) {
         return jsonResponse(
-          { error: "Informe o e-mail completo ou o número de WhatsApp completo (com DDD) usado na inscrição." },
+          { error: "Informe o e-mail completo, o número de WhatsApp completo (com DDD) ou o código da inscrição." },
           400,
           req
         );
@@ -877,11 +878,14 @@ serve(async (req: Request) => {
         let query = supabase
           .from("inscricoes")
           .select("id, nome_completo, email, whatsapp, sub, pagamento_status, criado_em")
-          .or("arquivado.is.null,arquivado.eq.false")
+          .eq("arquivado", false)
+          .eq("pagamento_status", "pendente")
           .order("criado_em", { ascending: false })
           .limit(10);
 
-        if (ehEmail) {
+        if (ehUuid) {
+          query = query.eq("id", cleanTermo);
+        } else if (ehEmail) {
           query = query.ilike("email", cleanTermo);
         } else {
           query = query.ilike("whatsapp", `%${digitos}%`);
@@ -896,7 +900,7 @@ serve(async (req: Request) => {
           email: r.email,
           whatsapp: r.whatsapp,
           sub: r.sub,
-          pagamento_status: r.pagamento_status || "pendente",
+          pagamento_status: "pendente",
           criado_em: r.criado_em
         }));
 
@@ -1532,6 +1536,12 @@ serve(async (req: Request) => {
         }
 
         const inscStatus = String(inscRecord.pagamento_status || "").toLowerCase().trim();
+        if (inscStatus === "cancelado") {
+          return jsonResponse({
+            error: "Esta inscrição está cancelada e não pode receber pagamentos."
+          }, 400, req);
+        }
+
         if (inscStatus === "approved" || inscStatus === "confirmado" || inscStatus === "pago") {
           return jsonResponse({
             error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."

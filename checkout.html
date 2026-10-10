@@ -1193,51 +1193,52 @@
     async function buscarInscricoesPendentes(termo) {
       if (!pendingSearchResults) return;
       const cleanTermo = (termo || "").trim().toLowerCase();
+
+      if (!cleanTermo || cleanTermo.length < 3) {
+        pendingSearchResults.innerHTML = `
+          <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; color: var(--text-muted); font-size: .88rem;">
+            <p style="margin: 0 0 10px;">Informe seu e-mail completo, número de WhatsApp (com DDD) ou código da inscrição para buscar.</p>
+          </div>
+        `;
+        return;
+      }
+
       pendingSearchResults.innerHTML = `<div style="text-align: center; padding: 16px; color: var(--text-muted); font-size: .88rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Buscando inscrições pendentes...</div>`;
 
       let encontradas = [];
 
-      // 1. Busca no localStorage ("ejc_inscricoes")
       try {
-        const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-        local.forEach(item => {
-          const matchTermo = !cleanTermo ||
-            (item.email && item.email.toLowerCase().includes(cleanTermo)) ||
-            (item.whatsapp && String(item.whatsapp).includes(cleanTermo)) ||
-            (item.nome_completo && item.nome_completo.toLowerCase().includes(cleanTermo)) ||
-            (item.id && String(item.id).toLowerCase().includes(cleanTermo));
-          const isPending = item.pagamento_status !== "confirmado" && item.pagamento_status !== "paid" && item.pagamento_status !== "approved";
-          if (matchTermo && isPending) {
-            encontradas.push({
-              id: item.id,
-              nome_completo: item.nome_completo || "Participante",
-              email: item.email || "",
-              whatsapp: item.whatsapp || "",
-              sub: item.sub || null,
-              pagamento_status: "pendente"
-            });
-          }
+        const resp = await fetch(`/api/checkout-process?action=buscar_inscricoes&termo=${encodeURIComponent(cleanTermo)}`, {
+          signal: AbortSignal.timeout(6000)
         });
-      } catch (eLocal) {}
-
-      // 2. Busca no backend remoto
-      if (cleanTermo.length >= 3) {
-        try {
-          const resp = await fetch(`/api/checkout-process?action=buscar_inscricoes&termo=${encodeURIComponent(cleanTermo)}`, {
-            signal: AbortSignal.timeout(4000)
-          });
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data && Array.isArray(data.inscricoes)) {
-              data.inscricoes.forEach(item => {
-                const jaExiste = encontradas.some(e => e.id === item.id || (e.email && item.email && e.email === item.email && e.sub === item.sub));
-                if (!jaExiste) {
-                  encontradas.push(item);
-                }
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && Array.isArray(data.inscricoes)) {
+            encontradas = data.inscricoes;
+          }
+        } else {
+          const errData = await resp.json().catch(() => ({}));
+          if (errData && errData.error) {
+            pendingSearchResults.innerHTML = `
+              <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; color: var(--text-muted); font-size: .88rem;">
+                <p style="margin: 0 0 10px;">${errData.error}</p>
+                <button type="button" class="button button-secondary" id="btnGoToNewSubFromSearch" style="font-size: .85rem; padding: 8px 16px;">
+                  Fazer uma nova inscrição &rarr;
+                </button>
+              </div>
+            `;
+            const btnNewFromSearch = document.getElementById("btnGoToNewSubFromSearch");
+            if (btnNewFromSearch) {
+              btnNewFromSearch.addEventListener("click", () => {
+                if (boxPendingSearch) boxPendingSearch.style.display = "none";
+                if (boxNewSubSelection) boxNewSubSelection.style.display = "block";
               });
             }
+            return;
           }
-        } catch (eFetch) {}
+        }
+      } catch (eFetch) {
+        console.warn("[buscarInscricoesPendentes] Falha na busca remota:", eFetch);
       }
 
       if (encontradas.length === 0) {
@@ -1404,16 +1405,7 @@
       });
     });
 
-    // Detecção inicial de inscrições salvas localmente
-    try {
-      const localInsc = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-      const pendentes = localInsc.filter(i => i.pagamento_status !== "confirmado" && i.pagamento_status !== "paid" && i.pagamento_status !== "approved");
-      const alertEl = document.getElementById("localPendingAlert");
-      if (pendentes.length > 0 && alertEl) {
-        alertEl.style.display = "block";
-        alertEl.innerHTML = `<i class="fa-solid fa-bell"></i> Identificamos ${pendentes.length} inscrição(ões) pendente(s) neste dispositivo. Clique em "Sim, já fiz minha inscrição" para continuar.`;
-      }
-    } catch (e) {}
+    // Detecção inicial de inscrições salvas localmente removida em favor de verificação autoritativa do servidor
 
     // Inicialização da interface do Sub
     atualizarSubUI();

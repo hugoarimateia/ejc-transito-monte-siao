@@ -597,21 +597,25 @@ module.exports = async (req, res) => {
       const digitos = termo.replace(/\D/g, "");
       const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(cleanTermo);
       const ehWhatsapp = !ehEmail && /^[\d\s()+\-]+$/.test(termo) && digitos.length >= 10;
+      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
 
-      // Busca pública restrita: exige o e-mail completo ou o WhatsApp completo do próprio inscrito.
-      // (Busca parcial por nome/ID permitiria vasculhar dados pessoais de outros participantes.)
-      if (!ehEmail && !ehWhatsapp) {
-        return res.status(400).json({ error: "Informe o e-mail completo ou o número de WhatsApp completo (com DDD) usado na inscrição." });
+      if (!ehEmail && !ehWhatsapp && !ehUuid) {
+        return res.status(400).json({ error: "Informe o e-mail completo, o número de WhatsApp completo (com DDD) ou o código da inscrição." });
       }
 
       const inscricoesEncontradas = [];
 
-      // 1. Busca no Supabase (se configurado)
       if (supabaseUrl && supabaseKey) {
         try {
-          const query = ehEmail
-            ? `email=ilike.${encodeURIComponent(cleanTermo)}&or=(arquivado.is.null,arquivado.eq.false)&order=criado_em.desc&limit=10`
-            : `whatsapp=ilike.*${encodeURIComponent(digitos)}*&or=(arquivado.is.null,arquivado.eq.false)&order=criado_em.desc&limit=10`;
+          let query = `arquivado=eq.false&pagamento_status=eq.pendente&order=criado_em.desc&limit=10`;
+          if (ehUuid) {
+            query += `&id=eq.${encodeURIComponent(cleanTermo)}`;
+          } else if (ehEmail) {
+            query += `&email=ilike.${encodeURIComponent(cleanTermo)}`;
+          } else {
+            query += `&whatsapp=ilike.*${encodeURIComponent(digitos)}*`;
+          }
+
           const sbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${query}`, {
             headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
             signal: AbortSignal.timeout(3500)
@@ -626,7 +630,7 @@ module.exports = async (req, res) => {
                   email: r.email,
                   whatsapp: r.whatsapp,
                   sub: r.sub,
-                  pagamento_status: r.pagamento_status || "pendente",
+                  pagamento_status: "pendente",
                   criado_em: r.criado_em
                 });
               });
@@ -636,31 +640,6 @@ module.exports = async (req, res) => {
           console.warn("[buscar_inscricoes] Falha na busca remota Supabase:", errDb.message);
         }
       }
-
-      // 2. Busca no localStore (pagamentos e histórico) como fallback / complemento
-      try {
-        const localStore = settingsStore.loadLocalStore();
-        if (Array.isArray(localStore.pagamentos)) {
-          localStore.pagamentos.forEach(p => {
-            const matchEmail = ehEmail && p.email && p.email.toLowerCase() === cleanTermo;
-            const matchWpp = ehWhatsapp && p.whatsapp_pagador && String(p.whatsapp_pagador).replace(/\D/g, "").includes(digitos);
-            if (matchEmail || matchWpp) {
-              const jaExiste = inscricoesEncontradas.some(i => i.id === p.inscricao_id || (i.email === p.email && i.sub === p.sub));
-              if (!jaExiste) {
-                inscricoesEncontradas.push({
-                  id: p.inscricao_id || p.txid,
-                  nome_completo: p.nome_pagador,
-                  email: p.email,
-                  whatsapp: p.whatsapp_pagador,
-                  sub: p.sub || null,
-                  pagamento_status: p.status === "approved" ? "confirmado" : "pendente",
-                  criado_em: p.criado_em
-                });
-              }
-            }
-          });
-        }
-      } catch (eLocal) {}
 
       return res.status(200).json({
         success: true,
@@ -1358,6 +1337,11 @@ module.exports = async (req, res) => {
               });
             }
             const inscStatus = String(inscRecord.pagamento_status || "").toLowerCase().trim();
+            if (inscStatus === "cancelado") {
+              return res.status(400).json({
+                error: "Esta inscrição está cancelada e não pode receber pagamentos."
+              });
+            }
             if (inscStatus === "approved" || inscStatus === "confirmado" || inscStatus === "pago") {
               return res.status(400).json({
                 error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."
