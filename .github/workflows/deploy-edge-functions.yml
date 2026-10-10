@@ -5,9 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "supabase/functions/admin-read/**"
-      - "supabase/functions/admin-write/**"
-      - "supabase/functions/sub-counts/**"
+      - "supabase/functions/**"
       - ".github/workflows/deploy-edge-functions.yml"
 
   workflow_dispatch:
@@ -21,7 +19,13 @@ on:
           - all
           - admin-read
           - admin-write
+          - checkout-process
+          - pix-webhook
+          - public-config
+          - r2-presigned-url
           - sub-counts
+          - whatsapp
+          - send-email
 
 concurrency:
   group: deploy-supabase-edge-functions
@@ -58,57 +62,37 @@ jobs:
       - name: Identificar Edge Functions a publicar
         id: select_functions
         run: |
+          FUNCTIONS=("admin-read" "admin-write" "checkout-process" "pix-webhook" "public-config" "r2-presigned-url" "sub-counts" "whatsapp" "send-email")
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TARGET="${{ github.event.inputs.target_function }}"
             echo "Modo manual (workflow_dispatch). Alvo: $TARGET"
-            if [ "$TARGET" = "all" ]; then
-              echo "deploy_admin_read=true" >> "$GITHUB_OUTPUT"
-              echo "deploy_admin_write=true" >> "$GITHUB_OUTPUT"
-              echo "deploy_sub_counts=true" >> "$GITHUB_OUTPUT"
-            elif [ "$TARGET" = "admin-read" ]; then
-              echo "deploy_admin_read=true" >> "$GITHUB_OUTPUT"
-              echo "deploy_admin_write=false" >> "$GITHUB_OUTPUT"
-              echo "deploy_sub_counts=false" >> "$GITHUB_OUTPUT"
-            elif [ "$TARGET" = "admin-write" ]; then
-              echo "deploy_admin_read=false" >> "$GITHUB_OUTPUT"
-              echo "deploy_admin_write=true" >> "$GITHUB_OUTPUT"
-              echo "deploy_sub_counts=false" >> "$GITHUB_OUTPUT"
-            elif [ "$TARGET" = "sub-counts" ]; then
-              echo "deploy_admin_read=false" >> "$GITHUB_OUTPUT"
-              echo "deploy_admin_write=false" >> "$GITHUB_OUTPUT"
-              echo "deploy_sub_counts=true" >> "$GITHUB_OUTPUT"
-            fi
+            for fn in "${FUNCTIONS[@]}"; do
+              var_name="deploy_${fn//-/_}"
+              if [ "$TARGET" = "all" ] || [ "$TARGET" = "$fn" ]; then
+                echo "${var_name}=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "${var_name}=false" >> "$GITHUB_OUTPUT"
+              fi
+            done
           else
             DIFF_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
             echo "Arquivos alterados no commit:"
             echo "$DIFF_FILES"
 
-            DEPLOY_READ="false"
-            DEPLOY_WRITE="false"
-            DEPLOY_COUNTS="false"
-
-            if echo "$DIFF_FILES" | grep -q "^supabase/functions/admin-read/"; then
-              DEPLOY_READ="true"
-            fi
-
-            if echo "$DIFF_FILES" | grep -q "^supabase/functions/admin-write/"; then
-              DEPLOY_WRITE="true"
-            fi
-
-            if echo "$DIFF_FILES" | grep -q "^supabase/functions/sub-counts/"; then
-              DEPLOY_COUNTS="true"
-            fi
-
-            # Se o próprio arquivo de workflow foi alterado, publica todas as funções homologadas
+            WF_CHANGED=false
             if echo "$DIFF_FILES" | grep -q "^\.github/workflows/deploy-edge-functions\.yml"; then
-              DEPLOY_READ="true"
-              DEPLOY_WRITE="true"
-              DEPLOY_COUNTS="true"
+              WF_CHANGED=true
             fi
 
-            echo "deploy_admin_read=$DEPLOY_READ" >> "$GITHUB_OUTPUT"
-            echo "deploy_admin_write=$DEPLOY_WRITE" >> "$GITHUB_OUTPUT"
-            echo "deploy_sub_counts=$DEPLOY_COUNTS" >> "$GITHUB_OUTPUT"
+            for fn in "${FUNCTIONS[@]}"; do
+              var_name="deploy_${fn//-/_}"
+              if [ "$WF_CHANGED" = "true" ] || echo "$DIFF_FILES" | grep -q "^supabase/functions/${fn}/"; then
+                echo "${var_name}=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "${var_name}=false" >> "$GITHUB_OUTPUT"
+              fi
+            done
           fi
 
       - name: Publicar Edge Function admin-read
@@ -117,9 +101,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
         run: |
-          echo "=================================================================="
           echo "Publicando supabase/functions/admin-read no projeto $PROJECT_REF..."
-          echo "=================================================================="
           supabase functions deploy admin-read --project-ref "$PROJECT_REF" --no-verify-jwt
 
       - name: Publicar Edge Function admin-write
@@ -128,10 +110,44 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
         run: |
-          echo "=================================================================="
           echo "Publicando supabase/functions/admin-write no projeto $PROJECT_REF..."
-          echo "=================================================================="
           supabase functions deploy admin-write --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function checkout-process
+        if: steps.select_functions.outputs.deploy_checkout_process == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/checkout-process no projeto $PROJECT_REF..."
+          supabase functions deploy checkout-process --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function pix-webhook
+        if: steps.select_functions.outputs.deploy_pix_webhook == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/pix-webhook no projeto $PROJECT_REF..."
+          supabase functions deploy pix-webhook --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function public-config
+        if: steps.select_functions.outputs.deploy_public_config == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/public-config no projeto $PROJECT_REF..."
+          supabase functions deploy public-config --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function r2-presigned-url
+        if: steps.select_functions.outputs.deploy_r2_presigned_url == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/r2-presigned-url no projeto $PROJECT_REF..."
+          supabase functions deploy r2-presigned-url --project-ref "$PROJECT_REF" --no-verify-jwt
 
       - name: Publicar Edge Function sub-counts
         if: steps.select_functions.outputs.deploy_sub_counts == 'true'
@@ -139,7 +155,23 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
         run: |
-          echo "=================================================================="
           echo "Publicando supabase/functions/sub-counts no projeto $PROJECT_REF..."
-          echo "=================================================================="
           supabase functions deploy sub-counts --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function whatsapp
+        if: steps.select_functions.outputs.deploy_whatsapp == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/whatsapp no projeto $PROJECT_REF..."
+          supabase functions deploy whatsapp --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function send-email
+        if: steps.select_functions.outputs.deploy_send_email == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "Publicando supabase/functions/send-email no projeto $PROJECT_REF..."
+          supabase functions deploy send-email --project-ref "$PROJECT_REF" --no-verify-jwt

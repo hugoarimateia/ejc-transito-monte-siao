@@ -155,13 +155,13 @@ const workerContent = `export default {
       const envFlag = env && env.FEATURE_FLAG_CHECKOUT_PROCESS_EDGE ? String(env.FEATURE_FLAG_CHECKOUT_PROCESS_EDGE).trim().toUpperCase() : null;
       const headerFlag = request.headers.get('x-feature-flag-checkout-process-edge') ? request.headers.get('x-feature-flag-checkout-process-edge').trim().toUpperCase() : null;
 
-      let flagValue = 'OFF';
+      let flagValue = 'ON';
       if (envFlag === 'ON' || envFlag === 'OFF') {
         flagValue = envFlag;
       } else if (headerFlag === 'ON' || headerFlag === 'OFF') {
         flagValue = headerFlag;
       } else {
-        flagValue = 'OFF';
+        flagValue = 'ON';
       }
 
       const useEdge = flagValue === 'ON';

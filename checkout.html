@@ -1501,28 +1501,10 @@
         return;
       }
 
-      // Se for inscrição e ainda não possui ID de inscrição associado, registra como pendente antes de pagar
+      // Se for inscrição e ainda não possui ID de inscrição associado, NÃO inventa UUID no cliente.
+      // O backend do checkout aceita inscricao_id null e associa o pagamento de forma autoritativa.
       if (tipoCheckout === "inscricao" && !inscricaoIdParam) {
-        const newId = crypto.randomUUID ? crypto.randomUUID() : `INS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        inscricaoIdParam = newId;
-        try {
-          const localInsc = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-          const exists = localInsc.some(i => i.id === newId || (i.email === emailVal && i.sub === subSelecionado));
-          if (!exists) {
-            localInsc.unshift({
-              id: newId,
-              criado_em: new Date().toISOString(),
-              nome_completo: nomeVal,
-              email: emailVal,
-              whatsapp: wppVal || null,
-              sub: subSelecionado,
-              forma_pagamento: "checkout_online",
-              pagamento_status: "pendente"
-            });
-            localStorage.setItem("ejc_inscricoes", JSON.stringify(localInsc));
-          }
-          sessionStorage.setItem("ejc_checkout_inscricao_id", newId);
-        } catch (eSave) {}
+        inscricaoIdParam = null;
       }
 
       step1ErrorMsg.style.display = "none";
@@ -1616,17 +1598,17 @@
       }
     }
 
-    async function avancarParaEtapa2(nome, email, whatsapp) {
-      if (isTransitioningToStep2) return;
-      isTransitioningToStep2 = true;
+    async function carregarCobrancaPix(nome, email, whatsapp) {
+      const qrBox = document.getElementById("pixQrCodeBox");
+      const textarea = document.getElementById("pixCodeTextarea");
+      const manualBox = document.getElementById("manualPixBox");
+      const instructionsText = document.getElementById("pixInstructionsText");
 
-      btnContinueToPayment.disabled = true;
-      btnContinueToPayment.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gerando cobrança oficial...`;
+      if (qrBox) {
+        qrBox.innerHTML = `<span style="color: #64748b; font-size: .88rem; font-weight: 600;"><i class="fa-solid fa-circle-notch fa-spin"></i> Gerando cobrança Pix oficial...</span>`;
+      }
+      if (textarea) textarea.value = "";
 
-      // Atualiza nome na lateral
-      document.getElementById("summaryParticipantName").textContent = nome;
-
-      // 1. Chama backend para registrar pagamento e obter cobrança oficial conforme modalidade
       let pixCode = "";
       let isManualMode = false;
       let manualDetailsData = null;
@@ -1664,11 +1646,15 @@
             activePixQrCodeBase64 = data.qr_code_base64;
           }
         } else {
-          throw new Error(data?.error || "Falha ao gerar cobrança no servidor.");
+          const errorMsg = data?.error || data?.detail || "Falha ao gerar cobrança no servidor.";
+          if (errorMsg.includes("arquivada") || errorMsg.includes("não localizada")) {
+            try { sessionStorage.removeItem("ejc_checkout_inscricao_id"); } catch (_) {}
+            inscricaoIdParam = null;
+          }
+          throw new Error(errorMsg);
         }
       } catch (eErr) {
-        console.warn("[Checkout] Falha ao criar checkout:", eErr.message);
-        // Se a modalidade configurada for manual, permite fallback manual local
+        console.warn("[Checkout] Falha ao criar checkout Pix:", eErr.message);
         if (activePixConfig.modalidade === "manual") {
           isManualMode = true;
           const ts36 = Date.now().toString(36).toUpperCase();
@@ -1678,26 +1664,34 @@
           activeOrderId = "ORD" + ts36 + rnd4;
           pixCode = activePixConfig.chave;
         } else {
-          alert("Não foi possível gerar a cobrança Pix oficial neste momento. " + (eErr.message || "Tente novamente."));
-          btnContinueToPayment.disabled = false;
-          btnContinueToPayment.innerHTML = `Continuar para Pagamento <i class="fa-solid fa-arrow-right"></i>`;
-          isTransitioningToStep2 = false;
+          if (qrBox) {
+            qrBox.innerHTML = `
+              <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 16px; margin: 10px auto; max-width: 380px; text-align: center; color: #b91c1c;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                <p style="margin: 0 0 12px; font-size: .86rem; font-weight: 600;">${eErr.message}</p>
+                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                  <button type="button" class="button button-primary" id="btnRetryPixInline" style="font-size: .8rem; padding: 6px 14px;">
+                    <i class="fa-solid fa-arrows-rotate"></i> Tentar gerar Pix
+                  </button>
+                  <button type="button" class="button button-secondary" id="btnGoToCardInline" style="font-size: .8rem; padding: 6px 14px;">
+                    <i class="fa-regular fa-credit-card"></i> Pagar com Cartão
+                  </button>
+                </div>
+              </div>
+            `;
+            const retryBtn = document.getElementById("btnRetryPixInline");
+            if (retryBtn) retryBtn.onclick = () => carregarCobrancaPix(nome, email, whatsapp);
+            const cardBtn = document.getElementById("btnGoToCardInline");
+            if (cardBtn) cardBtn.onclick = () => tabBtnCard.click();
+          }
+          if (textarea) textarea.placeholder = "Cobrança Pix indisponível no momento. Utilize o Cartão de Crédito.";
           return;
         }
       }
 
       activePixPayload = pixCode;
 
-      // 2. Renderiza Etapa 2
-      document.getElementById("step2IdentifiedName").textContent = nome;
-      document.getElementById("step2IdentifiedEmail").textContent = email;
-      document.getElementById("step2IdentifiedTotal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-      const manualBox = document.getElementById("manualPixBox");
-      const instructionsText = document.getElementById("pixInstructionsText");
-
       if (isManualMode) {
-        // Renderiza Modo Manual
         if (manualBox) {
           manualBox.style.display = "block";
           const keyDisp = document.getElementById("manualPixKeyDisplay");
@@ -1713,39 +1707,33 @@
         if (instructionsText) {
           instructionsText.innerHTML = `Faça a transferência Pix no app do seu banco utilizando a chave ou o código Copia e Cola, e <strong>anexe o comprovante nesta tela</strong>:`;
         }
-        document.getElementById("pixCodeTextarea").value = activePixPayload;
+        if (textarea) textarea.value = activePixPayload;
         
-        // QR Code auxiliar da chave manual
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
-        document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix Manual">`;
+        if (qrBox) qrBox.innerHTML = `<img src="${qrUrl}" alt="QR Code Pix Manual">`;
 
-        // Vincula upload de comprovante na mesma tela
         vincularUploadComprovante(activeTxid, email, nome);
-
         atualizarEstadoVisualPix(1, "🟡 Aguardando transferência e anexo do comprovante...");
       } else {
-        // Renderiza Modo API Mercado Pago
         if (manualBox) manualBox.style.display = "none";
         if (instructionsText) {
           instructionsText.innerHTML = `Abra o app do seu banco, escolha <strong>Pix</strong> e aponte a câmera para o QR Code oficial, ou utilize o código Copia e Cola:`;
         }
-        document.getElementById("pixCodeTextarea").value = activePixPayload;
+        if (textarea) textarea.value = activePixPayload;
         if (activePixQrCodeBase64) {
-          document.getElementById("pixQrCodeBox").innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial Mercado Pago">`;
+          if (qrBox) qrBox.innerHTML = `<img src="data:image/png;base64,${activePixQrCodeBase64}" alt="QR Code Pix Oficial Mercado Pago">`;
         } else {
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&margin=8&data=${encodeURIComponent(activePixPayload)}`;
-          document.getElementById("pixQrCodeBox").innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
+          if (qrBox) qrBox.innerHTML = `<img src="${qrUrl}" alt="QR Code Pix">`;
         }
         atualizarEstadoVisualPix(1, "🟡 Aguardando pagamento...");
       }
 
-      // Atualiza link para página exclusiva de confirmação
       const linkConf = document.getElementById("linkGoToConfirmation");
       if (linkConf) {
         linkConf.href = `./confirmacao-pagamento.html?txid=${encodeURIComponent(activeTxid)}&order_id=${encodeURIComponent(activeOrderId || '')}&payment_id=${encodeURIComponent(activePaymentId || '')}&email=${encodeURIComponent(email)}&nome=${encodeURIComponent(nome)}&sub=${encodeURIComponent(subSelecionado)}`;
       }
 
-      // 3. Salva sessão
       try {
         sessionStorage.setItem("ejc_active_checkout", JSON.stringify({
           txid: activeTxid,
@@ -1763,7 +1751,6 @@
         }));
       } catch (eStore) {}
 
-      // Registra no store local para redundância de leitura
       registrarTransacaoLocal({
         txid: activeTxid,
         payment_id: activePaymentId,
@@ -1777,13 +1764,24 @@
         sub: subSelecionado
       });
 
-      // 4. Inicia contagem regressiva 15 minutos
       iniciarTimerPix(15 * 60);
-
-      // 5. Inicia Polling de confirmação
       iniciarPolling(activeTxid);
+    }
 
-      // 6. Transição visual para Etapa 2
+    async function avancarParaEtapa2(nome, email, whatsapp) {
+      if (isTransitioningToStep2) return;
+      isTransitioningToStep2 = true;
+
+      btnContinueToPayment.disabled = true;
+      btnContinueToPayment.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Preparando checkout...`;
+
+      document.getElementById("summaryParticipantName").textContent = nome;
+
+      // 1. Transição imediata para a Etapa 2 (garante acesso às opções de pagamento Pix e Cartão)
+      document.getElementById("step2IdentifiedName").textContent = nome;
+      document.getElementById("step2IdentifiedEmail").textContent = email;
+      document.getElementById("step2IdentifiedTotal").textContent = valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
       checkoutStep1.style.display = "none";
       checkoutStep2.style.display = "block";
       checkoutStep2.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1794,15 +1792,16 @@
         }
       }
 
-      // Atualiza URL com parâmetros sem recarregar a página
       try {
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set("step", "2");
-        newUrl.searchParams.set("txid", activeTxid);
         newUrl.searchParams.set("email", email);
         newUrl.searchParams.set("nome", nome);
         window.history.replaceState(null, "", newUrl.toString());
       } catch (eH) {}
+
+      // 2. Dispara carregamento assíncrono da cobrança Pix
+      await carregarCobrancaPix(nome, email, whatsapp);
 
       btnContinueToPayment.disabled = false;
       btnContinueToPayment.innerHTML = `<span>Continuar para Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
@@ -2233,7 +2232,12 @@
           window.location.href = redirectUrl;
           return;
         } else {
-          throw new Error(data?.error || data?.mensagem_usuario || "Não foi possível gerar a cobrança no Mercado Pago.");
+          const errMsg = data?.error || data?.mensagem_usuario || "Não foi possível gerar a cobrança no Mercado Pago.";
+          if (errMsg.includes("arquivada") || errMsg.includes("não localizada")) {
+            try { sessionStorage.removeItem("ejc_checkout_inscricao_id"); } catch (_) {}
+            inscricaoIdParam = null;
+          }
+          throw new Error(errMsg);
         }
       } catch (err) {
         console.error("[CHECKOUT_PRO_CREATE_ERROR]", err);

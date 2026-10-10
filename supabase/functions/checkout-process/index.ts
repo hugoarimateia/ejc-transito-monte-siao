@@ -877,6 +877,7 @@ serve(async (req: Request) => {
         let query = supabase
           .from("inscricoes")
           .select("id, nome_completo, email, whatsapp, sub, pagamento_status, criado_em")
+          .or("arquivado.is.null,arquivado.eq.false")
           .order("criado_em", { ascending: false })
           .limit(10);
 

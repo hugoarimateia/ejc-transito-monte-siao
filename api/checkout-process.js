@@ -610,8 +610,8 @@ module.exports = async (req, res) => {
       if (supabaseUrl && supabaseKey) {
         try {
           const query = ehEmail
-            ? `email=ilike.${encodeURIComponent(cleanTermo)}&order=criado_em.desc&limit=10`
-            : `whatsapp=ilike.*${encodeURIComponent(digitos)}*&order=criado_em.desc&limit=10`;
+            ? `email=ilike.${encodeURIComponent(cleanTermo)}&or=(arquivado.is.null,arquivado.eq.false)&order=criado_em.desc&limit=10`
+            : `whatsapp=ilike.*${encodeURIComponent(digitos)}*&or=(arquivado.is.null,arquivado.eq.false)&order=criado_em.desc&limit=10`;
           const sbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${query}`, {
             headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
             signal: AbortSignal.timeout(3500)
