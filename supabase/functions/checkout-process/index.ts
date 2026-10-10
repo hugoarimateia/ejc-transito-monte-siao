@@ -2040,12 +2040,14 @@ serve(async (req: Request) => {
             db_persist: dbPersistRes
           }, 200, req);
         } catch (mpErr) {
-          console.error(`[CHECKOUT_PRO_CREATE_ERROR] TXID: ${txid}, Erro:`, mpErr instanceof Error ? mpErr.message : String(mpErr));
+          const errMsg = mpErr instanceof Error ? mpErr.message : String(mpErr);
+          console.error(`[CHECKOUT_CARTAO_ERROR] TXID: ${txid}, Erro:`, errMsg);
+          const isCardAttempt = Boolean(token || cartao_token);
           return jsonResponse({
             success: false,
-            error: "Não foi possível iniciar o ambiente seguro do Mercado Pago neste momento. Por favor, tente novamente ou utilize o Pix Instantâneo.",
-            detail: mpErr instanceof Error ? mpErr.message : String(mpErr)
-          }, 502, req);
+            error: isCardAttempt ? "Não foi possível autorizar o cartão. Verifique os dados digitados ou tente outro cartão." : "Não foi possível conectar ao Mercado Pago. Por favor, tente novamente.",
+            detail: errMsg
+          }, 400, req);
         }
       } else {
         return jsonResponse({
