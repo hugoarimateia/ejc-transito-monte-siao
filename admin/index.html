@@ -427,7 +427,7 @@
         <button type="submit" class="button button-primary" style="width: 100%;">Entrar no Painel</button>
       </form>
       <p id="authError" style="color: #c72532; margin-top: 14px; font-weight: 700; display: none;">Senha incorreta. Tente novamente.</p>
-      <a href="../" style="display: inline-block; margin-top: 18px; color: var(--text-muted); font-size: .85rem; font-weight: 700;">← Voltar ao site principal</a>
+      <a href="https://www.transitoejc.site/" id="linkVoltarSite" target="_blank" style="display: inline-block; margin-top: 18px; color: var(--text-muted); font-size: .85rem; font-weight: 700;">← Voltar ao site principal</a>
     </div>
 
     <!-- PAINEL ADMINISTRATIVO -->
@@ -444,10 +444,10 @@
           <button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
             <i class="fa-solid fa-moon"></i>
           </button>
-          <a href="/checkout" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <a href="https://www.transitoejc.site/checkout" id="linkAbrirCheckout" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Checkout
           </a>
-          <a href="/confirmacao-pagamento" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <a href="https://www.transitoejc.site/confirmacao-pagamento" id="linkConsultarConfirmacao" target="_blank" class="button button-secondary" style="min-height: 42px; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-receipt"></i> Consultar Confirmação
           </a>
           <button class="button button-secondary" id="exportBtn" style="min-height: 42px; font-size: .84rem;">📥 Exportar CSV</button>
@@ -1740,6 +1740,17 @@
     // FEATURE FLAGS - TRANSIÇÃO CONTROLADA PARA SUPABASE EDGE
     // Estado nesta etapa (ENV.15.2): ON (true) para canary controlado
     const FEATURE_FLAG_ADMIN_WRITE_EDGE = true;
+
+    // Ajusta links no localhost/desenvolvimento local
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      const lCheckout = document.getElementById("linkAbrirCheckout");
+      if (lCheckout) lCheckout.href = "../checkout.html";
+      const lConf = document.getElementById("linkConsultarConfirmacao");
+      if (lConf) lConf.href = "../confirmacao-pagamento.html";
+      const lVoltar = document.getElementById("linkVoltarSite");
+      if (lVoltar) lVoltar.href = "../index.html";
+    }
+
     const ADMIN_WRITE_EDGE_URL = "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
 
     let currentUserRole = "admin";
@@ -3596,7 +3607,11 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
 
       try {
-        const res = await fetch("/api/payment-settings", {
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "/api/payment-settings";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3606,13 +3621,22 @@
           body: JSON.stringify(pendingPricePayload)
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.persisted) {
+        let data = {};
+        const resText = await res.text();
+        if (resText && resText.trim()) {
+          try {
+            data = JSON.parse(resText);
+          } catch (eParse) {
+            data = { error: `Resposta inválida do servidor: ${resText.slice(0, 120)}` };
+          }
+        }
+
+        if (res.ok && (data.success || data.ok) && (data.persisted !== false)) {
           document.getElementById("modalConfirmarPrecos").close();
           alert("✓ Valores de inscrição atualizados e persistidos com sucesso no servidor! Os novos valores já estão vigentes no checkout.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Erro ao salvar preços: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
+          alert(`Erro ao salvar preços: ${data.error || data.message || `Servidor retornou status HTTP ${res.status}`}`);
         }
       } catch (err) {
         console.error("[Admin Preços] Erro na requisição:", err);
@@ -3850,7 +3874,11 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
 
       try {
-        const res = await fetch("/api/payment-settings", {
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "/api/payment-settings";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3860,13 +3888,22 @@
           body: JSON.stringify(pendingPixPayload)
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.persisted) {
+        let data = {};
+        const resText = await res.text();
+        if (resText && resText.trim()) {
+          try {
+            data = JSON.parse(resText);
+          } catch (eParse) {
+            data = { error: `Resposta inválida do servidor: ${resText.slice(0, 120)}` };
+          }
+        }
+
+        if (res.ok && (data.success || data.ok) && (data.persisted !== false)) {
           document.getElementById("modalConfirmarPix").close();
           alert("✓ Dados do PIX atualizados e persistidos com sucesso no servidor! A nova chave já está em uso nos checkouts.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Erro ao salvar configurações do PIX: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
+          alert(`Erro ao salvar configurações do PIX: ${data.error || data.message || `Servidor retornou status HTTP ${res.status}`}`);
         }
       } catch (err) {
         console.error("[Admin PIX] Erro na requisição:", err);
@@ -4170,7 +4207,11 @@
 
       try {
         const maxInst = parseInt(document.getElementById("cardMaxInstallmentsSelect")?.value || 6, 10);
-        const res = await fetch("/api/payment-settings", {
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "/api/payment-settings";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -4188,12 +4229,21 @@
           })
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.persisted) {
+        let data = {};
+        const resText = await res.text();
+        if (resText && resText.trim()) {
+          try {
+            data = JSON.parse(resText);
+          } catch (eParse) {
+            data = { error: `Resposta inválida do servidor: ${resText.slice(0, 120)}` };
+          }
+        }
+
+        if (res.ok && (data.success || data.ok) && (data.persisted !== false)) {
           alert("✓ Modo Automático ativado com sucesso! As condições oficiais do Mercado Pago já estão em vigor no checkout.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Erro ao restaurar modo automático: ${data.error || data.message || 'Falha na comunicação'}`);
+          alert(`Erro ao restaurar modo automático: ${data.error || data.message || `Servidor retornou status HTTP ${res.status}`}`);
         }
       } catch (err) {
         console.error("[Admin Cartão] Erro ao restaurar modo automático:", err);
@@ -4292,7 +4342,11 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
 
       try {
-        const res = await fetch("/api/payment-settings", {
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "/api/payment-settings";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -4302,13 +4356,22 @@
           body: JSON.stringify(pendingCardPayload)
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.persisted) {
+        let data = {};
+        const resText = await res.text();
+        if (resText && resText.trim()) {
+          try {
+            data = JSON.parse(resText);
+          } catch (eParse) {
+            data = { error: `Resposta inválida do servidor: ${resText.slice(0, 120)}` };
+          }
+        }
+
+        if (res.ok && (data.success || data.ok) && (data.persisted !== false)) {
           document.getElementById("modalConfirmarCartao").close();
           alert("✓ Configuração de cartão atualizada com sucesso! As novas condições de parcelamento já estão ativas no checkout.");
           await carregarConfiguracoesFinanceiras();
         } else {
-          alert(`Não foi possível salvar a configuração: ${data.error || data.message || 'Falha na comunicação com o servidor'}`);
+          alert(`Não foi possível salvar a configuração: ${data.error || data.message || `Servidor retornou status HTTP ${res.status}`}`);
         }
       } catch (err) {
         console.error("[Admin Cartão] Erro na requisição:", err);

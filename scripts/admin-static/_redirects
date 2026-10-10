@@ -1,1 +1,5 @@
-/   /admin/   302
+/checkout                   https://www.transitoejc.site/checkout                   302
+/confirmacao-pagamento      https://www.transitoejc.site/confirmacao-pagamento      302
+/checkout.html              https://www.transitoejc.site/checkout                   302
+/confirmacao-pagamento.html https://www.transitoejc.site/confirmacao-pagamento      302
+/                           /admin/                                                 302

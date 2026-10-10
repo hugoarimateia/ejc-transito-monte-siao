@@ -126,15 +126,19 @@ const sourceSupabaseConfig = fs.readFileSync(
   "utf8"
 );
 
-const ADMIN_READ_ADAPTER = `
+const ADMIN_EDGE_ADAPTER = `
 
 // ============================================================================
-// STATIC ADMIN READ ADAPTER
-// Keeps legacy admin read requests working on Cloudflare Pages.
+// STATIC ADMIN EDGE ADAPTER (READ & WRITE)
+// Keeps legacy admin read & write requests working on Cloudflare Pages.
 // ============================================================================
 (function() {
   const ADMIN_READ_URL =
     "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-read";
+  const ADMIN_WRITE_URL =
+    "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
+  const CHECKOUT_PROCESS_URL =
+    "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/checkout-process";
 
   const originalFetch = window.fetch;
 
@@ -148,6 +152,7 @@ const ADMIN_READ_ADAPTER = `
       (init && init.method ? init.method.toUpperCase() : "GET");
 
     // POST /api/admin com action=login -> admin-read
+    // Outras ações em POST /api/admin -> admin-write
     if (url === "/api/admin" && method === "POST") {
       try {
         const bodyObj = init && init.body
@@ -156,6 +161,8 @@ const ADMIN_READ_ADAPTER = `
 
         if (bodyObj.action === "login") {
           return originalFetch(ADMIN_READ_URL, init);
+        } else if (bodyObj.action) {
+          return originalFetch(ADMIN_WRITE_URL, init);
         }
       } catch (e) {}
     }
@@ -171,6 +178,16 @@ const ADMIN_READ_ADAPTER = `
         ADMIN_READ_URL + "?view=payment-settings";
 
       return originalFetch(targetUrl, init);
+    }
+
+    // POST ou PUT /api/payment-settings -> admin-write
+    if (url.startsWith("/api/payment-settings") && (method === "POST" || method === "PUT")) {
+      return originalFetch(ADMIN_WRITE_URL, init);
+    }
+
+    // POST /api/checkout-process -> checkout-process Edge Function
+    if (url.startsWith("/api/checkout-process") && method === "POST") {
+      return originalFetch(CHECKOUT_PROCESS_URL, init);
     }
 
     // GET /api/admin/inscritos-dados?sub=... -> admin-read
@@ -198,9 +215,9 @@ const ADMIN_READ_ADAPTER = `
 `;
 
 const finalSupabaseConfig =
-  sourceSupabaseConfig.includes("ADMIN_READ_URL")
+  sourceSupabaseConfig.includes("ADMIN_EDGE_ADAPTER") || sourceSupabaseConfig.includes("ADMIN_READ_URL")
     ? sourceSupabaseConfig
-    : sourceSupabaseConfig + ADMIN_READ_ADAPTER;
+    : sourceSupabaseConfig + ADMIN_EDGE_ADAPTER;
 
 copyFile(
   path.join(ROOT, "js", "supabase-config.js"),

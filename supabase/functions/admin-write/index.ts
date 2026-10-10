@@ -257,7 +257,7 @@ async function handleAdminAction(
       };
     }
 
-    const { data: updatedConfig, error: updateErr } = await supabase
+    let { data: updatedConfig, error: updateErr } = await supabase
       .from("configuracoes_financeiras")
       .update({
         valor_inscricao: precoEfetivo,
@@ -266,9 +266,34 @@ async function handleAdminAction(
         lote_atual: loteAtual,
         atualizado_em: new Date().toISOString()
       })
-      .order("id", { ascending: false })
-      .limit(1)
+      .eq("ativo", true)
       .select();
+
+    if (!updateErr && (!updatedConfig || updatedConfig.length === 0)) {
+      const { data: latestRow } = await supabase
+        .from("configuracoes_financeiras")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestRow?.id) {
+        const fallbackUpd = await supabase
+          .from("configuracoes_financeiras")
+          .update({
+            valor_inscricao: precoEfetivo,
+            valor_promocional: valorPromocional,
+            taxa_adicional: taxaAdicional,
+            lote_atual: loteAtual,
+            ativo: true,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("id", latestRow.id)
+          .select();
+        updatedConfig = fallbackUpd.data;
+        updateErr = fallbackUpd.error;
+      }
+    }
 
     if (updateErr) throw updateErr;
 
@@ -283,7 +308,7 @@ async function handleAdminAction(
 
     await recordAudit(supabase, "ALTERACAO_PRECO", { precoEfetivo, valorPromocional, taxaAdicional, loteAtual }, clientIp, authRole.role, isDryRun);
 
-    return { status: 200, body: { success: true, message: "Preços atualizados com sucesso.", config: updatedConfig } };
+    return { status: 200, body: { success: true, persisted: true, message: "Preços atualizados com sucesso.", config: updatedConfig } };
   }
 
   // --------------------------------------------------------------------------
@@ -332,15 +357,14 @@ async function handleAdminAction(
         pix_instrucoes_manual: String(body.pix_instrucoes_manual || ""),
         atualizado_em: new Date().toISOString()
       })
-      .order("id", { ascending: false })
-      .limit(1)
+      .eq("ativo", true)
       .select();
 
     if (pixErr) throw pixErr;
 
     await recordAudit(supabase, "UPDATE_PIX_SETTINGS", { modalidade, tipoChave, beneficiario, cidade }, clientIp, authRole.role, isDryRun);
 
-    return { status: 200, body: { success: true, message: "Configurações de Pix atualizadas com sucesso.", pix: updatedPix } };
+    return { status: 200, body: { success: true, persisted: true, message: "Configurações de Pix atualizadas com sucesso.", pix: updatedPix } };
   }
 
   // --------------------------------------------------------------------------
@@ -386,15 +410,14 @@ async function handleAdminAction(
     const { data: updatedCard, error: cardErr } = await supabase
       .from("configuracoes_financeiras")
       .update(updateData)
-      .order("id", { ascending: false })
-      .limit(1)
+      .eq("ativo", true)
       .select();
 
     if (cardErr) throw cardErr;
 
     await recordAudit(supabase, "UPDATE_CARD_SETTINGS", { installmentMode, maxInstallments, taxaAdicional }, clientIp, authRole.role, isDryRun);
 
-    return { status: 200, body: { success: true, message: "Configurações de cartão atualizadas com sucesso.", config: updatedCard } };
+    return { status: 200, body: { success: true, persisted: true, message: "Configurações de cartão atualizadas com sucesso.", config: updatedCard } };
   }
 
   // --------------------------------------------------------------------------
@@ -447,15 +470,14 @@ async function handleAdminAction(
         ...validUpdates,
         atualizado_em: new Date().toISOString()
       })
-      .order("id", { ascending: false })
-      .limit(1)
+      .eq("ativo", true)
       .select();
 
     if (syncErr) throw syncErr;
 
     await recordAudit(supabase, "SYNC_FULL_SETTINGS", { updated_keys: Object.keys(validUpdates) }, clientIp, authRole.role, isDryRun);
 
-    return { status: 200, body: { success: true, message: "Configurações sincronizadas com sucesso.", config: fullSync } };
+    return { status: 200, body: { success: true, persisted: true, message: "Configurações sincronizadas com sucesso.", config: fullSync } };
   }
 
   // --------------------------------------------------------------------------

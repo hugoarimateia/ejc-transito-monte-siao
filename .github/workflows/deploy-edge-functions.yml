@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "supabase/functions/admin-read/**"
+      - "supabase/functions/admin-write/**"
       - "supabase/functions/sub-counts/**"
       - ".github/workflows/deploy-edge-functions.yml"
 
@@ -19,6 +20,7 @@ on:
         options:
           - all
           - admin-read
+          - admin-write
           - sub-counts
 
 concurrency:
@@ -61,12 +63,19 @@ jobs:
             echo "Modo manual (workflow_dispatch). Alvo: $TARGET"
             if [ "$TARGET" = "all" ]; then
               echo "deploy_admin_read=true" >> "$GITHUB_OUTPUT"
+              echo "deploy_admin_write=true" >> "$GITHUB_OUTPUT"
               echo "deploy_sub_counts=true" >> "$GITHUB_OUTPUT"
             elif [ "$TARGET" = "admin-read" ]; then
               echo "deploy_admin_read=true" >> "$GITHUB_OUTPUT"
+              echo "deploy_admin_write=false" >> "$GITHUB_OUTPUT"
+              echo "deploy_sub_counts=false" >> "$GITHUB_OUTPUT"
+            elif [ "$TARGET" = "admin-write" ]; then
+              echo "deploy_admin_read=false" >> "$GITHUB_OUTPUT"
+              echo "deploy_admin_write=true" >> "$GITHUB_OUTPUT"
               echo "deploy_sub_counts=false" >> "$GITHUB_OUTPUT"
             elif [ "$TARGET" = "sub-counts" ]; then
               echo "deploy_admin_read=false" >> "$GITHUB_OUTPUT"
+              echo "deploy_admin_write=false" >> "$GITHUB_OUTPUT"
               echo "deploy_sub_counts=true" >> "$GITHUB_OUTPUT"
             fi
           else
@@ -75,23 +84,30 @@ jobs:
             echo "$DIFF_FILES"
 
             DEPLOY_READ="false"
+            DEPLOY_WRITE="false"
             DEPLOY_COUNTS="false"
 
             if echo "$DIFF_FILES" | grep -q "^supabase/functions/admin-read/"; then
               DEPLOY_READ="true"
             fi
 
+            if echo "$DIFF_FILES" | grep -q "^supabase/functions/admin-write/"; then
+              DEPLOY_WRITE="true"
+            fi
+
             if echo "$DIFF_FILES" | grep -q "^supabase/functions/sub-counts/"; then
               DEPLOY_COUNTS="true"
             fi
 
-            # Se o próprio arquivo de workflow foi alterado, publica ambas
+            # Se o próprio arquivo de workflow foi alterado, publica todas as funções homologadas
             if echo "$DIFF_FILES" | grep -q "^\.github/workflows/deploy-edge-functions\.yml"; then
               DEPLOY_READ="true"
+              DEPLOY_WRITE="true"
               DEPLOY_COUNTS="true"
             fi
 
             echo "deploy_admin_read=$DEPLOY_READ" >> "$GITHUB_OUTPUT"
+            echo "deploy_admin_write=$DEPLOY_WRITE" >> "$GITHUB_OUTPUT"
             echo "deploy_sub_counts=$DEPLOY_COUNTS" >> "$GITHUB_OUTPUT"
           fi
 
@@ -105,6 +121,17 @@ jobs:
           echo "Publicando supabase/functions/admin-read no projeto $PROJECT_REF..."
           echo "=================================================================="
           supabase functions deploy admin-read --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Publicar Edge Function admin-write
+        if: steps.select_functions.outputs.deploy_admin_write == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID || 'guppedddwnuvluhiaaas' }}
+        run: |
+          echo "=================================================================="
+          echo "Publicando supabase/functions/admin-write no projeto $PROJECT_REF..."
+          echo "=================================================================="
+          supabase functions deploy admin-write --project-ref "$PROJECT_REF" --no-verify-jwt
 
       - name: Publicar Edge Function sub-counts
         if: steps.select_functions.outputs.deploy_sub_counts == 'true'
