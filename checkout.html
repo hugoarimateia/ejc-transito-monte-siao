@@ -791,12 +791,26 @@
                   Você será direcionado ao ambiente oficial e seguro do Mercado Pago para pagar com Cartão de Crédito ou Débito.
                 </p>
 
-                <!-- AVISO DE PAGAMENTO COMO CONVIDADO (SEM OBRIGATORIEDADE DE CONTA) -->
-                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.88rem; color: var(--text-main); text-align: left; display: flex; align-items: flex-start; gap: 10px;">
-                  <i class="fa-solid fa-circle-info" style="color: #10b981; font-size: 1.1rem; margin-top: 2px;"></i>
-                  <span>
-                    <strong>Não é obrigatório ter conta no Mercado Pago:</strong> você pode pagar diretamente como <strong>convidado</strong> (sem login), ou acessar sua conta caso prefira.
-                  </span>
+                <!-- GUIA VISUAL DE PAGAMENTO COMO CONVIDADO (SEM NECESSIDADE DE CONTA) -->
+                <div style="background: rgba(8, 125, 249, 0.05); border: 1px solid rgba(8, 125, 249, 0.2); border-radius: 14px; padding: 16px 18px; margin-bottom: 22px; text-align: left;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 700; color: var(--blue); font-size: 0.95rem;">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Como pagar no Mercado Pago (Sem Login):</span>
+                  </div>
+                  <ol style="margin: 0; padding-left: 20px; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
+                    <li style="margin-bottom: 6px;">
+                      Clique no botão abaixo para abrir a página oficial de pagamento.
+                    </li>
+                    <li style="margin-bottom: 6px;">
+                      Na tela do Mercado Pago, selecione a opção <strong>"Cartão (Crédito ou pré-pago)"</strong>.
+                    </li>
+                    <li>
+                      Preencha os dados do cartão diretamente como <strong>convidado</strong> — <strong>não é necessário fazer login nem ter conta no Mercado Pago</strong>!
+                    </li>
+                  </ol>
+                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(8, 125, 249, 0.2); font-size: 0.80rem; color: var(--text-secondary, #64748b);">
+                    <i class="fa-solid fa-check-double" style="color: #10b981;"></i> Caso já possua conta Mercado Pago e prefira usar cartões salvos, você também pode escolher "Com sua conta Mercado Pago".
+                  </div>
                 </div>
 
                 <!-- RESUMO DO VALOR OFICIAL -->
@@ -810,8 +824,8 @@
 
                 <!-- BOTÃO PRINCIPAL -->
                 <button type="button" id="btnGoToMercadoPago" class="btn" style="width: 100%; padding: 16px 20px; border-radius: 12px; background: #009ee3; color: #ffffff; font-size: 1.05rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(0, 158, 227, 0.35);">
-                  <i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i>
-                  <span>Continuar para o Mercado Pago</span>
+                  <i class="fa-solid fa-credit-card"></i>
+                  <span>Pagar com Cartão no Mercado Pago</span>
                   <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>
                 </button>
 
@@ -2260,7 +2274,7 @@
           btn.disabled = false;
           btn.style.opacity = "1";
           btn.style.cursor = "pointer";
-          btn.innerHTML = `<i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i> <span>Continuar para o Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
+          btn.innerHTML = `<i class="fa-solid fa-credit-card"></i> <span>Pagar com Cartão no Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
         }
         exibirErroCartao(err.message || "Falha ao conectar ao Mercado Pago. Por favor, tente novamente ou utilize o Pix.");
       }
@@ -2275,7 +2289,7 @@
         btn.disabled = false;
         btn.style.opacity = "1";
         btn.style.cursor = "pointer";
-        btn.innerHTML = `<i class="fa-solid fa-lock" style="font-size: 0.9rem;"></i> <span>Continuar para o Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
+        btn.innerHTML = `<i class="fa-solid fa-credit-card"></i> <span>Pagar com Cartão no Mercado Pago</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.85rem;"></i>`;
       }
     }
     window.reiniciarTentativaCartao = reiniciarTentativaCartao;
