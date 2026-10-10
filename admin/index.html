@@ -2274,11 +2274,13 @@
       try { localStorage.removeItem("ejc_inscricoes"); } catch (e) {}
 
       // Busca oficial autenticada no servidor via /api/admin (backend oficial)
-      if (currentAdminPass) {
+      const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+      if (!currentAdminPass && token) currentAdminPass = token;
+      if (token) {
         fetch("/api/admin", {
           headers: {
-            "Authorization": `Bearer ${currentAdminPass}`,
-            "x-admin-token": currentAdminPass
+            "Authorization": `Bearer ${token}`,
+            "x-admin-token": token
           }
         }).then(async (res) => {
           if (!res.ok) {
@@ -2419,11 +2421,34 @@
     }
 
     function renderizarEstatisticas() {
-      const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-      let totalOperacionais = 0;
+      // 1. Mapeamento de inscrições ativas legítimas
+      const activeInscricoesMap = {};
+      inscricoesData.forEach(item => {
+        if (!item.arquivado) {
+          activeInscricoesMap[item.id] = item;
+        }
+      });
+
+      // 2. Identificação de pagamentos aprovados no gateway vinculados a inscrições ativas
+      const approvedPaymentInscricoes = new Set();
+      pagamentosData.forEach(p => {
+        if (isApproved(p.status) && p.inscricao_id && activeInscricoesMap[p.inscricao_id]) {
+          approvedPaymentInscricoes.add(p.inscricao_id);
+        }
+      });
+
+      // 3. Contagem exclusiva de participantes com pagamento confirmado por Sub
+      const subsConfirmados = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+      let totalConfirmados = 0;
 
       inscricoesData.forEach(item => {
         if (item.arquivado) return;
+
+        // Pagamento efetivamente confirmado: gateway aprovado OU status confirmado por comprovante/coordenação
+        const pagStatus = String(item.pagamento_status || "").trim().toLowerCase();
+        const isConfirmado = isApproved(pagStatus) || approvedPaymentInscricoes.has(item.id);
+        if (!isConfirmado) return;
+
         const subRaw = (item.sub === "Azul") ? "Laranja" : item.sub;
         const s = (subRaw && subRaw.includes("Verd")) ? "Verde"
           : (subRaw && subRaw.includes("Verm")) ? "Vermelho"
@@ -2431,32 +2456,39 @@
           : (subRaw && (subRaw.includes("Laran") || subRaw.includes("Azul"))) ? "Laranja"
           : subRaw;
 
-        if (subs[s] !== undefined) {
-          subs[s]++;
-          totalOperacionais++;
+        if (subsConfirmados[s] !== undefined) {
+          subsConfirmados[s]++;
+          totalConfirmados++;
         }
       });
 
-      document.getElementById("statTotalInscritos").textContent = totalOperacionais;
-      document.getElementById("statSubVerde").textContent = `${subs.Verde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
-      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
-      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
+      document.getElementById("statTotalInscritos").textContent = totalConfirmados;
+      document.getElementById("statSubVerde").textContent = `${subsConfirmados.Verde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
+      document.getElementById("statSubVermelho").textContent = `${subsConfirmados.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
+      document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subsConfirmados.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
 
-      // Cálculos financeiros
+      // 4. Cálculos financeiros estritamente de pagamentos válidos e confirmados
       let totalGeral = 0;
       let totalPix = 0;
       let totalCard = 0;
+      const countedInscricoes = new Set();
 
       pagamentosData.forEach(p => {
-        if (isApproved(p.status)) {
-          const val = Number(p.valor || 0);
-          totalGeral += val;
-          if (p.metodo === "credit_card") {
-            totalCard += val;
-          } else {
-            totalPix += val;
-          }
+        if (!isApproved(p.status)) return;
+        // Exclui pagamentos sem vínculo com inscrição ativa ou de testes arquivados
+        if (!p.inscricao_id || !activeInscricoesMap[p.inscricao_id]) return;
+
+        // Previne duplicação de valor para a mesma inscrição
+        if (countedInscricoes.has(p.inscricao_id)) return;
+        countedInscricoes.add(p.inscricao_id);
+
+        const val = Number(p.valor || 0);
+        totalGeral += val;
+        if (p.metodo === "credit_card") {
+          totalCard += val;
+        } else {
+          totalPix += val;
         }
       });
 
@@ -3485,11 +3517,20 @@
       }
 
       // Tenta buscar via API /api/payment-settings com anti-cache
+      const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+      if (!token) {
+        // Sem sessão administrativa autenticada; aborta chamada à API restrita sem disparar erro de rede
+        carregarFallbackConfigFinanceira();
+        preencherFormulariosFinanceiros();
+        renderizarHistoricoFinanceiro();
+        return;
+      }
+
       try {
         const res = await fetch(`/api/payment-settings?_t=${Date.now()}`, {
           headers: {
-            "Authorization": `Bearer ${currentAdminPass}`,
-            "x-admin-token": currentAdminPass
+            "Authorization": `Bearer ${token}`,
+            "x-admin-token": token
           }
         });
         if (res.ok) {
@@ -3523,6 +3564,12 @@
             canUserEditFinance = Boolean(data.permissions.canEdit);
           }
         } else {
+          if (res.status === 401) {
+            console.warn("[Admin Financeiro] Sessão expirada ou não autorizada (401).");
+            sessionStorage.clear();
+            location.reload();
+            return;
+          }
           console.warn("[Admin Financeiro] Status não-200 retornado:", res.status);
           carregarFallbackConfigFinanceira();
         }
@@ -5806,17 +5853,25 @@
     // Sincronização multi-dispositivo automática contínua (Multi-Device Auto-Sync)
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        carregarConfiguracoesFinanceiras();
-        carregarDados();
-        const activeTabBtn = document.querySelector(".admin-tab-btn.active");
-        if (activeTabBtn && activeTabBtn.getAttribute("data-tab") === "inscritos-dados") {
-          carregarSubAtivo();
+        const isAuth = sessionStorage.getItem("ejc_admin_auth") === "true";
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+        if (isAuth && token) {
+          carregarConfiguracoesFinanceiras();
+          carregarDados();
+          const activeTabBtn = document.querySelector(".admin-tab-btn.active");
+          if (activeTabBtn && activeTabBtn.getAttribute("data-tab") === "inscritos-dados") {
+            carregarSubAtivo();
+          }
         }
       }
     });
     setInterval(() => {
       if (document.visibilityState === "visible") {
-        carregarConfiguracoesFinanceiras();
+        const isAuth = sessionStorage.getItem("ejc_admin_auth") === "true";
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+        if (isAuth && token) {
+          carregarConfiguracoesFinanceiras();
+        }
       }
     }, 25000);
   </script>

@@ -608,15 +608,39 @@ serve(async (req: Request) => {
       if (r.sub) whatsapp[r.sub] = r.link_grupo || "";
     });
 
-    // Contadores oficiais operacionais por sub (inscrições ativas)
-    const counts: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+    // Conjunto de IDs de inscrições ativas com pagamento aprovado no gateway
+    const pagamentosAprovadosInscricoes = new Set<string>();
+    pagamentos.forEach((p: any) => {
+      const pStatus = String(p.status || "").trim().toLowerCase();
+      if ((pStatus === "approved" || pStatus === "confirmado" || pStatus === "pago") && p.inscricao_id) {
+        pagamentosAprovadosInscricoes.add(String(p.inscricao_id));
+      }
+    });
+
+    // Contadores de participantes com pagamento efetivamente confirmado por sub (Dashboard Principal)
+    const countsConfirmados: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+    inscricoes.forEach((item: any) => {
+      if (item.arquivado) return;
+      const iStatus = String(item.pagamento_status || "").trim().toLowerCase();
+      const isPago = (iStatus === "approved" || iStatus === "confirmado" || iStatus === "pago") ||
+                     pagamentosAprovadosInscricoes.has(String(item.id));
+      if (!isPago) return;
+
+      const s = normalizarSub(item.sub);
+      if (s && countsConfirmados[s] !== undefined) countsConfirmados[s]++;
+    });
+
+    const totalConfirmados = Object.values(countsConfirmados).reduce((a, b) => a + b, 0);
+
+    // Contadores operacionais por sub (todas as inscrições ativas válidas)
+    const countsOperacionais: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
     inscricoes.forEach((item: any) => {
       if (item.arquivado) return;
       const s = normalizarSub(item.sub);
-      if (s && counts[s] !== undefined) counts[s]++;
+      if (s && countsOperacionais[s] !== undefined) countsOperacionais[s]++;
     });
 
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const totalOperacional = Object.values(countsOperacionais).reduce((a, b) => a + b, 0);
 
     return new Response(JSON.stringify({
       success: true,
@@ -632,8 +656,12 @@ serve(async (req: Request) => {
       pagamentos,
       auditoria,
       whatsapp,
-      counts,
-      total,
+      counts: countsConfirmados,
+      total: totalConfirmados,
+      counts_confirmados: countsConfirmados,
+      total_confirmados: totalConfirmados,
+      counts_operacionais: countsOperacionais,
+      total_operacional: totalOperacional,
       timestamp: new Date().toISOString()
     }), {
       status: 200,
