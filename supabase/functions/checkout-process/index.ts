@@ -1659,13 +1659,13 @@ serve(async (req: Request) => {
             return jsonResponse({
               error: "Não foi possível gerar a cobrança Pix via Mercado Pago neste momento. Tente novamente em instantes.",
               detail: mpErr instanceof Error ? mpErr.message : String(mpErr)
-            }, 502, req);
+            }, 400, req);
           }
         } else {
           return jsonResponse({
             error: "Modalidade Pix via API ativa, porém MERCADOPAGO_ACCESS_TOKEN não está configurado na Edge Function.",
             hint: "Configure o segredo MERCADOPAGO_ACCESS_TOKEN no Supabase."
-          }, 503, req);
+          }, 400, req);
         }
       }
 

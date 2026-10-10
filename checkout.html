@@ -1634,7 +1634,13 @@
           })
         });
 
-        const data = await res.json();
+        const resText = await res.text();
+        let data = {};
+        try {
+          data = JSON.parse(resText);
+        } catch (_) {
+          data = { error: resText.includes("<!DOCTYPE") ? "Instabilidade temporária no gateway de pagamento. Tente novamente ou utilize o Cartão de Crédito." : resText };
+        }
         if (res.ok && data && data.txid) {
           activeTxid = data.txid;
           activePaymentId = data.payment_id || data.txid;
