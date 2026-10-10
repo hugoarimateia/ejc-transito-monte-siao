@@ -641,15 +641,12 @@ module.exports = async (req, res) => {
           } else if (ehEmail) {
             query += `&email=ilike.${encodeURIComponent(emailNorm)}`;
           } else if (ehWhatsapp) {
-            const ddd = wppNorm.slice(0, 2);
             const corpo = wppNorm.slice(2);
             const part1 = corpo.length === 9 ? corpo.slice(0, 5) : corpo.slice(0, 4);
             const part2 = corpo.length === 9 ? corpo.slice(5) : corpo.slice(4);
-            const formatted1 = `(${ddd}) ${part1}-${part2}`;
-            const formatted2 = `(${ddd})${part1}-${part2}`;
-            const formatted3 = `${part1}-${part2}`;
+            const comHifen = `${part1}-${part2}`;
             const last8 = wppNorm.slice(-8);
-            query += `&or=(whatsapp.ilike.*${encodeURIComponent(wppNorm)}*,whatsapp.ilike.*${encodeURIComponent(formatted1)}*,whatsapp.ilike.*${encodeURIComponent(formatted2)}*,whatsapp.ilike.*${encodeURIComponent(formatted3)}*,whatsapp.ilike.*${encodeURIComponent(last8)}*)`;
+            query += `&or=(whatsapp.ilike.*${encodeURIComponent(wppNorm)}*,whatsapp.ilike.*${encodeURIComponent(comHifen)}*,whatsapp.ilike.*${encodeURIComponent(last8)}*)`;
           } else {
             const partes = nomeNorm.split(" ").filter(p => p.length >= 2);
             if (partes.length >= 2) {
