@@ -350,7 +350,7 @@
       </div>
     </div>
 
-    <!-- Stepper de Progresso -->
+    <!-- Stepper de Progresso (3 Etapas: Identificação -> Conferência & Seleção -> Situação & Pagamento) -->
     <div class="stepper" id="verificationStepper">
       <div class="step-item active" id="stepIndicator1">
         <div class="step-circle">1</div>
@@ -358,25 +358,21 @@
       </div>
       <div class="step-item" id="stepIndicator2">
         <div class="step-circle">2</div>
-        <div class="step-label">Segurança</div>
+        <div class="step-label">Conferência</div>
       </div>
       <div class="step-item" id="stepIndicator3">
         <div class="step-circle">3</div>
-        <div class="step-label">Conferência</div>
-      </div>
-      <div class="step-item" id="stepIndicator4">
-        <div class="step-circle">4</div>
-        <div class="step-label">Pagamento</div>
+        <div class="step-label">Situação & Pagamento</div>
       </div>
     </div>
 
     <!-- ETAPA 1: Identificação do Participante -->
     <section class="verification-card" id="cardEtapa1">
       <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 16px; color: var(--text-main);">
-        <i class="fa-solid fa-user-check" style="color: var(--blue); margin-right: 8px;"></i> Identifique sua Inscrição
+        <i class="fa-solid fa-user-check" style="color: var(--blue);"></i> Identifique sua Inscrição
       </h2>
       <p style="color: var(--text-muted); font-size: .9rem; margin-bottom: 24px;">
-        Informe os mesmos dados utilizados no momento do preenchimento da ficha de inscrição.
+        Informe os mesmos dados cadastrais utilizados no momento da inscrição. A conferência é imediata e não necessita de código por e-mail.
       </p>
 
       <form id="formEtapa1">
@@ -395,60 +391,26 @@
           <input type="tel" id="inputWhatsapp" class="form-control" placeholder="Ex: (83) 99999-9999" required autocomplete="tel">
         </div>
 
-        <div id="etapa1ErrorMsg" style="display: none; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+        <div id="etapa1ErrorMsg" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; color: #dc2626; font-size: .88rem; margin-bottom: 16px; font-weight: 600; line-height: 1.5;"></div>
 
         <button type="submit" class="btn-verify" id="btnSubmitEtapa1">
-          <span>Localizar e Solicitar Código de Verificação</span>
+          <span>Localizar e Conferir Inscrição</span>
           <i class="fa-solid fa-arrow-right"></i>
         </button>
       </form>
     </section>
 
-    <!-- ETAPA 2: Código de Verificação (OTP) -->
+    <!-- ETAPA 2: Exibição de Inscrições e Seleção da Principal -->
     <section class="verification-card" id="cardEtapa2" style="display: none;">
-      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
-        <i class="fa-solid fa-key" style="color: var(--blue); margin-right: 8px;"></i> Confirme sua Identidade
-      </h2>
-      <p style="color: var(--text-muted); font-size: .92rem; line-height: 1.5; margin-bottom: 20px;">
-        Se encontrarmos cadastros compatíveis com os dados informados, enviamos um código de segurança de <strong>6 dígitos</strong> para o e-mail cadastrado (<span id="emailDisplayHint" style="font-weight: 700; color: var(--blue);"></span>).
-      </p>
-
-      <div class="otp-inputs-row" id="otpRow">
-        <input type="text" maxlength="1" class="otp-digit" data-idx="0" inputmode="numeric" pattern="[0-9]*" autofocus>
-        <input type="text" maxlength="1" class="otp-digit" data-idx="1" inputmode="numeric" pattern="[0-9]*">
-        <input type="text" maxlength="1" class="otp-digit" data-idx="2" inputmode="numeric" pattern="[0-9]*">
-        <input type="text" maxlength="1" class="otp-digit" data-idx="3" inputmode="numeric" pattern="[0-9]*">
-        <input type="text" maxlength="1" class="otp-digit" data-idx="4" inputmode="numeric" pattern="[0-9]*">
-        <input type="text" maxlength="1" class="otp-digit" data-idx="5" inputmode="numeric" pattern="[0-9]*">
-      </div>
-
-      <div id="etapa2ErrorMsg" style="display: none; text-align: center; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
-
-      <button type="button" class="btn-verify" id="btnSubmitEtapa2" disabled>
-        <span>Validar Código e Acessar Inscrição</span>
-        <i class="fa-solid fa-unlock-keyhole"></i>
-      </button>
-
-      <div style="text-align: center; margin-top: 20px; font-size: .88rem;">
-        <span style="color: var(--text-muted);">Não recebeu o código? </span>
-        <button type="button" id="btnResendOtp" style="background: none; border: none; color: var(--blue); font-weight: 700; cursor: pointer; text-decoration: underline;" disabled>
-          Reenviar código (<span id="resendTimer">60</span>s)
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: var(--text-main);">
+          <i class="fa-solid fa-list-check" style="color: var(--blue); margin-right: 8px;"></i> Inscrições Encontradas
+        </h2>
+        <button type="button" id="btnVoltarIdentificacao" style="background: none; border: none; color: var(--text-muted); font-size: .85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-arrow-left"></i> Corrigir dados
         </button>
       </div>
-
-      <div style="text-align: center; margin-top: 14px;">
-        <button type="button" id="btnBackToEtapa1" style="background: none; border: none; color: var(--text-muted); font-size: .85rem; cursor: pointer;">
-          &larr; Voltar e corrigir dados informados
-        </button>
-      </div>
-    </section>
-
-    <!-- ETAPA 3: Exibição de Inscrições e Seleção da Principal -->
-    <section class="verification-card" id="cardEtapa3" style="display: none;">
-      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
-        <i class="fa-solid fa-list-check" style="color: var(--blue); margin-right: 8px;"></i> Inscrições Encontradas
-      </h2>
-      <p style="color: var(--text-muted); font-size: .92rem; margin-bottom: 20px;" id="etapa3IntroText">
+      <p style="color: var(--text-muted); font-size: .92rem; margin-bottom: 20px;" id="etapa2IntroText">
         Confira abaixo os registros localizados para seus dados cadastrais.
       </p>
 
@@ -481,19 +443,24 @@
         </label>
       </div>
 
-      <div id="etapa3ErrorMsg" style="display: none; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+      <div id="etapa2ErrorMsg" style="display: none; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
 
       <button type="button" class="btn-verify" id="btnConfirmarPrincipal">
-        <span>Avançar para Conferência Financeira</span>
+        <span>Avançar para Situação & Pagamento</span>
         <i class="fa-solid fa-arrow-right"></i>
       </button>
     </section>
 
-    <!-- ETAPA 4: Conferência do Pagamento e Divergências -->
-    <section class="verification-card" id="cardEtapa4" style="display: none;">
-      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
-        <i class="fa-solid fa-credit-card" style="color: var(--blue); margin-right: 8px;"></i> Estado da Inscrição e Pagamento
-      </h2>
+    <!-- ETAPA 3: Conferência do Pagamento e Divergências -->
+    <section class="verification-card" id="cardEtapa3" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: var(--text-main);">
+          <i class="fa-solid fa-credit-card" style="color: var(--blue); margin-right: 8px;"></i> Estado da Inscrição e Pagamento
+        </h2>
+        <button type="button" id="btnVoltarConferencia" style="background: none; border: none; color: var(--text-muted); font-size: .85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-arrow-left"></i> Voltar à lista
+        </button>
+      </div>
       
       <div id="resumoInscricaoPrincipalCard" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
         <!-- Preenchido dinamicamente com os dados da inscrição principal -->
@@ -579,12 +546,10 @@
     const cardEtapa1 = document.getElementById("cardEtapa1");
     const cardEtapa2 = document.getElementById("cardEtapa2");
     const cardEtapa3 = document.getElementById("cardEtapa3");
-    const cardEtapa4 = document.getElementById("cardEtapa4");
 
     const stepIndicator1 = document.getElementById("stepIndicator1");
     const stepIndicator2 = document.getElementById("stepIndicator2");
     const stepIndicator3 = document.getElementById("stepIndicator3");
-    const stepIndicator4 = document.getElementById("stepIndicator4");
 
     const formEtapa1 = document.getElementById("formEtapa1");
     const inputNome = document.getElementById("inputNome");
@@ -593,20 +558,15 @@
     const btnSubmitEtapa1 = document.getElementById("btnSubmitEtapa1");
     const etapa1ErrorMsg = document.getElementById("etapa1ErrorMsg");
 
-    const otpDigits = document.querySelectorAll(".otp-digit");
-    const btnSubmitEtapa2 = document.getElementById("btnSubmitEtapa2");
-    const etapa2ErrorMsg = document.getElementById("etapa2ErrorMsg");
-    const btnResendOtp = document.getElementById("btnResendOtp");
-    const resendTimer = document.getElementById("resendTimer");
-    const emailDisplayHint = document.getElementById("emailDisplayHint");
-    const btnBackToEtapa1 = document.getElementById("btnBackToEtapa1");
+    const btnVoltarIdentificacao = document.getElementById("btnVoltarIdentificacao");
+    const btnVoltarConferencia = document.getElementById("btnVoltarConferencia");
 
     const inscriptionsListContainer = document.getElementById("inscriptionsListContainer");
     const duplicateAlertBox = document.getElementById("duplicateAlertBox");
     const saneamentoProposalBox = document.getElementById("saneamentoProposalBox");
     const checkConfirmSaneamento = document.getElementById("checkConfirmSaneamento");
     const btnConfirmarPrincipal = document.getElementById("btnConfirmarPrincipal");
-    const etapa3ErrorMsg = document.getElementById("etapa3ErrorMsg");
+    const etapa2ErrorMsg = document.getElementById("etapa2ErrorMsg");
     const saneamentoDetailsText = document.getElementById("saneamentoDetailsText");
 
     const resumoInscricaoPrincipalCard = document.getElementById("resumoInscricaoPrincipalCard");
@@ -631,19 +591,33 @@
 
     // NAVEGAÇÃO DO STEPPER
     function setStep(stepNum) {
-      [cardEtapa1, cardEtapa2, cardEtapa3, cardEtapa4].forEach((c, idx) => {
-        c.style.display = (idx + 1 === stepNum) ? "block" : "none";
+      [cardEtapa1, cardEtapa2, cardEtapa3].forEach((c, idx) => {
+        if (c) c.style.display = (idx + 1 === stepNum) ? "block" : "none";
       });
-      [stepIndicator1, stepIndicator2, stepIndicator3, stepIndicator4].forEach((s, idx) => {
-        s.classList.remove("active", "completed");
-        if (idx + 1 === stepNum) s.classList.add("active");
-        else if (idx + 1 < stepNum) s.classList.add("completed");
+      [stepIndicator1, stepIndicator2, stepIndicator3].forEach((s, idx) => {
+        if (s) {
+          s.classList.remove("active", "completed");
+          if (idx + 1 === stepNum) s.classList.add("active");
+          else if (idx + 1 < stepNum) s.classList.add("completed");
+        }
       });
       window.scrollTo({ top: 120, behavior: "smooth" });
     }
 
+    if (btnVoltarIdentificacao) {
+      btnVoltarIdentificacao.addEventListener("click", () => {
+        setStep(1);
+      });
+    }
+
+    if (btnVoltarConferencia) {
+      btnVoltarConferencia.addEventListener("click", () => {
+        setStep(2);
+      });
+    }
+
     // --------------------------------------------------------------------------
-    // FLUXO ETAPA 1: SOLICITAR CÓDIGO OTP
+    // FLUXO ETAPA 1: VERIFICAÇÃO DIRETA POR 3 DADOS NORMALIZADOS (SEM OTP)
     // --------------------------------------------------------------------------
     formEtapa1.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -653,7 +627,7 @@
 
       try {
         const payload = {
-          action: "solicitar_codigo",
+          action: "verificar_dados",
           nome: inputNome.value.trim(),
           email: inputEmail.value.trim(),
           whatsapp: inputWhatsapp.value.trim()
@@ -666,143 +640,28 @@
         });
 
         const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Não foi possível localizar as informações.");
+        if (!res.ok || !data.success || !data.inscricoes || data.inscricoes.length === 0) {
+          throw new Error(data.message || data.error || "Não encontramos uma inscrição compatível com os dados informados. Confira as informações e tente novamente. Se precisar de ajuda, entre em contato com a coordenação.");
         }
 
-        currentSessionToken = data.sessionToken;
-        if (data.emailHint) {
-          emailDisplayHint.textContent = data.emailHint;
-        } else {
-          emailDisplayHint.textContent = inputEmail.value.trim();
-        }
+        currentSessionToken = data.sessionToken || data.viewToken;
+        currentViewToken = data.viewToken || data.sessionToken;
+        candidateInscriptions = data.inscricoes || [];
 
-        // Inicia contagem regressiva para reenvio
-        startResendTimer(data.cooldownSeconds || 60);
-
+        renderInscriptionsList();
         setStep(2);
-        otpDigits[0].focus();
 
       } catch (err) {
         etapa1ErrorMsg.textContent = err.message;
         etapa1ErrorMsg.style.display = "block";
       } finally {
         btnSubmitEtapa1.disabled = false;
-        btnSubmitEtapa1.innerHTML = `<span>Localizar e Solicitar Código de Verificação</span> <i class="fa-solid fa-arrow-right"></i>`;
-      }
-    });
-
-    // CONTROLE DE INPUTS OTP (6 DÍGITOS)
-    otpDigits.forEach((input, index) => {
-      input.addEventListener("input", (e) => {
-        const val = e.target.value.replace(/\D/g, "");
-        e.target.value = val ? val[0] : "";
-        if (val && index < otpDigits.length - 1) {
-          otpDigits[index + 1].focus();
-        }
-        checkOtpComplete();
-      });
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace" && !input.value && index > 0) {
-          otpDigits[index - 1].focus();
-        }
-      });
-
-      input.addEventListener("paste", (e) => {
-        e.preventDefault();
-        const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
-        if (pasted) {
-          for (let i = 0; i < otpDigits.length; i++) {
-            otpDigits[i].value = pasted[i] || "";
-          }
-          const nextIdx = Math.min(pasted.length, otpDigits.length - 1);
-          otpDigits[nextIdx].focus();
-          checkOtpComplete();
-        }
-      });
-    });
-
-    function getOtpCode() {
-      let code = "";
-      otpDigits.forEach(i => code += i.value);
-      return code;
-    }
-
-    function checkOtpComplete() {
-      const code = getOtpCode();
-      btnSubmitEtapa2.disabled = (code.length !== 6);
-    }
-
-    function startResendTimer(sec) {
-      clearInterval(resendTimerInterval);
-      resendCountdown = sec;
-      btnResendOtp.disabled = true;
-      resendTimer.textContent = resendCountdown;
-
-      resendTimerInterval = setInterval(() => {
-        resendCountdown--;
-        resendTimer.textContent = resendCountdown;
-        if (resendCountdown <= 0) {
-          clearInterval(resendTimerInterval);
-          btnResendOtp.disabled = false;
-          btnResendOtp.innerHTML = `Reenviar código agora`;
-        }
-      }, 1000);
-    }
-
-    btnResendOtp.addEventListener("click", () => {
-      formEtapa1.dispatchEvent(new Event("submit"));
-    });
-
-    btnBackToEtapa1.addEventListener("click", () => {
-      setStep(1);
-    });
-
-    // --------------------------------------------------------------------------
-    // FLUXO ETAPA 2: VALIDAR CÓDIGO OTP
-    // --------------------------------------------------------------------------
-    btnSubmitEtapa2.addEventListener("click", async () => {
-      const code = getOtpCode();
-      if (code.length !== 6) return;
-
-      etapa2ErrorMsg.style.display = "none";
-      btnSubmitEtapa2.disabled = true;
-      btnSubmitEtapa2.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Validando código...`;
-
-      try {
-        const res = await fetch("/api/verificar-inscricao", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "validar_codigo",
-            sessionToken: currentSessionToken,
-            code: code
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Código de verificação incorreto ou expirado.");
-        }
-
-        currentViewToken = data.viewToken;
-        candidateInscriptions = data.inscricoes || [];
-
-        renderInscriptionsList();
-        setStep(3);
-
-      } catch (err) {
-        etapa2ErrorMsg.textContent = err.message;
-        etapa2ErrorMsg.style.display = "block";
-      } finally {
-        btnSubmitEtapa2.disabled = false;
-        btnSubmitEtapa2.innerHTML = `<span>Validar Código e Acessar Inscrição</span> <i class="fa-solid fa-unlock-keyhole"></i>`;
+        btnSubmitEtapa1.innerHTML = `<span>Localizar e Conferir Inscrição</span> <i class="fa-solid fa-arrow-right"></i>`;
       }
     });
 
     // --------------------------------------------------------------------------
-    // FLUXO ETAPA 3: RENDERIZAR E SELECIONAR INSCRIÇÃO PRINCIPAL
+    // FLUXO ETAPA 2: RENDERIZAR E SELECIONAR INSCRIÇÃO PRINCIPAL
     // --------------------------------------------------------------------------
     function renderInscriptionsList() {
       inscriptionsListContainer.innerHTML = "";
@@ -824,11 +683,12 @@
       const hasDuplicates = candidateInscriptions.length > 1;
       duplicateAlertBox.style.display = hasDuplicates ? "block" : "none";
       saneamentoProposalBox.style.display = hasDuplicates ? "block" : "none";
+      btnConfirmarPrincipal.style.display = "flex";
 
       // Por padrão seleciona a primeira (mais recente)
       selectedPrincipalId = candidateInscriptions[0].id;
 
-      candidateInscriptions.forEach((insc, idx) => {
+      candidateInscriptions.forEach((insc) => {
         const subLow = (insc.sub || "verde").toLowerCase();
         const dataFormatada = insc.criado_em ? new Date(insc.criado_em).toLocaleDateString("pt-BR") : "Data indisponível";
         const statusMap = {
@@ -900,20 +760,22 @@
         .map(c => c.id);
 
       const principal = candidateInscriptions.find(c => c.id === selectedPrincipalId);
-      saneamentoDetailsText.innerHTML = `
-        A inscrição <strong>#${principal.masked_id} (Sub ${principal.sub})</strong> será mantida como sua <strong>Inscrição Principal</strong>.<br>
-        Serão arquivados <strong>${duplicateIdsToArchive.length} registro(s) duplicado(s)</strong> para desocupar vagas operacionais da sua Sub, mantendo o histórico totalmente auditável.
-      `;
+      if (principal) {
+        saneamentoDetailsText.innerHTML = `
+          A inscrição <strong>#${principal.masked_id} (Sub ${principal.sub})</strong> será mantida como sua <strong>Inscrição Principal</strong>.<br>
+          Serão arquivados <strong>${duplicateIdsToArchive.length} registro(s) duplicado(s)</strong> para desocupar vagas operacionais da sua Sub, mantendo o histórico totalmente auditável.
+        `;
+      }
     }
 
     // CONFIRMAR PRINCIPAL E SANEAMENTO
     btnConfirmarPrincipal.addEventListener("click", async () => {
-      etapa3ErrorMsg.style.display = "none";
+      etapa2ErrorMsg.style.display = "none";
 
       const hasDuplicates = candidateInscriptions.length > 1;
       if (hasDuplicates && !checkConfirmSaneamento.checked) {
-        etapa3ErrorMsg.textContent = "Por favor, marque a caixa confirmando a escolha da inscrição principal e a autorização para sanear as duplicidades.";
-        etapa3ErrorMsg.style.display = "block";
+        etapa2ErrorMsg.textContent = "Por favor, marque a caixa confirmando a escolha da inscrição principal e a autorização para sanear as duplicidades.";
+        etapa2ErrorMsg.style.display = "block";
         return;
       }
 
@@ -940,24 +802,46 @@
           }
         }
 
-        renderEtapa4Resumo();
-        setStep(4);
+        renderEtapa3Resumo();
+        setStep(3);
 
       } catch (err) {
-        etapa3ErrorMsg.textContent = err.message;
-        etapa3ErrorMsg.style.display = "block";
+        etapa2ErrorMsg.textContent = err.message;
+        etapa2ErrorMsg.style.display = "block";
       } finally {
         btnConfirmarPrincipal.disabled = false;
-        btnConfirmarPrincipal.innerHTML = `<span>Avançar para Conferência Financeira</span> <i class="fa-solid fa-arrow-right"></i>`;
+        btnConfirmarPrincipal.innerHTML = `<span>Avançar para Situação & Pagamento</span> <i class="fa-solid fa-arrow-right"></i>`;
       }
     });
 
     // --------------------------------------------------------------------------
-    // FLUXO ETAPA 4: CONFERÊNCIA DO PAGAMENTO E DIVERGÊNCIAS
+    // FLUXO ETAPA 3: CONFERÊNCIA DO PAGAMENTO E DIVERGÊNCIAS
     // --------------------------------------------------------------------------
-    function renderEtapa4Resumo() {
+    function renderEtapa3Resumo() {
       const principal = candidateInscriptions.find(c => c.id === selectedPrincipalId) || candidateInscriptions[0];
       const isPaid = ["pago", "confirmado", "approved"].includes(principal.pagamento_status);
+
+      let statusBadgeLabel = "Pagamento Pendente";
+      let statusBadgeClass = "status-pendente";
+      let iconClass = "fa-clock";
+
+      if (principal.arquivado) {
+        statusBadgeLabel = "Inscrição Arquivada";
+        statusBadgeClass = "status-arquivado";
+        iconClass = "fa-box-archive";
+      } else if (isPaid) {
+        statusBadgeLabel = "Pagamento Confirmado";
+        statusBadgeClass = "status-pago";
+        iconClass = "fa-check-circle";
+      } else if (principal.pagamento_status === "cancelado" || principal.pagamento_status === "pix_expirado") {
+        statusBadgeLabel = "Pix Expirado / Aguardando Renovação";
+        statusBadgeClass = "status-cancelado";
+        iconClass = "fa-circle-xmark";
+      } else if (principal.pagamento_informado) {
+        statusBadgeLabel = "Pagamento Informado (Em Análise)";
+        statusBadgeClass = "status-pendente";
+        iconClass = "fa-hourglass-half";
+      }
 
       let financeCardHtml = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px;">
@@ -971,32 +855,71 @@
             </div>
           </div>
           <div>
-            <span class="status-pill ${isPaid ? 'status-pago' : 'status-pendente'}" style="font-size: .85rem; padding: 6px 14px;">
-              <i class="fa-solid ${isPaid ? 'fa-check-circle' : 'fa-clock'}"></i>
-              ${isPaid ? 'Pagamento Aprovado' : 'Pagamento Pendente'}
+            <span class="status-pill ${statusBadgeClass}" style="font-size: .85rem; padding: 6px 14px;">
+              <i class="fa-solid ${iconClass}"></i>
+              ${statusBadgeLabel}
             </span>
           </div>
+        </div>
+
+        <div style="margin: 14px 0 8px; font-weight: 700; font-size: .98rem; color: var(--text-main);">
+          <i class="fa-solid fa-clipboard-question" style="color: var(--blue); margin-right: 6px;"></i>
+          “As informações da sua inscrição e do pagamento estão corretas?”
         </div>
 
         <div style="font-size: .88rem; line-height: 1.6; color: var(--text-main);">
       `;
 
-      if (isPaid && principal.tem_comprovante) {
+      if (principal.arquivado) {
+        // Cenário E: Arquivado
+        financeCardHtml += `
+          <div style="background: #f1f5f9; border-left: 4px solid #64748b; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #334155;">
+            <strong>Cenário Arquivado / Cancelado:</strong> Esta inscrição encontra-se arquivada no sistema${principal.motivo_arquivamento ? ` (${principal.motivo_arquivamento})` : ''}. Se você acredita que houve um equívoco, informe os detalhes abaixo para revisão pela coordenação.
+          </div>
+        `;
+      } else if (isPaid && principal.tem_comprovante) {
+        // Cenário A: Pago e comprovante registrado
         financeCardHtml += `
           <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #065f46;">
-            <strong>✓ Cenário Confirmado:</strong> Seu pagamento está confirmado no sistema e o comprovante encontra-se devidamente registrado e validado!
+            <strong>✓ Cenário A — Pagamento Confirmado com Comprovante:</strong> Seu pagamento está confirmado no sistema e o comprovante encontra-se devidamente registrado e validado pela coordenação do EJC!
           </div>
         `;
       } else if (isPaid && !principal.tem_comprovante) {
+        // Cenário B: Pago, mas sem comprovante registrado
         financeCardHtml += `
           <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #065f46;">
-            <strong>✓ Confirmado no Gateway:</strong> Seu pagamento foi processado e aprovado com sucesso via Mercado Pago.
+            <strong>✓ Cenário B — Confirmado no Gateway:</strong> Seu pagamento foi processado e aprovado com sucesso via Mercado Pago (cartão ou Pix aprovado).
+          </div>
+        `;
+      } else if (principal.pagamento_informado) {
+        // Cenário C: Não pago no gateway, mas participante informou pagamento
+        financeCardHtml += `
+          <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #1e40af;">
+            <strong>ℹ️ Cenário C — Pagamento Informado:</strong> Você já registrou uma solicitação informando o pagamento. A coordenação financeira analisará o comprovante para conferência manual.
+          </div>
+        `;
+      } else if (principal.pagamento_status === "cancelado" || principal.pagamento_status === "pix_expirado") {
+        // Cenário D: Pix Expirado
+        financeCardHtml += `
+          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #92400e;">
+            <strong>⚠️ Cenário D — Cobrança Pix Expirada:</strong> O código Pix anterior expirou pelo limite de tempo do banco. Sua inscrição continua preservada! Você pode gerar um novo pagamento no Checkout Oficial ou enviar seu comprovante abaixo se realizou transferência manual.
+          </div>
+          <div style="margin-top: 12px;">
+            <a href="/checkout" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 18px; font-size: .88rem; border-radius: 8px;">
+              <i class="fa-solid fa-arrows-rotate"></i> Gerar Novo Pix / Cartão no Checkout
+            </a>
           </div>
         `;
       } else {
+        // Cenário D: Pendente
         financeCardHtml += `
           <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #92400e;">
-            <strong>⚠️ Pagamento Pendente:</strong> Consta em nosso sistema que a inscrição ainda não teve o pagamento validado. Caso você já tenha pago ou realizado uma transferência Pix manual, utilize o formulário abaixo para enviar seu comprovante.
+            <strong>⚠️ Cenário D — Pagamento Pendente:</strong> Consta em nosso sistema que a inscrição ainda não foi paga. Você pode concluir o pagamento no Checkout Oficial ou anexar seu comprovante abaixo se já realizou o pagamento.
+          </div>
+          <div style="margin-top: 12px;">
+            <a href="/checkout" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 18px; font-size: .88rem; border-radius: 8px;">
+              <i class="fa-solid fa-credit-card"></i> Concluir Pagamento no Checkout
+            </a>
           </div>
         `;
       }

@@ -2511,7 +2511,6 @@
           </td>
           <td>
             <button class="action-btn view" onclick="verDetalhes('${item.whatsapp}')"><i class="fa-regular fa-eye"></i> Detalhes</button>
-            ${item.pagamento_status !== 'confirmado' ? `<button class="action-btn confirm" onclick="confirmarPagamentoInscricao('${item.whatsapp}')"><i class="fa-solid fa-check"></i> Aprovar</button>` : ''}
           </td>
         </tr>
       `;
@@ -2845,50 +2844,16 @@
             </button>
           </div>
         ` : ''}
+        <div style="margin-top: 14px; padding: 10px 12px; background: rgba(8, 125, 249, 0.06); border-radius: 8px; border: 1px dashed var(--border-color); font-size: .8rem; color: var(--muted);">
+          <i class="fa-solid fa-lock" style="color: var(--blue);"></i> <strong>Gestão Financeira:</strong> A aprovação e conferência de pagamentos foram centralizadas exclusivamente na aba <a href="#pagamentos" onclick="document.getElementById('detailModal').close(); ativarAba('pagamentos');" style="color: var(--blue); font-weight: 700; text-decoration: underline;">Pagamentos e Checkout</a>.
+        </div>
       `;
       document.getElementById("detailModal").showModal();
     };
 
-    window.confirmarPagamentoInscricao = async function(whatsapp) {
-      if (!confirm("Deseja confirmar manualmente o pagamento desta inscrição?")) return;
-      
-      try {
-        const res = await fetch("/api/payment-settings", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${currentAdminPass}`,
-            "x-admin-token": currentAdminPass
-          },
-          body: JSON.stringify({
-            action: "approve_payment",
-            identificador: whatsapp,
-            usuario: currentUserRole,
-            admin_pass: currentAdminPass
-          })
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          const local = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
-          const idx = local.findIndex(i => i.whatsapp === whatsapp);
-          if (idx !== -1) {
-            local[idx].pagamento_status = "confirmado";
-            localStorage.setItem("ejc_inscricoes", JSON.stringify(local));
-          }
-
-          const cur = inscricoesData.find(i => i.whatsapp === whatsapp);
-          if (cur) cur.pagamento_status = "confirmado";
-
-          renderizarTudo();
-          alert("✓ Pagamento confirmado e persistido com sucesso!");
-        } else {
-          alert(`Erro ao confirmar pagamento: ${data.error || 'Falha no servidor'}`);
-        }
-      } catch (err) {
-        console.error("Erro ao aprovar pagamento:", err);
-        alert("Erro de comunicação ao confirmar pagamento no servidor.");
-      }
+    window.confirmarPagamentoInscricao = function() {
+      alert("Ações de aprovação financeira estão centralizadas exclusivamente na aba 'Pagamentos e Checkout' para assegurar a conciliação.");
+      ativarAba("pagamentos");
     };
 
     // Detalhes & Auditoria do Pagamento

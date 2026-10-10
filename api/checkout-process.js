@@ -635,7 +635,7 @@ module.exports = async (req, res) => {
 
       if (supabaseUrl && supabaseKey) {
         try {
-          let query = `arquivado=eq.false&pagamento_status=eq.pendente&order=criado_em.desc&limit=10`;
+          let query = `arquivado=eq.false&motivo_arquivamento=is.null&pagamento_status=in.(pendente,cancelado)&order=criado_em.desc&limit=10`;
           if (ehUuid) {
             query += `&id=eq.${encodeURIComponent(termo.toLowerCase().trim())}`;
           } else if (ehEmail) {
@@ -659,13 +659,16 @@ module.exports = async (req, res) => {
             const rows = await sbRes.json();
             if (Array.isArray(rows)) {
               rows.forEach(r => {
+                const isPixExpirado = r.pagamento_status === "cancelado";
                 inscricoesEncontradas.push({
                   id: r.id,
                   nome_completo: r.nome_completo,
                   email: r.email,
                   whatsapp: r.whatsapp,
                   sub: r.sub,
-                  pagamento_status: "pendente",
+                  pagamento_status: isPixExpirado ? "pix_expirado" : "pendente",
+                  pix_expirado: isPixExpirado,
+                  elegivel_novo_pix: true,
                   criado_em: r.criado_em
                 });
               });

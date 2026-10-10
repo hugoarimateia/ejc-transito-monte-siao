@@ -1260,17 +1260,25 @@
         return;
       }
 
-      let html = `<div style="font-size: .85rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Encontramos inscrições com pagamento pendente. Selecione qual deseja pagar:</div>`;
+      let html = `<div style="font-size: .85rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Encontramos inscrições vinculadas aos seus dados. Selecione qual deseja pagar:</div>`;
       html += `<div class="pending-cards-list">`;
       encontradas.forEach(item => {
         const subLow = item.sub ? item.sub.toLowerCase() : "none";
         const subName = item.sub ? `Sub ${item.sub}` : "Nenhum Sub definido";
         const shortId = String(item.id || "").slice(0, 10);
+        const isExpirado = item.pix_expirado || item.pagamento_status === "pix_expirado";
+        const statusBadgeHtml = isExpirado
+          ? `<span class="pending-status-tag" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;"><i class="fa-solid fa-clock-rotate-left"></i> Pix Expirado (Elegível para renovação)</span>`
+          : `<span class="pending-status-tag"><i class="fa-solid fa-clock"></i> Pagamento pendente</span>`;
+        const actionBtnText = isExpirado
+          ? `<i class="fa-solid fa-rotate-right"></i> Gerar Novo Pagamento para esta Inscrição`
+          : `<i class="fa-solid fa-check"></i> Selecionar e Pagar esta Inscrição`;
+
         html += `
           <div class="pending-inscricao-card" data-id="${item.id}" data-sub="${item.sub || ''}" data-name="${encodeURIComponent(item.nome_completo || '')}" data-email="${encodeURIComponent(item.email || '')}" data-wpp="${encodeURIComponent(item.whatsapp || '')}">
             <div class="pending-card-header">
               <span class="confirmed-sub-badge sub-badge-${subLow}">${subName}</span>
-              <span class="pending-status-tag"><i class="fa-solid fa-clock"></i> Pagamento pendente</span>
+              ${statusBadgeHtml}
             </div>
             <div style="font-size: .95rem; font-weight: 700; color: var(--text-main); margin-bottom: 2px;">
               ${item.nome_completo || 'Participante EJC'}
@@ -1279,7 +1287,7 @@
               Inscrição nº: <code>${shortId}</code> ${item.email ? `• ${item.email}` : ''}
             </div>
             <button type="button" class="button button-primary" style="width: 100%; min-height: 38px; font-size: .85rem; padding: 6px 12px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i class="fa-solid fa-check"></i> Selecionar e Pagar esta Inscrição
+              ${actionBtnText}
             </button>
           </div>
         `;

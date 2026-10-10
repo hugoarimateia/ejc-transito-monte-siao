@@ -904,11 +904,13 @@ serve(async (req: Request) => {
       }
 
       try {
+        // Busca inscrições não arquivadas com status 'pendente' ou 'cancelado' (Pix expirado)
         let query = supabase
           .from("inscricoes")
-          .select("id, nome_completo, email, whatsapp, sub, pagamento_status, criado_em")
+          .select("id, nome_completo, email, whatsapp, sub, pagamento_status, motivo_arquivamento, arquivado, criado_em")
           .eq("arquivado", false)
-          .eq("pagamento_status", "pendente")
+          .is("motivo_arquivamento", null)
+          .in("pagamento_status", ["pendente", "cancelado"])
           .order("criado_em", { ascending: false })
           .limit(10);
 
@@ -931,15 +933,39 @@ serve(async (req: Request) => {
         const { data: rows, error } = await query;
         if (error) throw error;
 
-        const inscricoesEncontradas = (rows || []).map((r) => ({
-          id: r.id,
-          nome_completo: r.nome_completo,
-          email: r.email,
-          whatsapp: r.whatsapp,
-          sub: r.sub,
-          pagamento_status: "pendente",
-          criado_em: r.criado_em
-        }));
+        // Se houver registros, verificar se algum já possui pagamento aprovado no gateway
+        const candidateIds = (rows || []).map(r => r.id);
+        let approvedSet = new Set<string>();
+        if (candidateIds.length > 0) {
+          const { data: approvedRows } = await supabase
+            .from("pagamentos")
+            .select("inscricao_id")
+            .in("inscricao_id", candidateIds)
+            .in("status", ["approved", "confirmado", "pago"]);
+
+          if (Array.isArray(approvedRows)) {
+            approvedRows.forEach(a => {
+              if (a.inscricao_id) approvedSet.add(String(a.inscricao_id));
+            });
+          }
+        }
+
+        const inscricoesEncontradas = (rows || [])
+          .filter(r => !approvedSet.has(String(r.id))) // Exclui inscrições já pagas/aprovadas
+          .map((r) => {
+            const isPixExpirado = r.pagamento_status === "cancelado";
+            return {
+              id: r.id,
+              nome_completo: r.nome_completo,
+              email: r.email,
+              whatsapp: r.whatsapp,
+              sub: r.sub,
+              pagamento_status: isPixExpirado ? "pix_expirado" : "pendente",
+              pix_expirado: isPixExpirado,
+              elegivel_novo_pix: true,
+              criado_em: r.criado_em
+            };
+          });
 
         return jsonResponse(
           {
@@ -1573,16 +1599,48 @@ serve(async (req: Request) => {
         }
 
         const inscStatus = String(inscRecord.pagamento_status || "").toLowerCase().trim();
-        if (inscStatus === "cancelado") {
-          return jsonResponse({
-            error: "Esta inscrição está cancelada e não pode receber pagamentos."
-          }, 400, req);
-        }
-
         if (inscStatus === "approved" || inscStatus === "confirmado" || inscStatus === "pago") {
           return jsonResponse({
             error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."
           }, 400, req);
+        }
+
+        // Se está marcada como 'cancelado', verificar se é Pix expirado elegível ou cancelamento definitivo
+        if (inscStatus === "cancelado") {
+          const isCancelamentoManual = !!inscRecord.motivo_arquivamento;
+          if (isCancelamentoManual) {
+            return jsonResponse({
+              error: "Esta inscrição possui cancelamento administrativo e não pode receber pagamentos."
+            }, 400, req);
+          }
+
+          // Verificar se não há nenhum pagamento aprovado anterior
+          const { data: approvedCheck } = await supabase
+            .from("pagamentos")
+            .select("id")
+            .eq("inscricao_id", validUuid)
+            .in("status", ["approved", "confirmado", "pago"])
+            .limit(1);
+
+          if (approvedCheck && approvedCheck.length > 0) {
+            return jsonResponse({
+              error: "Esta inscrição já possui um pagamento aprovado no sistema."
+            }, 400, req);
+          }
+
+          // Revalidar se a vaga da Sub ainda está dentro do limite oficial de 85
+          const { data: subCountData } = await supabase.rpc("contagem_inscricoes_por_sub");
+          if (Array.isArray(subCountData)) {
+            const subRow = subCountData.find((s: any) => String(s.sub || "").toLowerCase() === String(inscRecord.sub || "").toLowerCase());
+            const currentTotal = subRow ? Number(subRow.total || 0) : 0;
+            if (currentTotal >= 85) {
+              return jsonResponse({
+                error: `As vagas para o Sub ${inscRecord.sub} estão atualmente esgotadas (85/85). Entre em contato com a coordenação.`
+              }, 400, req);
+            }
+          }
+
+          console.log(`[RECUPERACAO_PIX_EXPIRADO] Inscrição ${validUuid} (${inscRecord.nome_completo}, Sub ${inscRecord.sub}) autorizada para nova tentativa de pagamento.`);
         }
 
         // Se o cliente forneceu Sub, deve coincidir estritamente com o Sub registrado
@@ -1765,6 +1823,36 @@ serve(async (req: Request) => {
           inscricao_id: inscricao_id || null
         }
       });
+
+      // Se era uma inscrição existente (recuperação de Pix expirado), reativar para 'pendente'
+      if (validUuid) {
+        try {
+          await supabase
+            .from("inscricoes")
+            .update({
+              pagamento_status: "pendente",
+              forma_pagamento: "pix",
+              observacao_pagamento: `Nova tentativa de Pix gerada (${txid}) em ${new Date().toISOString()}`
+            })
+            .eq("id", validUuid);
+
+          await supabase.from("auditoria_transacoes").insert({
+            transacao_id: txid,
+            acao: "RECUPERACAO_PIX_EXPIRADO",
+            status_anterior: "cancelado",
+            status_novo: "pendente",
+            executado_por: "checkout_participante",
+            detalhes: {
+              inscricao_id: validUuid,
+              nome: nomeFinal,
+              sub: subFinal,
+              metodo: "pix"
+            }
+          });
+        } catch (auditErr) {
+          console.warn("[checkout-process] Falha não impeditiva no registro de auditoria:", auditErr);
+        }
+      }
 
       return jsonResponse({
         success: true,
