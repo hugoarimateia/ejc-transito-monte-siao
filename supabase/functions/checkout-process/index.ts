@@ -1361,6 +1361,8 @@ serve(async (req: Request) => {
       executado_por: bodyExecutadoPor
     } = body;
 
+    const validUuid = safeUuidOrNull(inscricao_id);
+
     // --------------------------------------------------------------------------
     // AÇÃO 1: CONFIRMAÇÃO MANUAL / RECONCILIAÇÃO (EXIGE SUPERADMIN OU FINANCEIRO)
     // --------------------------------------------------------------------------
@@ -1583,7 +1585,6 @@ serve(async (req: Request) => {
       if (rawSub.toLowerCase() === "azul") rawSub = "Laranja";
 
       // Validação autoritativa da inscrição no banco contra adulteração de Sub (Anti-Tampering)
-      const validUuid = safeUuidOrNull(inscricao_id);
       if (validUuid) {
         const { data: inscRows, error: inscErr } = await supabase
           .from("inscricoes")
@@ -2056,6 +2057,9 @@ serve(async (req: Request) => {
     return jsonResponse({ error: "Método de pagamento inválido. Use 'pix' ou 'credit_card'." }, 400, req);
   } catch (err) {
     console.error("[Checkout Process Exception]", err);
-    return jsonResponse({ error: "Falha interna no processamento do checkout." }, 500, req);
+    return jsonResponse({
+      error: "Falha interna no processamento do checkout.",
+      detail: err instanceof Error ? err.message : String(err)
+    }, 500, req);
   }
 });
