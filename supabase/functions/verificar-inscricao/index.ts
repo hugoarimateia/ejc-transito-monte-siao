@@ -291,7 +291,7 @@ serve(async (req: Request) => {
           criado_em
         `)
         .eq("arquivado", false)
-        .or(`email.ilike.${emailNorm},whatsapp.ilike.%${wppNorm}%`)
+        .or(`email.ilike.${emailNorm},whatsapp.ilike.%${wppNorm}%,whatsapp.ilike.%${wppNorm.slice(-8)}%`)
         .order("criado_em", { ascending: false })
         .limit(20);
 

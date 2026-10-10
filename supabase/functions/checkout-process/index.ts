@@ -919,7 +919,16 @@ serve(async (req: Request) => {
         } else if (ehEmail) {
           query = query.ilike("email", emailNorm);
         } else if (ehWhatsapp) {
-          query = query.ilike("whatsapp", `%${wppNorm}%`);
+          const ddd = wppNorm.slice(0, 2);
+          const corpo = wppNorm.slice(2);
+          const part1 = corpo.length === 9 ? corpo.slice(0, 5) : corpo.slice(0, 4);
+          const part2 = corpo.length === 9 ? corpo.slice(5) : corpo.slice(4);
+          const formatted1 = `(${ddd}) ${part1}-${part2}`;
+          const formatted2 = `(${ddd})${part1}-${part2}`;
+          const formatted3 = `${part1}-${part2}`;
+          const last8 = wppNorm.slice(-8);
+
+          query = query.or(`whatsapp.ilike.%${wppNorm}%,whatsapp.ilike.%${formatted1}%,whatsapp.ilike.%${formatted2}%,whatsapp.ilike.%${formatted3}%,whatsapp.ilike.%${last8}%`);
         } else {
           // Busca combinada por termos do nome
           const partes = nomeNorm.split(" ").filter(p => p.length >= 2);
