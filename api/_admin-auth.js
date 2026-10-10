@@ -44,15 +44,15 @@ function safeEqual(a, b) {
 function configuredPasswords() {
   const list = [];
 
-  // 1. Coordenação / Super Admin: senha transitoejc26
+  // 1. Coordenação / Super Admin
   const passCoordenacao = (process.env.ADMIN_PASSWORD_COORDENACAO || process.env.ADMIN_PASS || "").trim();
   if (passCoordenacao) list.push({ pass: passCoordenacao, role: "superadmin" });
 
-  // 2. Financeiro: senha financeirott26
+  // 2. Financeiro
   const passFinanceiro = (process.env.ADMIN_PASSWORD_FINANCEIRO || process.env.FINANCEIRO_PASSWORD || "").trim();
   if (passFinanceiro) list.push({ pass: passFinanceiro, role: "financeiro" });
 
-  // 3. Admin Normal: senha ejc2026adm
+  // 3. Admin Geral
   const passAdmin = (process.env.ADMIN_PASSWORD || "").trim();
   if (passAdmin) list.push({ pass: passAdmin, role: "admin" });
 
