@@ -1,5 +1,5 @@
 // ==============================================================================
-// SUPABASE EDGE FUNCTION: checkout-process
+// SUPABASE EDGE FUNCTION: checkout-process (v2.1)
 // Processamento centralizado do Checkout Unificado (Pix e Cartão de Crédito)
 // Consulta de Status (GET Polling) e Registro/Confirmação Resiliente (POST)
 // 100% equivalente a /api/checkout-process.js (Vercel) com execução no Supabase Edge
