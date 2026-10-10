@@ -49,9 +49,9 @@
       gap: 12px;
       padding: 12px 18px;
       border-radius: 14px;
-      border: 1.5px solid var(--border-subtle, #e2e8f0);
-      background: var(--card-bg, #ffffff);
-      color: var(--ink, #1e293b);
+      border: 1.5px solid var(--border-color, #dce1ed);
+      background: var(--bg-card, #ffffff);
+      color: var(--text-main, #1e293b);
       cursor: pointer;
       font-family: inherit;
       font-size: 0.92rem;
@@ -64,6 +64,7 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
       border-color: var(--sub-accent, #087df9);
+      background: var(--bg-card-subtle, #f8faff);
     }
     .sub-tab-pill.active {
       border-color: var(--sub-accent, #087df9);
@@ -88,11 +89,39 @@
       line-height: 1.2;
     }
     .sub-tab-pill small {
-      color: var(--muted, #64748b);
+      color: var(--text-muted, #64748b);
       font-size: 0.76rem;
       font-weight: 500;
       display: block;
       margin-top: 2px;
+    }
+
+    /* Dark Mode explícito para os botões das Subs (correção visual) */
+    [data-theme="dark"] .sub-tab-pill {
+      background: var(--bg-card, #162242);
+      border-color: var(--border-color, rgba(255, 255, 255, 0.12));
+      color: var(--text-main, #f1f5f9);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    [data-theme="dark"] .sub-tab-pill:hover {
+      background: var(--bg-card-subtle, #1c2b52);
+      border-color: var(--sub-accent, #087df9);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+    }
+    [data-theme="dark"] .sub-tab-pill.active {
+      background: var(--sub-active-bg, rgba(8, 125, 249, 0.18));
+      border-color: var(--sub-accent, #087df9);
+      box-shadow: 0 4px 16px var(--sub-glow, rgba(8, 125, 249, 0.35));
+    }
+    [data-theme="dark"] .sub-tab-pill[data-sub="verde"].active { --sub-active-bg: rgba(36, 167, 100, 0.2); --sub-glow: rgba(36, 167, 100, 0.4); }
+    [data-theme="dark"] .sub-tab-pill[data-sub="vermelho"].active { --sub-active-bg: rgba(232, 51, 62, 0.2); --sub-glow: rgba(232, 51, 62, 0.4); }
+    [data-theme="dark"] .sub-tab-pill[data-sub="amarelo"].active { --sub-active-bg: rgba(234, 179, 8, 0.2); --sub-glow: rgba(234, 179, 8, 0.4); }
+    [data-theme="dark"] .sub-tab-pill[data-sub="laranja"].active { --sub-active-bg: rgba(249, 115, 22, 0.2); --sub-glow: rgba(249, 115, 22, 0.4); }
+    [data-theme="dark"] .sub-tab-pill .sub-dot {
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.5);
+    }
+    [data-theme="dark"] .sub-tab-pill small {
+      color: var(--text-muted, #94a3b8);
     }
     .inscrito-avatar-thumb {
       width: 44px;
@@ -506,6 +535,7 @@
               <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
               <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
               <button type="button" class="admin-tab-btn" data-tab="arquivados" id="tabBtnArquivados"><i class="fa-solid fa-box-archive"></i> Histórico / Arquivados</button>
+              <button type="button" class="admin-tab-btn" data-tab="verificacoes" id="tabBtnVerificacoes"><i class="fa-solid fa-user-shield"></i> Verificações & Saneamento</button>
             </div>
           </div>
 
@@ -1328,6 +1358,88 @@
         </div>
       </div>
 
+      <!-- SEÇÃO 7: VERIFICAÇÕES & SANEAMENTO (UTILIDADE PÚBLICA) -->
+      <div class="table-container" id="sectionVerificacoes" style="display: none;">
+        <div class="table-toolbar" style="border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
+          <div>
+            <h3 style="margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-size: 1.35rem; color: var(--blue-dark); display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-user-shield" style="color: var(--blue);"></i> Verificações, Saneamento & Divergências
+            </h3>
+            <span style="font-size: .86rem; color: var(--muted);">Acompanhamento de conferências cadastrais dos participantes, duplicidades resolvidas e divergências financeiras reportadas</span>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn-refresh" onclick="carregarVerificacoesAdmin(true)" style="padding: 9px 15px; font-size: .85rem; border-radius: 9px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+              <i class="fa-solid fa-rotate"></i> Atualizar Verificações
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px;">
+          <div class="stat-box" style="border-left-color: #087df9;">
+            <span>Divergências Reportadas</span>
+            <strong id="statDivergenciasCount" style="font-size: 1.5rem; color: #087df9;">0</strong>
+          </div>
+          <div class="stat-box" style="border-left-color: #10b981;">
+            <span>Duplicidades Saneadas</span>
+            <strong id="statDuplicidadesSaneadasCount" style="font-size: 1.5rem; color: #10b981;">0</strong>
+          </div>
+          <div class="stat-box" style="border-left-color: #f59e0b;">
+            <span>Comprovantes em Análise</span>
+            <strong id="statComprovantesEmAnaliseCount" style="font-size: 1.5rem; color: #f59e0b;">0</strong>
+          </div>
+        </div>
+
+        <h4 style="margin: 0 0 12px; font-size: 1.05rem; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> Divergências Financeiras & Comprovantes Enviados pelos Participantes
+        </h4>
+        <div style="overflow-x: auto; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px; margin-bottom: 28px;">
+          <table class="data-table" id="tableDivergencias" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Participante</th>
+                <th>Sub</th>
+                <th>Contato</th>
+                <th>Status do Pagamento</th>
+                <th>Divergência / Relato</th>
+                <th>Comprovante</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyDivergencias">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 30px;">
+                  <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando divergências...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 style="margin: 0 0 12px; font-size: 1.05rem; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-clock-rotate-left" style="color: var(--blue);"></i> Histórico de Saneamento de Duplicidades Confirmadas
+        </h4>
+        <div style="overflow-x: auto; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
+          <table class="data-table" id="tableAuditoriaSaneamento" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Data da Operação</th>
+                <th>Inscrição Principal</th>
+                <th>Inscrição Duplicada Arquivada</th>
+                <th>E-mail do Participante</th>
+                <th>Motivo Registrado</th>
+                <th>Operador</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyAuditoriaSaneamento">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--muted); padding: 30px;">
+                  <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando histórico de auditoria...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -1946,6 +2058,7 @@
       const secInscDados = document.getElementById("sectionInscritosDados");
       const secCancelar = document.getElementById("sectionCancelarInscricao");
       const secArquivados = document.getElementById("sectionArquivados");
+      const secVerificacoes = document.getElementById("sectionVerificacoes");
 
       tabBtns.forEach(b => {
         if (b.getAttribute("data-tab") === targetTab) {
@@ -1963,6 +2076,7 @@
         if (secInscDados) secInscDados.style.display = "none";
         if (secCancelar) secCancelar.style.display = "none";
         if (secArquivados) secArquivados.style.display = "none";
+        if (secVerificacoes) secVerificacoes.style.display = "none";
       } else {
         if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
         if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
@@ -1971,6 +2085,7 @@
         if (secInscDados) secInscDados.style.display = (targetTab === "inscritos-dados") ? "block" : "none";
         if (secCancelar) secCancelar.style.display = (targetTab === "cancelar-inscricao") ? "block" : "none";
         if (secArquivados) secArquivados.style.display = (targetTab === "arquivados") ? "block" : "none";
+        if (secVerificacoes) secVerificacoes.style.display = (targetTab === "verificacoes") ? "block" : "none";
       }
 
       if (targetTab === "inscritos-dados") {
@@ -1979,6 +2094,8 @@
         renderizarTabelaCancelarInscricao();
       } else if (targetTab === "arquivados") {
         renderizarTabelaArquivados();
+      } else if (targetTab === "verificacoes") {
+        carregarVerificacoesAdmin();
       }
     }
 
@@ -2017,6 +2134,8 @@
           autoTab = "cancelar-inscricao";
         } else if (path.endsWith("/arquivados") || hash === "arquivados" || hash === "historico") {
           autoTab = "arquivados";
+        } else if (path.endsWith("/verificacoes") || hash === "verificacoes" || hash === "saneamento") {
+          autoTab = "verificacoes";
         }
         ativarAba(autoTab);
       }
@@ -2024,6 +2143,131 @@
       window.addEventListener("hashchange", sincronizarComHash);
       sincronizarComHash();
     }
+
+    async function carregarVerificacoesAdmin(forceRefresh = false) {
+      const tbodyDiv = document.getElementById("tbodyDivergencias");
+      const tbodyAud = document.getElementById("tbodyAuditoriaSaneamento");
+      const statDiv = document.getElementById("statDivergenciasCount");
+      const statDup = document.getElementById("statDuplicidadesSaneadasCount");
+      const statComp = document.getElementById("statComprovantesEmAnaliseCount");
+
+      if (tbodyDiv) tbodyDiv.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--muted); padding: 30px;"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando divergências...</td></tr>`;
+      if (tbodyAud) tbodyAud.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 30px;"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Carregando auditoria...</td></tr>`;
+
+      try {
+        const edgeUrl = "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/verificar-inscricao";
+        const res = await fetch(edgeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": currentAdminPass || "",
+            "Authorization": `Bearer ${currentAdminPass || ""}`
+          },
+          body: JSON.stringify({ action: "admin_listar_verificacoes" })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Falha ao carregar verificações.");
+        }
+
+        const divergencias = data.divergencias || [];
+        const auditoria = data.auditoria || [];
+
+        const totalDiv = divergencias.filter(d => d.pagamento_informado && !["approved", "pago", "confirmado"].includes(d.pagamento_status)).length;
+        const totalComp = divergencias.filter(d => d.comprovante_caminho && !["approved", "pago", "confirmado"].includes(d.pagamento_status)).length;
+        const totalDup = auditoria.filter(a => a.acao === "saneamento_duplicidade_participante").length;
+
+        if (statDiv) statDiv.textContent = totalDiv;
+        if (statComp) statComp.textContent = totalComp;
+        if (statDup) statDup.textContent = totalDup;
+
+        if (tbodyDiv) {
+          if (divergencias.length === 0) {
+            tbodyDiv.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--muted); padding: 30px;">Nenhuma divergência registrada no momento.</td></tr>`;
+          } else {
+            let htmlDiv = "";
+            divergencias.forEach(item => {
+              const dataStr = item.criado_em ? new Date(item.criado_em).toLocaleDateString("pt-BR") : "-";
+              const subLow = (item.sub || "verde").toLowerCase();
+              const isPaid = ["approved", "pago", "confirmado"].includes(item.pagamento_status);
+              const comprovanteBtn = item.comprovante_caminho
+                ? `<button type="button" class="button button-secondary" style="font-size: .78rem; padding: 4px 10px;" onclick="visualizarComprovantePrivado('${encodeURIComponent(item.comprovante_caminho)}')"><i class="fa-solid fa-eye"></i> Ver Anexo</button>`
+                : `<span style="color: var(--muted); font-size: .8rem;">Sem anexo</span>`;
+
+              htmlDiv += `
+                <tr>
+                  <td style="white-space: nowrap; font-size: .84rem;">${dataStr}</td>
+                  <td><strong>${item.nome_completo}</strong></td>
+                  <td><span class="sub-badge sub-badge-${subLow}">Sub ${item.sub}</span></td>
+                  <td style="font-size: .84rem;">${item.email || '-'}<br><small style="color: var(--muted);">${item.whatsapp || ''}</small></td>
+                  <td><span class="badge-status ${isPaid ? 'completo' : 'incompleto'}">${item.pagamento_status.toUpperCase()}</span></td>
+                  <td style="max-width: 280px; font-size: .82rem; line-height: 1.4;">${item.justificativa_pagamento || 'Confirmação cadastral do participante'}</td>
+                  <td>${comprovanteBtn}</td>
+                </tr>
+              `;
+            });
+            tbodyDiv.innerHTML = htmlDiv;
+          }
+        }
+
+        if (tbodyAud) {
+          const auditDups = auditoria.filter(a => a.acao === "saneamento_duplicidade_participante");
+          if (auditDups.length === 0) {
+            tbodyAud.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 30px;">Nenhum histórico de duplicidade saneada registrado até o momento.</td></tr>`;
+          } else {
+            let htmlAud = "";
+            auditDups.forEach(a => {
+              const dataStr = a.criado_em ? new Date(a.criado_em).toLocaleString("pt-BR") : "-";
+              const det = a.detalhes || {};
+              const idPrinc = a.transacao_id ? String(a.transacao_id).slice(0, 10) + '...' : '-';
+              const idDup = det.duplicata_arquivada ? String(det.duplicata_arquivada).slice(0, 10) + '...' : '-';
+
+              htmlAud += `
+                <tr>
+                  <td style="white-space: nowrap; font-size: .84rem;">${dataStr}</td>
+                  <td><code style="font-family: monospace; font-size: .82rem;">${idPrinc}</code> (Ativo)</td>
+                  <td><code style="font-family: monospace; font-size: .82rem; color: #dc2626;">${idDup}</code> (Arquivado)</td>
+                  <td style="font-size: .84rem;">${det.email || '-'}</td>
+                  <td><span class="badge-status incompleto">${det.motivo || 'DUPLICIDADE_CONFIRMADA_PELO_PARTICIPANTE'}</span></td>
+                  <td style="font-size: .84rem;">${a.executado_por || 'participante'}</td>
+                </tr>
+              `;
+            });
+            tbodyAud.innerHTML = htmlAud;
+          }
+        }
+
+      } catch (err) {
+        console.warn("[carregarVerificacoesAdmin error]", err);
+        if (tbodyDiv) tbodyDiv.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 25px;"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</td></tr>`;
+        if (tbodyAud) tbodyAud.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 25px;"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</td></tr>`;
+      }
+    }
+
+    async function visualizarComprovantePrivado(caminhoEncoded) {
+      const caminho = decodeURIComponent(caminhoEncoded);
+      if (!caminho) return;
+
+      try {
+        const edgeUrl = `https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-read?action=get_comprovante_url&path=${encodeURIComponent(caminho)}`;
+        const res = await fetch(edgeUrl, {
+          headers: {
+            "x-admin-token": currentAdminPass || "",
+            "Authorization": `Bearer ${currentAdminPass || ""}`
+          }
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          window.open(data.url, "_blank");
+        } else {
+          alert("Não foi possível gerar visualização privada para este comprovante: " + (data.error || "Erro desconhecido"));
+        }
+      } catch (err) {
+        alert("Erro ao abrir comprovante: " + err.message);
+      }
+    }
+
 
     function carregarDados() {
       // Limpa dados legados locais para garantir Fonte Única de Verdade do Servidor

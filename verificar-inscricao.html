@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <script>
+    (function () {
+      try {
+        var s = localStorage.getItem("ejc_theme");
+        var d = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var t = s || (d ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+        var iconHref = "images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3";
+        var l = document.querySelector('link[rel="icon"]');
+        if (l) { l.href = iconHref; }
+      } catch (e) { }
+    })();
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#023284">
+  <meta name="description" content="Verifique e confirme sua inscrição no EJC — Equipe do Trânsito. Localize seu cadastro, confirme seus dados e saneie duplicidades com segurança.">
+  <title>Verifique e confirme sua inscrição no EJC</title>
+  <link rel="icon" type="image/png" href="images/favicondefault.png?v=4" id="favicon-link">
+  <link rel="apple-touch-icon" href="images/10%20EJC%20MONTE%20SI%C3%83O.png?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/all.min.css" rel="stylesheet">
+
+  <style>
+    .verification-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-body, #f8fafc);
+      color: var(--text-main, #0f172a);
+    }
+    .verification-container {
+      max-width: 860px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+      width: 100%;
+    }
+    .verification-card {
+      background: var(--bg-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      margin-bottom: 24px;
+      transition: all .2s ease;
+    }
+    @media (max-width: 600px) {
+      .verification-card {
+        padding: 24px 16px;
+        border-radius: 16px;
+      }
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(8, 125, 249, 0.1);
+      color: var(--blue, #087df9);
+      border: 1px solid rgba(8, 125, 249, 0.25);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-main, #0f172a);
+      margin: 0 0 10px;
+      letter-spacing: -0.5px;
+      line-height: 1.25;
+    }
+    @media (max-width: 600px) {
+      .hero-title {
+        font-size: 1.55rem;
+      }
+    }
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--text-muted, #64748b);
+      line-height: 1.6;
+      margin: 0 0 24px;
+    }
+    .notice-box {
+      background: var(--bg-surface, #f8fafc);
+      border-left: 4px solid var(--blue, #087df9);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--text-main, #334155);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .notice-box strong {
+      color: var(--text-main, #0f172a);
+    }
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 30px;
+      right: 30px;
+      height: 2px;
+      background: var(--border-color, #e2e8f0);
+      z-index: 1;
+    }
+    .step-item {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      text-align: center;
+    }
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-card, #ffffff);
+      border: 2px solid var(--border-color, #cbd5e1);
+      color: var(--text-muted, #64748b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      transition: all .25s ease;
+    }
+    .step-item.active .step-circle {
+      border-color: var(--blue, #087df9);
+      background: var(--blue, #087df9);
+      color: #ffffff;
+      box-shadow: 0 0 0 4px rgba(8, 125, 249, 0.2);
+    }
+    .step-item.completed .step-circle {
+      border-color: #10b981;
+      background: #10b981;
+      color: #ffffff;
+    }
+    .step-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-muted, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .step-item.active .step-label {
+      color: var(--blue, #087df9);
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main, #1e293b);
+      margin-bottom: 8px;
+    }
+    .form-control {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border-color, #dce1ed);
+      background: var(--bg-surface, #ffffff);
+      color: var(--text-main, #0f172a);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all .2s ease;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--blue, #087df9);
+      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.15);
+    }
+    .btn-verify {
+      width: 100%;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #023284 0%, #087df9 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all .2s ease;
+      box-shadow: 0 6px 18px rgba(8, 125, 249, 0.25);
+    }
+    .btn-verify:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(8, 125, 249, 0.35);
+    }
+    .btn-verify:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .otp-inputs-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 24px 0;
+    }
+    .otp-digit {
+      width: 52px;
+      height: 60px;
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-align: center;
+      font-family: monospace;
+      border-radius: 12px;
+      border: 2px solid var(--border-color, #dce1ed);
+      background: var(--bg-surface, #ffffff);
+      color: var(--text-main, #0f172a);
+      transition: all .2s ease;
+    }
+    @media (max-width: 480px) {
+      .otp-digit {
+        width: 42px;
+        height: 52px;
+        font-size: 1.5rem;
+      }
+    }
+    .otp-digit:focus {
+      outline: none;
+      border-color: var(--blue, #087df9);
+      box-shadow: 0 0 0 3px rgba(8, 125, 249, 0.2);
+    }
+    .candidate-card {
+      border: 2px solid var(--border-color, #e2e8f0);
+      background: var(--bg-surface, #ffffff);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all .2s ease;
+      position: relative;
+    }
+    .candidate-card:hover {
+      border-color: var(--blue, #087df9);
+      transform: translateY(-2px);
+    }
+    .candidate-card.selected {
+      border-color: var(--blue, #087df9);
+      background: rgba(8, 125, 249, 0.04);
+      box-shadow: 0 6px 18px rgba(8, 125, 249, 0.12);
+    }
+    .sub-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .sub-badge-verde { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .sub-badge-vermelho { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .sub-badge-amarelo { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .sub-badge-laranja { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .status-pago { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .status-pendente { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .status-cancelado { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .status-arquivado { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+    .duplicate-warning-banner {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      padding: 16px;
+      color: #92400e;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .duplicate-warning-banner strong {
+      color: #78350f;
+    }
+    .divergence-box {
+      margin-top: 24px;
+      border-top: 1px dashed var(--border-color, #e2e8f0);
+      padding-top: 24px;
+    }
+  </style>
+</head>
+
+<body class="verification-page">
+  <header class="site-header" id="topo">
+    <div class="container nav-wrap">
+      <a aria-label="Página inicial" class="brand" href="/">
+        <img alt="Logo EJC Equipe do Trânsito" src="images/favicon.png?v=2" data-logo-light="images/favicon.png?v=2"
+          data-logo-dark="images/favicon-dark.png?v=2">
+      </a>
+      <nav aria-label="Navegação principal" class="nav" id="menu">
+        <a href="/">Página Inicial</a>
+        <a href="/checkout">Checkout / Pagar Inscrição</a>
+        <a href="/verificar-inscricao" class="active" style="color: var(--blue, #087df9); font-weight: 800;">Verificar Inscrição</a>
+        <a class="nav-cta" href="/api/whatsapp" data-whatsapp-target="geral" rel="noopener" target="_blank">Ajuda / WhatsApp</a>
+      </nav>
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle-btn" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="verification-container" id="conteudo">
+    <!-- Header Hero -->
+    <div style="text-align: center; margin-bottom: 30px;">
+      <span class="hero-badge"><i class="fa-solid fa-shield-halved"></i> Portal de Autoatendimento Oficial</span>
+      <h1 class="hero-title">Verifique e confirme sua inscrição no EJC</h1>
+      <p class="hero-desc">
+        Localize sua inscrição, confira seus dados e confirme as informações registradas. Se identificar uma divergência, informe o problema para que a coordenação possa verificar.
+      </p>
+      <div class="notice-box" style="text-align: left; max-width: 720px; margin: 0 auto 20px;">
+        <i class="fa-solid fa-circle-info" style="color: var(--blue, #087df9); margin-right: 6px;"></i>
+        <strong>Nota Importante:</strong> Confirmar seus dados cadastrais serve para validar sua titularidade e identificar possíveis duplicidades, o que <strong>não equivale a confirmar financeiramente o pagamento</strong> caso este ainda esteja pendente.
+      </div>
+    </div>
+
+    <!-- Stepper de Progresso -->
+    <div class="stepper" id="verificationStepper">
+      <div class="step-item active" id="stepIndicator1">
+        <div class="step-circle">1</div>
+        <div class="step-label">Identificação</div>
+      </div>
+      <div class="step-item" id="stepIndicator2">
+        <div class="step-circle">2</div>
+        <div class="step-label">Segurança</div>
+      </div>
+      <div class="step-item" id="stepIndicator3">
+        <div class="step-circle">3</div>
+        <div class="step-label">Conferência</div>
+      </div>
+      <div class="step-item" id="stepIndicator4">
+        <div class="step-circle">4</div>
+        <div class="step-label">Pagamento</div>
+      </div>
+    </div>
+
+    <!-- ETAPA 1: Identificação do Participante -->
+    <section class="verification-card" id="cardEtapa1">
+      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 16px; color: var(--text-main);">
+        <i class="fa-solid fa-user-check" style="color: var(--blue); margin-right: 8px;"></i> Identifique sua Inscrição
+      </h2>
+      <p style="color: var(--text-muted); font-size: .9rem; margin-bottom: 24px;">
+        Informe os mesmos dados utilizados no momento do preenchimento da ficha de inscrição.
+      </p>
+
+      <form id="formEtapa1">
+        <div class="form-group">
+          <label class="form-label" for="inputNome">Nome Completo</label>
+          <input type="text" id="inputNome" class="form-control" placeholder="Ex: João da Silva" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputEmail">E-mail Cadastrado</label>
+          <input type="email" id="inputEmail" class="form-control" placeholder="Ex: joao@exemplo.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputWhatsapp">Telefone ou WhatsApp</label>
+          <input type="tel" id="inputWhatsapp" class="form-control" placeholder="Ex: (83) 99999-9999" required autocomplete="tel">
+        </div>
+
+        <div id="etapa1ErrorMsg" style="display: none; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+
+        <button type="submit" class="btn-verify" id="btnSubmitEtapa1">
+          <span>Localizar e Solicitar Código de Verificação</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+    </section>
+
+    <!-- ETAPA 2: Código de Verificação (OTP) -->
+    <section class="verification-card" id="cardEtapa2" style="display: none;">
+      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
+        <i class="fa-solid fa-key" style="color: var(--blue); margin-right: 8px;"></i> Confirme sua Identidade
+      </h2>
+      <p style="color: var(--text-muted); font-size: .92rem; line-height: 1.5; margin-bottom: 20px;">
+        Se encontrarmos cadastros compatíveis com os dados informados, enviamos um código de segurança de <strong>6 dígitos</strong> para o e-mail cadastrado (<span id="emailDisplayHint" style="font-weight: 700; color: var(--blue);"></span>).
+      </p>
+
+      <div class="otp-inputs-row" id="otpRow">
+        <input type="text" maxlength="1" class="otp-digit" data-idx="0" inputmode="numeric" pattern="[0-9]*" autofocus>
+        <input type="text" maxlength="1" class="otp-digit" data-idx="1" inputmode="numeric" pattern="[0-9]*">
+        <input type="text" maxlength="1" class="otp-digit" data-idx="2" inputmode="numeric" pattern="[0-9]*">
+        <input type="text" maxlength="1" class="otp-digit" data-idx="3" inputmode="numeric" pattern="[0-9]*">
+        <input type="text" maxlength="1" class="otp-digit" data-idx="4" inputmode="numeric" pattern="[0-9]*">
+        <input type="text" maxlength="1" class="otp-digit" data-idx="5" inputmode="numeric" pattern="[0-9]*">
+      </div>
+
+      <div id="etapa2ErrorMsg" style="display: none; text-align: center; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+
+      <button type="button" class="btn-verify" id="btnSubmitEtapa2" disabled>
+        <span>Validar Código e Acessar Inscrição</span>
+        <i class="fa-solid fa-unlock-keyhole"></i>
+      </button>
+
+      <div style="text-align: center; margin-top: 20px; font-size: .88rem;">
+        <span style="color: var(--text-muted);">Não recebeu o código? </span>
+        <button type="button" id="btnResendOtp" style="background: none; border: none; color: var(--blue); font-weight: 700; cursor: pointer; text-decoration: underline;" disabled>
+          Reenviar código (<span id="resendTimer">60</span>s)
+        </button>
+      </div>
+
+      <div style="text-align: center; margin-top: 14px;">
+        <button type="button" id="btnBackToEtapa1" style="background: none; border: none; color: var(--text-muted); font-size: .85rem; cursor: pointer;">
+          &larr; Voltar e corrigir dados informados
+        </button>
+      </div>
+    </section>
+
+    <!-- ETAPA 3: Exibição de Inscrições e Seleção da Principal -->
+    <section class="verification-card" id="cardEtapa3" style="display: none;">
+      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
+        <i class="fa-solid fa-list-check" style="color: var(--blue); margin-right: 8px;"></i> Inscrições Encontradas
+      </h2>
+      <p style="color: var(--text-muted); font-size: .92rem; margin-bottom: 20px;" id="etapa3IntroText">
+        Confira abaixo os registros localizados para seus dados cadastrais.
+      </p>
+
+      <div id="duplicateAlertBox" class="duplicate-warning-banner" style="display: none;">
+        <div style="font-weight: 800; font-size: .95rem; margin-bottom: 6px;">
+          <i class="fa-solid fa-triangle-exclamation"></i> Identificamos mais de uma inscrição cadastrada em seu nome!
+        </div>
+        <p style="margin: 0 0 8px;">
+          Para garantir a integridade das vagas da sua Sub e evitar duplicação na lista operacional, selecione abaixo qual é a sua <strong>inscrição principal</strong>.
+        </p>
+        <p style="margin: 0; font-weight: 700;">
+          “Esta é a inscrição que você deseja confirmar como sua inscrição principal?”
+        </p>
+      </div>
+
+      <!-- Lista de Cards das Inscrições -->
+      <div id="inscriptionsListContainer"></div>
+
+      <!-- Proposta de Saneamento quando há duplicidades -->
+      <div id="saneamentoProposalBox" style="display: none; background: var(--bg-surface); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 18px; margin: 20px 0;">
+        <h4 style="margin: 0 0 10px; font-size: .95rem; color: var(--text-main);">
+          <i class="fa-solid fa-clipboard-check" style="color: var(--blue);"></i> Proposta de Confirmação e Saneamento
+        </h4>
+        <div style="font-size: .88rem; color: var(--text-muted); line-height: 1.6;" id="saneamentoDetailsText">
+          Ao confirmar, o registro principal será mantido ativo e os registros secundários duplicados serão arquivados, preservando todo o histórico financeiro e de auditoria no sistema.
+        </div>
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; cursor: pointer; font-size: .88rem; color: var(--text-main); font-weight: 600;">
+          <input type="checkbox" id="checkConfirmSaneamento" style="margin-top: 3px; accent-color: var(--blue);">
+          <span>Confirmo que a inscrição selecionada é a minha inscrição oficial e autorizo o saneamento das duplicidades sem prejuízo ao histórico.</span>
+        </label>
+      </div>
+
+      <div id="etapa3ErrorMsg" style="display: none; color: #ef4444; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+
+      <button type="button" class="btn-verify" id="btnConfirmarPrincipal">
+        <span>Avançar para Conferência Financeira</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </section>
+
+    <!-- ETAPA 4: Conferência do Pagamento e Divergências -->
+    <section class="verification-card" id="cardEtapa4" style="display: none;">
+      <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 12px; color: var(--text-main);">
+        <i class="fa-solid fa-credit-card" style="color: var(--blue); margin-right: 8px;"></i> Estado da Inscrição e Pagamento
+      </h2>
+      
+      <div id="resumoInscricaoPrincipalCard" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+        <!-- Preenchido dinamicamente com os dados da inscrição principal -->
+      </div>
+
+      <!-- Cenário de Divergência Financeira / Envio de Comprovante -->
+      <div class="divergence-box">
+        <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0 0 10px; color: var(--text-main);">
+          <i class="fa-solid fa-circle-question" style="color: #f59e0b;"></i> Identificou alguma divergência?
+        </h3>
+        <p style="font-size: .88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+          Se o sistema informa que seu pagamento está pendente, mas você já efetuou o pagamento, envie o seu comprovante para que a coordenação financeira do EJC faça a conferência manual.
+        </p>
+
+        <form id="formDivergencia">
+          <div class="form-group">
+            <label class="form-label" for="selectTipoDivergencia">Tipo de divergência</label>
+            <select id="selectTipoDivergencia" class="form-control">
+              <option value="afirma_pago_sem_confirmacao">Afirmo que paguei, mas o sistema consta como pendente</option>
+              <option value="comprovante_nao_localizado">Já paguei, mas desejo anexar um novo comprovante</option>
+              <option value="dados_cadastrais_divergentes">Dados cadastrais incorretos (Sub, camisa, etc.)</option>
+              <option value="outro">Outra divergência a relatar</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputDescricaoDivergencia">Explicação ou Detalhes</label>
+            <textarea id="inputDescricaoDivergencia" rows="3" class="form-control" placeholder="Informe a data do pagamento, banco utilizado ou detalhes do que precisa ser corrigido." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputFileComprovante">Anexar Comprovante de Pagamento (Opcional se já tiver comprovante registrado)</label>
+            <input type="file" id="inputFileComprovante" class="form-control" accept="image/jpeg,image/png,image/webp,application/pdf">
+            <small style="color: var(--text-muted); font-size: .78rem; display: block; margin-top: 4px;">
+              Formatos aceitos: JPG, PNG, WebP ou PDF (até 10 MB). Os arquivos são enviados para armazenamento estritamente privado.
+            </small>
+          </div>
+
+          <div class="notice-box" style="margin-bottom: 18px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b; margin-right: 6px;"></i>
+            <strong>Importante:</strong> A submissão do comprovante <strong>NÃO aprova automaticamente o pagamento</strong>. Seu documento será conferido pela coordenação financeira do EJC antes da validação.
+          </div>
+
+          <div id="divergenciaMsg" style="display: none; font-size: .88rem; margin-bottom: 16px; font-weight: 600;"></div>
+
+          <button type="submit" class="btn-verify" id="btnSubmitDivergencia" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%);">
+            <span>Enviar Solicitação de Revisão à Coordenação</span>
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+
+      <div style="margin-top: 28px; text-align: center;">
+        <a href="/checkout" class="button button-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Ir para o Checkout Oficial
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" style="margin-top: auto;">
+    <div class="container footer-content">
+      <div class="footer-info">
+        <p><strong>EJC — Encontro de Jovens com Cristo</strong></p>
+        <p>Equipe do Trânsito • IEAD Monte Sião • Campina Grande - PB</p>
+        <p class="copyright">© 2026 EJC Trânsito Monte Sião. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/theme.js"></script>
+  <script>
+    // ESTADO DA APLICAÇÃO DE VERIFICAÇÃO
+    let currentSessionToken = null;
+    let currentViewToken = null;
+    let candidateInscriptions = [];
+    let selectedPrincipalId = null;
+    let duplicateIdsToArchive = [];
+    let resendCountdown = 60;
+    let resendTimerInterval = null;
+
+    // ELEMENTOS DOM
+    const cardEtapa1 = document.getElementById("cardEtapa1");
+    const cardEtapa2 = document.getElementById("cardEtapa2");
+    const cardEtapa3 = document.getElementById("cardEtapa3");
+    const cardEtapa4 = document.getElementById("cardEtapa4");
+
+    const stepIndicator1 = document.getElementById("stepIndicator1");
+    const stepIndicator2 = document.getElementById("stepIndicator2");
+    const stepIndicator3 = document.getElementById("stepIndicator3");
+    const stepIndicator4 = document.getElementById("stepIndicator4");
+
+    const formEtapa1 = document.getElementById("formEtapa1");
+    const inputNome = document.getElementById("inputNome");
+    const inputEmail = document.getElementById("inputEmail");
+    const inputWhatsapp = document.getElementById("inputWhatsapp");
+    const btnSubmitEtapa1 = document.getElementById("btnSubmitEtapa1");
+    const etapa1ErrorMsg = document.getElementById("etapa1ErrorMsg");
+
+    const otpDigits = document.querySelectorAll(".otp-digit");
+    const btnSubmitEtapa2 = document.getElementById("btnSubmitEtapa2");
+    const etapa2ErrorMsg = document.getElementById("etapa2ErrorMsg");
+    const btnResendOtp = document.getElementById("btnResendOtp");
+    const resendTimer = document.getElementById("resendTimer");
+    const emailDisplayHint = document.getElementById("emailDisplayHint");
+    const btnBackToEtapa1 = document.getElementById("btnBackToEtapa1");
+
+    const inscriptionsListContainer = document.getElementById("inscriptionsListContainer");
+    const duplicateAlertBox = document.getElementById("duplicateAlertBox");
+    const saneamentoProposalBox = document.getElementById("saneamentoProposalBox");
+    const checkConfirmSaneamento = document.getElementById("checkConfirmSaneamento");
+    const btnConfirmarPrincipal = document.getElementById("btnConfirmarPrincipal");
+    const etapa3ErrorMsg = document.getElementById("etapa3ErrorMsg");
+    const saneamentoDetailsText = document.getElementById("saneamentoDetailsText");
+
+    const resumoInscricaoPrincipalCard = document.getElementById("resumoInscricaoPrincipalCard");
+    const formDivergencia = document.getElementById("formDivergencia");
+    const btnSubmitDivergencia = document.getElementById("btnSubmitDivergencia");
+    const divergenciaMsg = document.getElementById("divergenciaMsg");
+
+    // MÁSCARA TELEFONE / WHATSAPP
+    inputWhatsapp.addEventListener("input", (e) => {
+      let v = e.target.value.replace(/\D/g, "");
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length > 10) {
+        e.target.value = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+      } else if (v.length > 6) {
+        e.target.value = `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+      } else if (v.length > 2) {
+        e.target.value = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+      } else if (v.length > 0) {
+        e.target.value = `(${v}`;
+      }
+    });
+
+    // NAVEGAÇÃO DO STEPPER
+    function setStep(stepNum) {
+      [cardEtapa1, cardEtapa2, cardEtapa3, cardEtapa4].forEach((c, idx) => {
+        c.style.display = (idx + 1 === stepNum) ? "block" : "none";
+      });
+      [stepIndicator1, stepIndicator2, stepIndicator3, stepIndicator4].forEach((s, idx) => {
+        s.classList.remove("active", "completed");
+        if (idx + 1 === stepNum) s.classList.add("active");
+        else if (idx + 1 < stepNum) s.classList.add("completed");
+      });
+      window.scrollTo({ top: 120, behavior: "smooth" });
+    }
+
+    // --------------------------------------------------------------------------
+    // FLUXO ETAPA 1: SOLICITAR CÓDIGO OTP
+    // --------------------------------------------------------------------------
+    formEtapa1.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      etapa1ErrorMsg.style.display = "none";
+      btnSubmitEtapa1.disabled = true;
+      btnSubmitEtapa1.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Localizando...`;
+
+      try {
+        const payload = {
+          action: "solicitar_codigo",
+          nome: inputNome.value.trim(),
+          email: inputEmail.value.trim(),
+          whatsapp: inputWhatsapp.value.trim()
+        };
+
+        const res = await fetch("/api/verificar-inscricao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Não foi possível localizar as informações.");
+        }
+
+        currentSessionToken = data.sessionToken;
+        if (data.emailHint) {
+          emailDisplayHint.textContent = data.emailHint;
+        } else {
+          emailDisplayHint.textContent = inputEmail.value.trim();
+        }
+
+        // Inicia contagem regressiva para reenvio
+        startResendTimer(data.cooldownSeconds || 60);
+
+        setStep(2);
+        otpDigits[0].focus();
+
+      } catch (err) {
+        etapa1ErrorMsg.textContent = err.message;
+        etapa1ErrorMsg.style.display = "block";
+      } finally {
+        btnSubmitEtapa1.disabled = false;
+        btnSubmitEtapa1.innerHTML = `<span>Localizar e Solicitar Código de Verificação</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    });
+
+    // CONTROLE DE INPUTS OTP (6 DÍGITOS)
+    otpDigits.forEach((input, index) => {
+      input.addEventListener("input", (e) => {
+        const val = e.target.value.replace(/\D/g, "");
+        e.target.value = val ? val[0] : "";
+        if (val && index < otpDigits.length - 1) {
+          otpDigits[index + 1].focus();
+        }
+        checkOtpComplete();
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !input.value && index > 0) {
+          otpDigits[index - 1].focus();
+        }
+      });
+
+      input.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+        if (pasted) {
+          for (let i = 0; i < otpDigits.length; i++) {
+            otpDigits[i].value = pasted[i] || "";
+          }
+          const nextIdx = Math.min(pasted.length, otpDigits.length - 1);
+          otpDigits[nextIdx].focus();
+          checkOtpComplete();
+        }
+      });
+    });
+
+    function getOtpCode() {
+      let code = "";
+      otpDigits.forEach(i => code += i.value);
+      return code;
+    }
+
+    function checkOtpComplete() {
+      const code = getOtpCode();
+      btnSubmitEtapa2.disabled = (code.length !== 6);
+    }
+
+    function startResendTimer(sec) {
+      clearInterval(resendTimerInterval);
+      resendCountdown = sec;
+      btnResendOtp.disabled = true;
+      resendTimer.textContent = resendCountdown;
+
+      resendTimerInterval = setInterval(() => {
+        resendCountdown--;
+        resendTimer.textContent = resendCountdown;
+        if (resendCountdown <= 0) {
+          clearInterval(resendTimerInterval);
+          btnResendOtp.disabled = false;
+          btnResendOtp.innerHTML = `Reenviar código agora`;
+        }
+      }, 1000);
+    }
+
+    btnResendOtp.addEventListener("click", () => {
+      formEtapa1.dispatchEvent(new Event("submit"));
+    });
+
+    btnBackToEtapa1.addEventListener("click", () => {
+      setStep(1);
+    });
+
+    // --------------------------------------------------------------------------
+    // FLUXO ETAPA 2: VALIDAR CÓDIGO OTP
+    // --------------------------------------------------------------------------
+    btnSubmitEtapa2.addEventListener("click", async () => {
+      const code = getOtpCode();
+      if (code.length !== 6) return;
+
+      etapa2ErrorMsg.style.display = "none";
+      btnSubmitEtapa2.disabled = true;
+      btnSubmitEtapa2.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Validando código...`;
+
+      try {
+        const res = await fetch("/api/verificar-inscricao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "validar_codigo",
+            sessionToken: currentSessionToken,
+            code: code
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Código de verificação incorreto ou expirado.");
+        }
+
+        currentViewToken = data.viewToken;
+        candidateInscriptions = data.inscricoes || [];
+
+        renderInscriptionsList();
+        setStep(3);
+
+      } catch (err) {
+        etapa2ErrorMsg.textContent = err.message;
+        etapa2ErrorMsg.style.display = "block";
+      } finally {
+        btnSubmitEtapa2.disabled = false;
+        btnSubmitEtapa2.innerHTML = `<span>Validar Código e Acessar Inscrição</span> <i class="fa-solid fa-unlock-keyhole"></i>`;
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // FLUXO ETAPA 3: RENDERIZAR E SELECIONAR INSCRIÇÃO PRINCIPAL
+    // --------------------------------------------------------------------------
+    function renderInscriptionsList() {
+      inscriptionsListContainer.innerHTML = "";
+
+      if (candidateInscriptions.length === 0) {
+        inscriptionsListContainer.innerHTML = `
+          <div style="background: var(--bg-surface); border: 1px dashed var(--border-color); border-radius: 14px; padding: 24px; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-magnifying-glass" style="font-size: 2rem; margin-bottom: 12px; color: var(--blue);"></i>
+            <p style="margin: 0 0 10px; font-weight: 700; color: var(--text-main);">Nenhuma inscrição localizada</p>
+            <p style="margin: 0; font-size: .88rem;">Não encontramos inscrições vinculadas aos dados validados. Se você ainda não se inscreveu, acesse a página inicial ou o checkout.</p>
+          </div>
+        `;
+        duplicateAlertBox.style.display = "none";
+        saneamentoProposalBox.style.display = "none";
+        btnConfirmarPrincipal.style.display = "none";
+        return;
+      }
+
+      const hasDuplicates = candidateInscriptions.length > 1;
+      duplicateAlertBox.style.display = hasDuplicates ? "block" : "none";
+      saneamentoProposalBox.style.display = hasDuplicates ? "block" : "none";
+
+      // Por padrão seleciona a primeira (mais recente)
+      selectedPrincipalId = candidateInscriptions[0].id;
+
+      candidateInscriptions.forEach((insc, idx) => {
+        const subLow = (insc.sub || "verde").toLowerCase();
+        const dataFormatada = insc.criado_em ? new Date(insc.criado_em).toLocaleDateString("pt-BR") : "Data indisponível";
+        const statusMap = {
+          pago: "status-pago",
+          confirmado: "status-pago",
+          approved: "status-pago",
+          pendente: "status-pendente",
+          cancelado: "status-cancelado",
+          arquivado: "status-arquivado"
+        };
+        const statusClass = statusMap[insc.pagamento_status] || "status-pendente";
+
+        const card = document.createElement("div");
+        card.className = `candidate-card ${insc.id === selectedPrincipalId ? "selected" : ""}`;
+        card.dataset.id = insc.id;
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span class="sub-badge sub-badge-${subLow}">Sub ${insc.sub}</span>
+              <span class="status-pill ${statusClass}">
+                <i class="fa-solid fa-circle" style="font-size: .5rem;"></i> Pagamento: ${insc.pagamento_status.toUpperCase()}
+              </span>
+              ${insc.tem_comprovante ? '<span class="status-pill status-pago"><i class="fa-solid fa-file-invoice"></i> Comprovante Anexado</span>' : ''}
+              ${insc.arquivado ? '<span class="status-pill status-arquivado"><i class="fa-solid fa-box-archive"></i> Arquivado</span>' : ''}
+            </div>
+            ${hasDuplicates ? `
+              <div style="font-size: .82rem; font-weight: 800; color: ${insc.id === selectedPrincipalId ? 'var(--blue)' : 'var(--text-muted)'}; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="principalSelection" value="${insc.id}" ${insc.id === selectedPrincipalId ? 'checked' : ''} style="accent-color: var(--blue);">
+                <span>${insc.id === selectedPrincipalId ? 'Principal Selecionada' : 'Selecionar como Principal'}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
+            ${insc.nome_completo}
+          </div>
+
+          <div style="font-size: .85rem; color: var(--text-muted); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; margin-top: 8px;">
+            <div><strong>ID:</strong> <code style="font-family: monospace;">${insc.masked_id}</code></div>
+            <div><strong>Data:</strong> ${dataFormatada}</div>
+            <div><strong>Camisa:</strong> ${insc.modelo_camisa || '-'} (${insc.tamanho_camisa || '-'})</div>
+            <div><strong>E-mail:</strong> ${insc.email_mascarado || '-'}</div>
+          </div>
+        `;
+
+        if (hasDuplicates) {
+          card.addEventListener("click", () => {
+            selectedPrincipalId = insc.id;
+            document.querySelectorAll(".candidate-card").forEach(c => c.classList.remove("selected"));
+            card.classList.add("selected");
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+            updateSaneamentoDetails();
+          });
+        }
+
+        inscriptionsListContainer.appendChild(card);
+      });
+
+      if (hasDuplicates) {
+        updateSaneamentoDetails();
+      }
+    }
+
+    function updateSaneamentoDetails() {
+      duplicateIdsToArchive = candidateInscriptions
+        .filter(c => c.id !== selectedPrincipalId)
+        .map(c => c.id);
+
+      const principal = candidateInscriptions.find(c => c.id === selectedPrincipalId);
+      saneamentoDetailsText.innerHTML = `
+        A inscrição <strong>#${principal.masked_id} (Sub ${principal.sub})</strong> será mantida como sua <strong>Inscrição Principal</strong>.<br>
+        Serão arquivados <strong>${duplicateIdsToArchive.length} registro(s) duplicado(s)</strong> para desocupar vagas operacionais da sua Sub, mantendo o histórico totalmente auditável.
+      `;
+    }
+
+    // CONFIRMAR PRINCIPAL E SANEAMENTO
+    btnConfirmarPrincipal.addEventListener("click", async () => {
+      etapa3ErrorMsg.style.display = "none";
+
+      const hasDuplicates = candidateInscriptions.length > 1;
+      if (hasDuplicates && !checkConfirmSaneamento.checked) {
+        etapa3ErrorMsg.textContent = "Por favor, marque a caixa confirmando a escolha da inscrição principal e a autorização para sanear as duplicidades.";
+        etapa3ErrorMsg.style.display = "block";
+        return;
+      }
+
+      btnConfirmarPrincipal.disabled = true;
+      btnConfirmarPrincipal.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Confirmando...`;
+
+      try {
+        if (hasDuplicates) {
+          const res = await fetch("/api/verificar-inscricao", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "confirmar_principal_duplicidades",
+              viewToken: currentViewToken,
+              principalId: selectedPrincipalId,
+              duplicateIdsToArchive: duplicateIdsToArchive,
+              confirmacaoTexto: "DUPLICIDADE_CONFIRMADA_PELO_PARTICIPANTE"
+            })
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || "Falha ao processar o saneamento de duplicidades.");
+          }
+        }
+
+        renderEtapa4Resumo();
+        setStep(4);
+
+      } catch (err) {
+        etapa3ErrorMsg.textContent = err.message;
+        etapa3ErrorMsg.style.display = "block";
+      } finally {
+        btnConfirmarPrincipal.disabled = false;
+        btnConfirmarPrincipal.innerHTML = `<span>Avançar para Conferência Financeira</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // FLUXO ETAPA 4: CONFERÊNCIA DO PAGAMENTO E DIVERGÊNCIAS
+    // --------------------------------------------------------------------------
+    function renderEtapa4Resumo() {
+      const principal = candidateInscriptions.find(c => c.id === selectedPrincipalId) || candidateInscriptions[0];
+      const isPaid = ["pago", "confirmado", "approved"].includes(principal.pagamento_status);
+
+      let financeCardHtml = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <span class="sub-badge sub-badge-${(principal.sub || 'verde').toLowerCase()}">Sub ${principal.sub}</span>
+            <h3 style="margin: 8px 0 2px; font-size: 1.2rem; color: var(--text-main); font-weight: 800;">
+              ${principal.nome_completo}
+            </h3>
+            <div style="font-size: .82rem; color: var(--text-muted);">
+              ID Oficial: <code style="font-family: monospace;">${principal.masked_id}</code>
+            </div>
+          </div>
+          <div>
+            <span class="status-pill ${isPaid ? 'status-pago' : 'status-pendente'}" style="font-size: .85rem; padding: 6px 14px;">
+              <i class="fa-solid ${isPaid ? 'fa-check-circle' : 'fa-clock'}"></i>
+              ${isPaid ? 'Pagamento Aprovado' : 'Pagamento Pendente'}
+            </span>
+          </div>
+        </div>
+
+        <div style="font-size: .88rem; line-height: 1.6; color: var(--text-main);">
+      `;
+
+      if (isPaid && principal.tem_comprovante) {
+        financeCardHtml += `
+          <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #065f46;">
+            <strong>✓ Cenário Confirmado:</strong> Seu pagamento está confirmado no sistema e o comprovante encontra-se devidamente registrado e validado!
+          </div>
+        `;
+      } else if (isPaid && !principal.tem_comprovante) {
+        financeCardHtml += `
+          <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #065f46;">
+            <strong>✓ Confirmado no Gateway:</strong> Seu pagamento foi processado e aprovado com sucesso via Mercado Pago.
+          </div>
+        `;
+      } else {
+        financeCardHtml += `
+          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #92400e;">
+            <strong>⚠️ Pagamento Pendente:</strong> Consta em nosso sistema que a inscrição ainda não teve o pagamento validado. Caso você já tenha pago ou realizado uma transferência Pix manual, utilize o formulário abaixo para enviar seu comprovante.
+          </div>
+        `;
+      }
+
+      financeCardHtml += `</div>`;
+      resumoInscricaoPrincipalCard.innerHTML = financeCardHtml;
+    }
+
+    // FORMULÁRIO DE DIVERGÊNCIA E UPLOAD PRIVADO DE COMPROVANTE
+    formDivergencia.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      divergenciaMsg.style.display = "none";
+      btnSubmitDivergencia.disabled = true;
+      btnSubmitDivergencia.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando solicitação...`;
+
+      try {
+        const fileInput = document.getElementById("inputFileComprovante");
+        let comprovanteKey = null;
+
+        // Se o usuário selecionou um arquivo para upload
+        if (fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+
+          if (file.size > 10 * 1024 * 1024) {
+            throw new Error("O arquivo do comprovante não pode exceder 10 MB.");
+          }
+
+          // 1. Solicita Presigned URL privada para o bucket ejc-comprovantes
+          const ext = file.name.split(".").pop() || "jpg";
+          const presignedRes = await fetch("/api/verificar-inscricao", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "get_upload_comprovante_url",
+              viewToken: currentViewToken,
+              inscricaoId: selectedPrincipalId,
+              mimeType: file.type || "image/jpeg",
+              extension: ext
+            })
+          });
+
+          const presignedData = await presignedRes.json();
+          if (!presignedRes.ok || !presignedData.success) {
+            throw new Error(presignedData.error || "Falha ao gerar link seguro de upload para o comprovante.");
+          }
+
+          // 2. Faz upload direto do binário para o R2 com PUT
+          const uploadRes = await fetch(presignedData.uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": file.type || "image/jpeg"
+            },
+            body: file
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error(`Falha no upload do arquivo para o servidor seguro (HTTP ${uploadRes.status}).`);
+          }
+
+          comprovanteKey = presignedData.storageKey;
+        }
+
+        // 3. Registra a divergência e associa o comprovante
+        const reportRes = await fetch("/api/verificar-inscricao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "reportar_divergencia",
+            viewToken: currentViewToken,
+            inscricaoId: selectedPrincipalId,
+            tipoDivergencia: document.getElementById("selectTipoDivergencia").value,
+            descricao: document.getElementById("inputDescricaoDivergencia").value.trim(),
+            comprovanteKey: comprovanteKey
+          })
+        });
+
+        const reportData = await reportRes.json();
+        if (!reportRes.ok || !reportData.success) {
+          throw new Error(reportData.error || "Falha ao registrar a solicitação de divergência.");
+        }
+
+        divergenciaMsg.style.display = "block";
+        divergenciaMsg.style.color = "#047857";
+        divergenciaMsg.style.background = "#ecfdf5";
+        divergenciaMsg.style.padding = "14px";
+        divergenciaMsg.style.borderRadius = "8px";
+        divergenciaMsg.innerHTML = `
+          <i class="fa-solid fa-circle-check"></i>
+          <strong>Solicitação registrada com sucesso!</strong><br>
+          A coordenação financeira do EJC analisará seu relato e seu comprovante anexado. O pagamento permanecerá em conferência até aprovação manual.
+        `;
+
+        formDivergencia.reset();
+
+      } catch (err) {
+        divergenciaMsg.style.display = "block";
+        divergenciaMsg.style.color = "#b91c1c";
+        divergenciaMsg.style.background = "#fef2f2";
+        divergenciaMsg.style.padding = "14px";
+        divergenciaMsg.style.borderRadius = "8px";
+        divergenciaMsg.textContent = err.message;
+      } finally {
+        btnSubmitDivergencia.disabled = false;
+        btnSubmitDivergencia.innerHTML = `<span>Enviar Solicitação de Revisão à Coordenação</span> <i class="fa-solid fa-paper-plane"></i>`;
+      }
+    });
+  </script>
+</body>
+</html>

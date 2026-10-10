@@ -22,7 +22,8 @@ const htmlFiles = [
   'index.html',
   'checkout.html',
   'confirmacao-pagamento.html',
-  'checkout-retorno.html'
+  'checkout-retorno.html',
+  'verificar-inscricao.html'
 ];
 
 for (const f of htmlFiles) {
@@ -90,6 +91,7 @@ const redirectsContent = `# Cloudflare Pages Redirects - EJC Trânsito Público
 # Redirecionamento da área administrativa para o Cloudflare Pages do Admin já publicado
 /admin/*  https://ejc-admin.pages.dev/admin/:splat  302
 /admin    https://ejc-admin.pages.dev/admin/        302
+/verificar-inscricao  /verificar-inscricao.html    200
 `;
 fs.writeFileSync(path.join(DIST_DIR, '_redirects'), redirectsContent, 'utf8');
 console.log(`✓ Gerado: _redirects`);
@@ -146,11 +148,16 @@ const workerContent = `export default {
       }
     }
 
+    if (url.pathname === '/verificar-inscricao' || url.pathname === '/verificar-inscricao/') {
+      const cleanUrl = new URL('/verificar-inscricao.html' + url.search, request.url);
+      return env.ASSETS.fetch(new Request(cleanUrl, request));
+    }
+
     // 3. /api/checkout-process com suporte a Feature Flag
     // REGRA DE SEGURANÇA (ENV.11.1):
     // - Ambiente de produção (env.FEATURE_FLAG_CHECKOUT_PROCESS_EDGE) é AUTORITATIVO
     // - Cliente não consegue alterar a decisão de roteamento via header quando env estiver definido
-    // - DEFAULT SEGURO: 'OFF'
+    // - DEFAULT SEGURO: 'ON'
     if (url.pathname === '/api/checkout-process' || url.pathname === '/api/checkout-process/') {
       const envFlag = env && env.FEATURE_FLAG_CHECKOUT_PROCESS_EDGE ? String(env.FEATURE_FLAG_CHECKOUT_PROCESS_EDGE).trim().toUpperCase() : null;
       const headerFlag = request.headers.get('x-feature-flag-checkout-process-edge') ? request.headers.get('x-feature-flag-checkout-process-edge').trim().toUpperCase() : null;
@@ -295,6 +302,21 @@ const workerContent = `export default {
     // 9. /api/r2-presigned-url -> Supabase Edge Function r2-presigned-url
     if (url.pathname === '/api/r2-presigned-url' || url.pathname === '/api/r2-presigned-url/') {
       const targetUrl = new URL('/functions/v1/r2-presigned-url' + url.search, 'https://guppedddwnuvluhiaaas.supabase.co');
+      const modifiedHeaders = new Headers(request.headers);
+      modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+      if (!modifiedHeaders.has('apikey')) {
+        modifiedHeaders.set('apikey', 'sb_publishable_QJV9XI3sN3P_gVtiQ2ObRg_gpSSKc-i');
+      }
+      return fetch(targetUrl.toString(), {
+        method: request.method,
+        headers: modifiedHeaders,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body
+      });
+    }
+
+    // 10. /api/verificar-inscricao -> Supabase Edge Function verificar-inscricao
+    if (url.pathname === '/api/verificar-inscricao' || url.pathname === '/api/verificar-inscricao/') {
+      const targetUrl = new URL('/functions/v1/verificar-inscricao' + url.search, 'https://guppedddwnuvluhiaaas.supabase.co');
       const modifiedHeaders = new Headers(request.headers);
       modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
       if (!modifiedHeaders.has('apikey')) {

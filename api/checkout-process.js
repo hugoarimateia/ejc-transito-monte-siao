@@ -66,6 +66,31 @@ function sanitizePixAscii(str, maxLen) {
     .slice(0, maxLen);
 }
 
+function normalizeName(name) {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeEmail(email) {
+  if (!email || typeof email !== "string") return "";
+  return email.toLowerCase().trim();
+}
+
+function normalizePhone(phone) {
+  if (!phone || typeof phone !== "string") return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  return digits;
+}
+
 function getFriendlyCardErrorMessage(statusDetail, status = null) {
   const map = {
     accredited: "Pagamento aprovado com sucesso!",
@@ -592,15 +617,18 @@ module.exports = async (req, res) => {
     // SUB-AÇÃO GET: BUSCA DE INSCRIÇÕES PENDENTES (EMAIL, WHATSAPP, NOME OU ID)
     // --------------------------------------------------------------------------
     if (req.query.action === "buscar_inscricoes") {
-      const termo = String(req.query.termo || req.query.email || req.query.whatsapp || req.query.busca || "").trim();
-      const cleanTermo = termo.toLowerCase();
-      const digitos = termo.replace(/\D/g, "");
-      const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(cleanTermo);
-      const ehWhatsapp = !ehEmail && /^[\d\s()+\-]+$/.test(termo) && digitos.length >= 10;
-      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
+      const termo = String(req.query.termo || req.query.email || req.query.whatsapp || req.query.nome || req.query.busca || "").trim();
+      const emailNorm = normalizeEmail(termo);
+      const wppNorm = normalizePhone(termo);
+      const nomeNorm = normalizeName(termo);
 
-      if (!ehEmail && !ehWhatsapp && !ehUuid) {
-        return res.status(400).json({ error: "Informe o e-mail completo, o número de WhatsApp completo (com DDD) ou o código da inscrição." });
+      const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(emailNorm);
+      const ehWhatsapp = !ehEmail && wppNorm.length >= 10;
+      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
+      const ehNome = !ehEmail && !ehWhatsapp && !ehUuid && nomeNorm.length >= 3;
+
+      if (!ehEmail && !ehWhatsapp && !ehUuid && !ehNome) {
+        return res.status(400).json({ error: "Informe o nome completo, o e-mail completo, o WhatsApp (com DDD) ou o código da inscrição." });
       }
 
       const inscricoesEncontradas = [];
@@ -609,11 +637,18 @@ module.exports = async (req, res) => {
         try {
           let query = `arquivado=eq.false&pagamento_status=eq.pendente&order=criado_em.desc&limit=10`;
           if (ehUuid) {
-            query += `&id=eq.${encodeURIComponent(cleanTermo)}`;
+            query += `&id=eq.${encodeURIComponent(termo.toLowerCase().trim())}`;
           } else if (ehEmail) {
-            query += `&email=ilike.${encodeURIComponent(cleanTermo)}`;
+            query += `&email=ilike.${encodeURIComponent(emailNorm)}`;
+          } else if (ehWhatsapp) {
+            query += `&whatsapp=ilike.*${encodeURIComponent(wppNorm)}*`;
           } else {
-            query += `&whatsapp=ilike.*${encodeURIComponent(digitos)}*`;
+            const partes = nomeNorm.split(" ").filter(p => p.length >= 2);
+            if (partes.length >= 2) {
+              query += `&nome_completo=ilike.*${encodeURIComponent(partes[0])}*${encodeURIComponent(partes[partes.length - 1])}*`;
+            } else {
+              query += `&nome_completo=ilike.*${encodeURIComponent(nomeNorm)}*`;
+            }
           }
 
           const sbRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/inscricoes?${query}`, {

@@ -572,10 +572,10 @@
                   <button type="button" class="btn-flow-change" id="btnBackToDecisionFromPending">Trocar opção</button>
                 </div>
                 <p class="sub-flow-desc">
-                  Selecione sua inscrição abaixo ou busque por seu e-mail ou WhatsApp:
+                  Selecione sua inscrição abaixo ou busque por seu nome completo, e-mail ou WhatsApp:
                 </p>
                 <div class="search-pending-row">
-                  <input type="text" id="inputSearchPending" placeholder="Digite seu e-mail ou WhatsApp cadastrado" class="card-input">
+                  <input type="text" id="inputSearchPending" placeholder="Digite seu nome completo, e-mail ou WhatsApp" class="card-input">
                   <button type="button" class="button button-primary" id="btnSearchPending" style="padding: 0 18px; white-space: nowrap;">
                     <i class="fa-solid fa-magnifying-glass"></i> Buscar
                   </button>
@@ -1197,7 +1197,7 @@
       if (!cleanTermo || cleanTermo.length < 3) {
         pendingSearchResults.innerHTML = `
           <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; color: var(--text-muted); font-size: .88rem;">
-            <p style="margin: 0 0 10px;">Informe seu e-mail completo, número de WhatsApp (com DDD) ou código da inscrição para buscar.</p>
+            <p style="margin: 0 0 10px;">Informe seu nome completo, e-mail, número de WhatsApp (com DDD) ou código da inscrição para buscar.</p>
           </div>
         `;
         return;

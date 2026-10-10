@@ -78,6 +78,31 @@ function safeUuidOrNull(val: unknown): string | null {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean) ? clean : null;
 }
 
+function normalizeName(name: string): string {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeEmail(email: string): string {
+  if (!email || typeof email !== "string") return "";
+  return email.toLowerCase().trim();
+}
+
+function normalizePhone(phone: string): string {
+  if (!phone || typeof phone !== "string") return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  return digits;
+}
+
 async function sha256Bytes(str: string): Promise<Uint8Array> {
   const enc = new TextEncoder().encode(str);
   const hash = await crypto.subtle.digest("SHA-256", enc);
@@ -849,26 +874,30 @@ serve(async (req: Request) => {
     const action = url.searchParams.get("action");
 
     // --------------------------------------------------------------------------
-    // SUB-AÇÃO GET: BUSCA DE INSCRIÇÕES PENDENTES
+    // SUB-AÇÃO GET: BUSCA DE INSCRIÇÕES PENDENTES (NORMALIZAÇÃO COMPLETA)
     // --------------------------------------------------------------------------
     if (action === "buscar_inscricoes") {
       const termo = String(
         url.searchParams.get("termo") ||
         url.searchParams.get("email") ||
         url.searchParams.get("whatsapp") ||
+        url.searchParams.get("nome") ||
         url.searchParams.get("busca") ||
         ""
       ).trim();
 
-      const cleanTermo = termo.toLowerCase();
-      const digitos = termo.replace(/\D/g, "");
-      const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(cleanTermo);
-      const ehWhatsapp = !ehEmail && /^[\d\s()+\-]+$/.test(termo) && digitos.length >= 10;
-      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
+      const emailNorm = normalizeEmail(termo);
+      const wppNorm = normalizePhone(termo);
+      const nomeNorm = normalizeName(termo);
 
-      if (!ehEmail && !ehWhatsapp && !ehUuid) {
+      const ehEmail = /^[^\s@,()%*]+@[^\s@,()%*]+\.[^\s@,()%*]+$/.test(emailNorm);
+      const ehWhatsapp = !ehEmail && wppNorm.length >= 10;
+      const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(termo);
+      const ehNome = !ehEmail && !ehWhatsapp && !ehUuid && nomeNorm.length >= 3;
+
+      if (!ehEmail && !ehWhatsapp && !ehUuid && !ehNome) {
         return jsonResponse(
-          { error: "Informe o e-mail completo, o número de WhatsApp completo (com DDD) ou o código da inscrição." },
+          { error: "Informe o nome completo, o e-mail completo, o WhatsApp (com DDD) ou o código da inscrição." },
           400,
           req
         );
@@ -884,11 +913,19 @@ serve(async (req: Request) => {
           .limit(10);
 
         if (ehUuid) {
-          query = query.eq("id", cleanTermo);
+          query = query.eq("id", termo.toLowerCase().trim());
         } else if (ehEmail) {
-          query = query.ilike("email", cleanTermo);
+          query = query.ilike("email", emailNorm);
+        } else if (ehWhatsapp) {
+          query = query.ilike("whatsapp", `%${wppNorm}%`);
         } else {
-          query = query.ilike("whatsapp", `%${digitos}%`);
+          // Busca combinada por termos do nome
+          const partes = nomeNorm.split(" ").filter(p => p.length >= 2);
+          if (partes.length >= 2) {
+            query = query.ilike("nome_completo", `%${partes[0]}%${partes[partes.length - 1]}%`);
+          } else {
+            query = query.ilike("nome_completo", `%${nomeNorm}%`);
+          }
         }
 
         const { data: rows, error } = await query;
