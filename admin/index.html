@@ -509,14 +509,22 @@
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
           <strong id="statTotalGeral">R$ 0,00</strong>
+          <small id="statTotalGeralSub" style="font-size: .72rem; color: var(--muted); display: block; margin-top: 4px; font-weight: 600;">Gateway: R$ 0,00 | Manual: R$ 0,00</small>
         </div>
         <div class="stat-box" style="border-left-color: #0d9488;">
           <span>Total via Pix</span>
           <strong id="statTotalPix">R$ 0,00</strong>
+          <small id="statTotalPixSub" style="font-size: .72rem; color: var(--muted); display: block; margin-top: 4px; font-weight: 600;">Gateway & Manual</small>
         </div>
         <div class="stat-box" style="border-left-color: #0284c7;">
           <span>Total via Cartão</span>
           <strong id="statTotalCard">R$ 0,00</strong>
+          <small id="statTotalCardSub" style="font-size: .72rem; color: var(--muted); display: block; margin-top: 4px; font-weight: 600;">Crédito</small>
+        </div>
+        <div class="stat-box" style="border-left-color: #f59e0b;" id="statBoxConciliacao">
+          <span>Em Conciliação</span>
+          <strong id="statTotalConciliacao">R$ 0,00</strong>
+          <small id="statTotalConciliacaoSub" style="font-size: .72rem; color: var(--muted); display: block; margin-top: 4px; font-weight: 600;">Pendente de decisão/titular</small>
         </div>
         <div class="stat-box" style="border-left-color: #8b5cf6;">
           <span>Lote Vigente</span>
@@ -2468,33 +2476,89 @@
       document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
       if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subsConfirmados.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
 
-      // 4. Cálculos financeiros estritamente de pagamentos válidos e confirmados
-      let totalGeral = 0;
+      // 4. Cálculos financeiros estritamente categorizados sem dupla contagem
+      let totalGeral = 0;              // Total arrecadado real comprovado
+      let totalGateway = 0;            // Receita gateway de participantes ativos
+      let totalManual = 0;             // Receita manual validada por comprovante
+      let totalPendenteConciliacao = 0;// Transações reais no gateway aguardando resolução de titular/cadastro
       let totalPix = 0;
       let totalCard = 0;
+      let totalTestes = 0;             // Transações de teste expurgadas
+
+      const countedPayments = new Set();
       const countedInscricoes = new Set();
 
       pagamentosData.forEach(p => {
         if (!isApproved(p.status)) return;
-        // Exclui pagamentos sem vínculo com inscrição ativa ou de testes arquivados
-        if (!p.inscricao_id || !activeInscricoesMap[p.inscricao_id]) return;
 
-        // Previne duplicação de valor para a mesma inscrição
-        if (countedInscricoes.has(p.inscricao_id)) return;
-        countedInscricoes.add(p.inscricao_id);
+        // Identificador estável para cada transação (previne duplicação da mesma linha)
+        const pKey = String(p.id || p.txid || "").trim();
+        if (!pKey || countedPayments.has(pKey)) return;
+        countedPayments.add(pKey);
 
         const val = Number(p.valor || 0);
-        totalGeral += val;
-        if (p.metodo === "credit_card") {
-          totalCard += val;
-        } else {
+
+        // Expurgar transações de teste (< R$ 1,00 ou flag de teste)
+        const isTeste = val < 1.00 || (p.txid && p.txid.toLowerCase().includes("teste"));
+        if (isTeste) {
+          totalTestes += val;
+          return; // Não contabiliza na arrecadação real oficial
+        }
+
+        const isManual = p.metodo === "manual_pix" || p.modalidade_pix === "manual";
+        const hasActiveInscricao = Boolean(p.inscricao_id && activeInscricoesMap[p.inscricao_id]);
+
+        if (isManual) {
+          // Receita manual validada
+          if (p.inscricao_id) {
+            if (countedInscricoes.has(p.inscricao_id)) return;
+            countedInscricoes.add(p.inscricao_id);
+          }
+          totalManual += val;
+          totalGeral += val;
           totalPix += val;
+        } else if (hasActiveInscricao) {
+          // Receita oficial do gateway vinculada a participante ativo
+          if (countedInscricoes.has(p.inscricao_id)) return;
+          countedInscricoes.add(p.inscricao_id);
+
+          totalGateway += val;
+          totalGeral += val;
+          if (p.metodo === "credit_card") {
+            totalCard += val;
+          } else {
+            totalPix += val;
+          }
+        } else {
+          // Transação real recebida no gateway sem inscrição ativa vinculada
+          // (ex: titular sem ficha cadastral, ou cadastro retido para decisão)
+          totalPendenteConciliacao += val;
+          totalGeral += val; // Receita real recebida pelo gateway no caixa
+          if (p.metodo === "credit_card") {
+            totalCard += val;
+          } else {
+            totalPix += val;
+          }
         }
       });
 
       document.getElementById("statTotalGeral").textContent = totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      const elGeralSub = document.getElementById("statTotalGeralSub");
+      if (elGeralSub) {
+        elGeralSub.textContent = `Gateway: ${totalGateway.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} | Manual: ${totalManual.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+      }
+
       document.getElementById("statTotalPix").textContent = totalPix.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       document.getElementById("statTotalCard").textContent = totalCard.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+      const elConc = document.getElementById("statTotalConciliacao");
+      if (elConc) {
+        elConc.textContent = totalPendenteConciliacao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      }
+      const elConcSub = document.getElementById("statTotalConciliacaoSub");
+      if (elConcSub) {
+        elConcSub.textContent = totalPendenteConciliacao > 0 ? "Pendente de decisão/titular" : "100% conciliado";
+      }
     }
 
     function renderizarTabelaInscricoes() {
@@ -2629,7 +2693,7 @@
         const isPix = p.metodo !== "credit_card";
         let methodBadge = "";
         if (isPix) {
-          if (p.modalidade_pix === "manual") {
+          if (p.modalidade_pix === "manual" || p.metodo === "manual_pix") {
             methodBadge = `<span class="method-badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;"><i class="fa-solid fa-hand-holding-dollar"></i> Pix Manual</span>`;
           } else {
             methodBadge = `<span class="method-badge pix"><i class="fa-brands fa-pix"></i> Pix API (MP)</span>`;
@@ -2641,7 +2705,7 @@
         const statusClass = isApproved(p.status) ? "status-approved" : `status-${p.status || 'pending'}`;
         const statusLabel = isApproved(p.status) ? "Aprovado" : (p.status === "rejected" ? "Recusado" : (p.status === "aguardando_analise" ? "Aguardando Análise" : (p.status === "expired" ? "Expirado" : "Pendente")));
         const displayPaymentId = p.payment_id || p.metadata?.payment_id;
-        const proofUrl = p.comprovante_caminho || p.comprovante_url;
+        const proofUrl = p.comprovante_caminho || p.comprovante_url || p.metadata?.comprovante_caminho;
 
         return `
           <tr>
