@@ -5,7 +5,11 @@
 const crypto = require("crypto");
 
 function getSigningSecret() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.ADMIN_PASSWORD_COORDENACAO || "transitoejc26";
+  const secret = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.ADMIN_PASSWORD_COORDENACAO || "").trim();
+  if (!secret) {
+    throw new Error("Assinatura de fotos indisponível: chave de serviço ou credencial de coordenação não configurada.");
+  }
+  return secret;
 }
 
 function generateSignedPhotoToken(path, ttlSeconds = 7200) {

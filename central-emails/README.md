@@ -65,7 +65,7 @@ Projeto 100% independente e isolado para envio seletivo de e-mails institucionai
     - Registro local (`data/audit-logs.json`) contendo data/hora, assunto, selecionados, enviados, falhas e distribuição de pagamento. Nenhuma credencial ou API Key é gravada.
 
 11. **Autenticação Própria:**
-    - Acesso protegido por senha administrativa (`transitoejc26`) com tokens de sessão em memória.
+    - Acesso protegido por senha administrativa (`[CONFIGURAR_VIA_ENV]`) com tokens de sessão em memória.
 
 ---
 
@@ -90,7 +90,7 @@ Abra a URL:
 ```
 http://localhost:3333
 ```
-- **Senha Padrão:** `transitoejc26`
+- **Senha Padrão:** `[CONFIGURAR_VIA_ENV]`
 
 ---
 
@@ -114,9 +114,9 @@ A Central lê a chave de API diretamente da variável de ambiente `BREVO_API_KEY
 | `BREVO_API_KEY` | *(Lida do .env)* | Chave oficial de API v3 da Brevo |
 | `BREVO_FROM_EMAIL` | `hugogeeta.gamer@gmail.com` | E-mail verificado do remetente na Brevo |
 | `BREVO_FROM_NAME` | `EJC — AD Monte Sião` | Nome do remetente |
-| `CENTRAL_ADMIN_PASSWORD` | `transitoejc26` | Senha de login da Central |
+| `CENTRAL_ADMIN_PASSWORD` | `[CONFIGURAR_VIA_ENV]` | Senha de login da Central |
 | `SITE_URL` | `https://www.transitoejc.site` | URL da API oficial para leitura de dados |
-| `ADMIN_TOKEN` | `transitoejc26` | Token de leitura da API `/api/admin` |
+| `ADMIN_TOKEN` | `[CONFIGURAR_VIA_ENV]` | Token de leitura da API `/api/admin` |
 | `PORT` | `3333` | Porta HTTP local do servidor |
 
 ---

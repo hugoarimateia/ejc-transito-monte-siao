@@ -106,13 +106,13 @@ async function authenticateAdmin(req: Request, bodyData?: Record<string, unknown
   const pass = bodyPass || adminToken || bearerToken;
   if (!pass) return { ok: false, role: null };
 
-  const passSuperadmin = Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || "transitoejc26";
-  const passFinanceiro = Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || "financeirott26";
-  const passAdmin = Deno.env.get("ADMIN_PASSWORD") || "ejc2026adm";
+  const passSuperadmin = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "").trim().replace(/^"|"$/g, "");
+  const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "").trim().replace(/^"|"$/g, "");
+  const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "").trim().replace(/^"|"$/g, "");
 
-  if (await timingSafeEqualStr(pass, passSuperadmin)) return { ok: true, role: "superadmin" };
-  if (await timingSafeEqualStr(pass, passFinanceiro)) return { ok: true, role: "financeiro" };
-  if (await timingSafeEqualStr(pass, passAdmin)) return { ok: true, role: "admin" };
+  if (Boolean(passSuperadmin) && (await timingSafeEqualStr(pass, passSuperadmin))) return { ok: true, role: "superadmin" };
+  if (Boolean(passFinanceiro) && (await timingSafeEqualStr(pass, passFinanceiro))) return { ok: true, role: "financeiro" };
+  if (Boolean(passAdmin) && (await timingSafeEqualStr(pass, passAdmin))) return { ok: true, role: "admin" };
 
   return { ok: false, role: null };
 }

@@ -89,23 +89,17 @@ async function authenticateRequest(
   const pass = bodyPass || adminToken || bearerToken;
   if (!pass) return null;
 
-  const passSuperadmin = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "transitoejc26").trim().replace(/^"|"$/g, "");
-  const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "financeirott26").trim().replace(/^"|"$/g, "");
-  const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "ejc2026adm").trim().replace(/^"|"$/g, "");
+  const passSuperadmin = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "").trim().replace(/^"|"$/g, "");
+  const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "").trim().replace(/^"|"$/g, "");
+  const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "").trim().replace(/^"|"$/g, "");
 
-  const isSuper = (await timingSafeEqualStr(pass, passSuperadmin)) ||
-                  (await timingSafeEqualStr(pass, "transitoejc26")) ||
-                  (await timingSafeEqualStr(pass, "transito2026tt"));
+  const isSuper = Boolean(passSuperadmin) && (await timingSafeEqualStr(pass, passSuperadmin));
   if (isSuper) return ROLES.superadmin;
 
-  const isFin = (await timingSafeEqualStr(pass, passFinanceiro)) ||
-                (await timingSafeEqualStr(pass, "financeirott26")) ||
-                (await timingSafeEqualStr(pass, "financeiro2026"));
+  const isFin = Boolean(passFinanceiro) && (await timingSafeEqualStr(pass, passFinanceiro));
   if (isFin) return ROLES.financeiro;
 
-  const isAdmin = (await timingSafeEqualStr(pass, passAdmin)) ||
-                  (await timingSafeEqualStr(pass, "ejc2026adm")) ||
-                  (await timingSafeEqualStr(pass, "ejc2026"));
+  const isAdmin = Boolean(passAdmin) && (await timingSafeEqualStr(pass, passAdmin));
   if (isAdmin) return ROLES.admin;
 
   return null;
@@ -464,7 +458,7 @@ serve(async (req: Request) => {
       }
 
       // 3. Monta relação consolidada com dados complementares e URLs assinadas de fotos
-      const photoSecret = supabaseServiceKey || Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || "transitoejc26";
+      const photoSecret = supabaseServiceKey || Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || "";
 
       const inscritos = await Promise.all((inscricoesRows || []).map(async (i: any) => {
         const comp = dadosCompMap[i.id] || null;

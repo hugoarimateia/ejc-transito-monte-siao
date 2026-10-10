@@ -2239,6 +2239,7 @@
 
       tbody.innerHTML = filtered.map(item => {
         const displaySub = (item.sub === "Azul") ? "Laranja" : (item.sub || '-');
+        const adm = obterStatusAdministrativo(item);
         return `
         <tr>
           <td>${new Date(item.criado_em || Date.now()).toLocaleDateString("pt-BR")}</td>

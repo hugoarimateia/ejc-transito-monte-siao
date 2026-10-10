@@ -77,12 +77,12 @@ function loadConfig() {
   const brevoKey = (process.env.BREVO_API_KEY || fileConfig.brevoApiKey || "").trim();
 
   return {
-    adminPassword: process.env.CENTRAL_ADMIN_PASSWORD || fileConfig.adminPassword || "transitoejc26",
+    adminPassword: (process.env.CENTRAL_ADMIN_PASSWORD || fileConfig.adminPassword || "").trim(),
     brevoApiKey: brevoKey,
     brevoSenderEmail: process.env.BREVO_FROM_EMAIL || fileConfig.brevoSenderEmail || "hugogeeta.gamer@gmail.com",
     brevoSenderName: process.env.BREVO_FROM_NAME || fileConfig.brevoSenderName || "EJC — AD Monte Sião",
     siteUrl: process.env.SITE_URL || fileConfig.siteUrl || "https://www.transitoejc.site",
-    adminToken: process.env.ADMIN_TOKEN || fileConfig.adminToken || "transitoejc26"
+    adminToken: (process.env.ADMIN_TOKEN || fileConfig.adminToken || "").trim()
   };
 }
 
@@ -438,7 +438,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === "/api/login" && req.method === "POST") {
     const pass = String(body.password || "").trim();
     const config = loadConfig();
-    if (pass === config.adminPassword || pass === "transitoejc26") {
+    if (Boolean(config.adminPassword) && pass === config.adminPassword) {
       const token = createSession();
       return sendJson(200, { success: true, token, message: "Acesso autorizado à Central de E-mails." });
     }

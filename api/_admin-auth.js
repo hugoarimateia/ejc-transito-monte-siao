@@ -45,16 +45,16 @@ function configuredPasswords() {
   const list = [];
 
   // 1. Coordenação / Super Admin: senha transitoejc26
-  const passCoordenacao = process.env.ADMIN_PASSWORD_COORDENACAO || "transitoejc26";
-  list.push({ pass: passCoordenacao, role: "superadmin" });
+  const passCoordenacao = (process.env.ADMIN_PASSWORD_COORDENACAO || process.env.ADMIN_PASS || "").trim();
+  if (passCoordenacao) list.push({ pass: passCoordenacao, role: "superadmin" });
 
   // 2. Financeiro: senha financeirott26
-  const passFinanceiro = process.env.ADMIN_PASSWORD_FINANCEIRO || process.env.FINANCEIRO_PASSWORD || "financeirott26";
-  list.push({ pass: passFinanceiro, role: "financeiro" });
+  const passFinanceiro = (process.env.ADMIN_PASSWORD_FINANCEIRO || process.env.FINANCEIRO_PASSWORD || "").trim();
+  if (passFinanceiro) list.push({ pass: passFinanceiro, role: "financeiro" });
 
   // 3. Admin Normal: senha ejc2026adm
-  const passAdmin = process.env.ADMIN_PASSWORD || "ejc2026adm";
-  list.push({ pass: passAdmin, role: "admin" });
+  const passAdmin = (process.env.ADMIN_PASSWORD || "").trim();
+  if (passAdmin) list.push({ pass: passAdmin, role: "admin" });
 
   return list;
 }

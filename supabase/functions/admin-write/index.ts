@@ -131,17 +131,17 @@ async function authenticateRequest(
   const pass = bodyPass || adminToken || bearerToken;
   if (!pass) return null;
 
-  const passSuperadmin = Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "transitoejc26";
-  const passFinanceiro = Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "financeirott26";
-  const passAdmin = Deno.env.get("ADMIN_PASSWORD") || "ejc2026adm";
+  const passSuperadmin = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "").trim().replace(/^"|"$/g, "");
+  const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "").trim().replace(/^"|"$/g, "");
+  const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "").trim().replace(/^"|"$/g, "");
 
-  const isSuper = await timingSafeEqualStr(pass, passSuperadmin);
+  const isSuper = Boolean(passSuperadmin) && (await timingSafeEqualStr(pass, passSuperadmin));
   if (isSuper) return ROLES.superadmin;
 
-  const isFin = await timingSafeEqualStr(pass, passFinanceiro);
+  const isFin = Boolean(passFinanceiro) && (await timingSafeEqualStr(pass, passFinanceiro));
   if (isFin) return ROLES.financeiro;
 
-  const isAdmin = await timingSafeEqualStr(pass, passAdmin);
+  const isAdmin = Boolean(passAdmin) && (await timingSafeEqualStr(pass, passAdmin));
   if (isAdmin) return ROLES.admin;
 
   // Permite autenticação para self-test interno ou simulação segura de role apenas se autenticado com Service Role Key

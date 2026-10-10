@@ -397,9 +397,9 @@ serve(async (req: Request) => {
     const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
     const adminToken = req.headers.get("x-admin-token")?.trim() || "";
 
-    const passCoordenacao = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || "transitoejc26").trim().replace(/^"|"$/g, "");
-    const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || "financeirott26").trim().replace(/^"|"$/g, "");
-    const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "ejc2026adm").trim().replace(/^"|"$/g, "");
+    const passCoordenacao = (Deno.env.get("ADMIN_PASSWORD_COORDENACAO") || Deno.env.get("ADMIN_PASS") || "").trim().replace(/^"|"$/g, "");
+    const passFinanceiro = (Deno.env.get("ADMIN_PASSWORD_FINANCEIRO") || Deno.env.get("FINANCEIRO_PASSWORD") || "").trim().replace(/^"|"$/g, "");
+    const passAdmin = (Deno.env.get("ADMIN_PASSWORD") || "").trim().replace(/^"|"$/g, "");
 
     const validServiceKeys = new Set<string>();
     if (serviceRoleKey) validServiceKeys.add(serviceRoleKey.trim());
@@ -443,12 +443,12 @@ serve(async (req: Request) => {
     // B) ADMIN: Senha administrativa via x-admin-token ou Bearer
     if (
       !callerType &&
-      ((adminToken && (adminToken === passCoordenacao || adminToken === passFinanceiro || adminToken === passAdmin)) ||
-       (bearerToken && (bearerToken === passCoordenacao || bearerToken === passFinanceiro || bearerToken === passAdmin)))
+      ((adminToken && ((passCoordenacao && adminToken === passCoordenacao) || (passFinanceiro && adminToken === passFinanceiro) || (passAdmin && adminToken === passAdmin))) ||
+       (bearerToken && ((passCoordenacao && bearerToken === passCoordenacao) || (passFinanceiro && bearerToken === passFinanceiro) || (passAdmin && bearerToken === passAdmin))))
     ) {
       callerType = "admin";
       const tokenToCheck = adminToken || bearerToken;
-      callerRole = tokenToCheck === passCoordenacao ? "superadmin" : (tokenToCheck === passFinanceiro ? "financeiro" : "admin");
+      callerRole = (passCoordenacao && tokenToCheck === passCoordenacao) ? "superadmin" : ((passFinanceiro && tokenToCheck === passFinanceiro) ? "financeiro" : "admin");
     }
 
     // C) ADMIN: Sessão Supabase Auth com role administrativa
