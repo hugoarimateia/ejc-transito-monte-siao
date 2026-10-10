@@ -1921,7 +1921,9 @@ serve(async (req: Request) => {
               issuer_id: issuer_id ? String(issuer_id) : undefined,
               payer: {
                 email: String(email).trim().toLowerCase(),
-                identification: cpf ? { type: "CPF", number: String(cpf) } : undefined
+                identification: (cpf || body.payer?.identification?.number)
+                  ? { type: "CPF", number: String(cpf || body.payer?.identification?.number).replace(/\D/g, "") }
+                  : undefined
               },
               txid: txid,
               description: `Inscrição EJC Trânsito ${financialConfig.lote_atual}`,
@@ -1942,7 +1944,7 @@ serve(async (req: Request) => {
                 nome_pagador: nomeFinal,
                 email: String(email).trim().toLowerCase(),
                 whatsapp_pagador: whatsapp ? String(whatsapp) : null,
-                cpf_pagador: cpf ? String(cpf) : null,
+                cpf_pagador: (cpf || body.payer?.identification?.number) ? String(cpf || body.payer?.identification?.number).replace(/\D/g, "") : null,
                 valor: valorFinalCobranca,
                 metodo: "credit_card",
                 parcelas: mpCardRes.installments || 1,
