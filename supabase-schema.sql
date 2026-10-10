@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.subs (
     nome TEXT UNIQUE NOT NULL,
     cor TEXT NOT NULL,
     casal_coordenador TEXT NOT NULL,
-    capacidade INT NOT NULL DEFAULT 85,
+    capacidade INT NOT NULL DEFAULT 95,
     link_whatsapp TEXT,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -24,10 +24,10 @@ DELETE FROM public.subs WHERE nome = 'Azul';
 -- Popula os 4 subs se não existirem
 INSERT INTO public.subs (nome, cor, casal_coordenador, capacidade, link_whatsapp)
 VALUES
-    ('Verde', '#24a764', 'Abraão e Sara', 85, NULL),
-    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 85, NULL),
-    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 85, NULL),
-    ('Laranja', '#f97316', 'Alan e Kallyne', 85, NULL)
+    ('Verde', '#24a764', 'Abraão e Sara', 95, NULL),
+    ('Vermelho', '#e8333e', 'Kadmiel e Bia', 95, NULL),
+    ('Amarelo', '#e9dd3c', 'Mateus e Gabriely', 95, NULL),
+    ('Laranja', '#f97316', 'Alan e Kallyne', 95, NULL)
 ON CONFLICT (nome) DO UPDATE 
 SET casal_coordenador = EXCLUDED.casal_coordenador,
     capacidade = EXCLUDED.capacidade;
@@ -217,7 +217,7 @@ DECLARE
 BEGIN
     SELECT capacidade INTO v_capacidade FROM public.subs WHERE nome = p_sub FOR UPDATE;
     IF v_capacidade IS NULL THEN
-        v_capacidade := 85;
+        v_capacidade := 95;
     END IF;
 
     -- Conta apenas vagas com pagamento confirmado e não arquivadas

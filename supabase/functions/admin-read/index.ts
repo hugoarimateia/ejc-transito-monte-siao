@@ -593,7 +593,7 @@ serve(async (req: Request) => {
     const wppRows = wppRes.data || [];
     const subsRows = subsRes.data || [];
 
-    const capacities: Record<string, number> = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
+    const capacities: Record<string, number> = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
     if (Array.isArray(subsRows)) {
       subsRows.forEach((row: any) => {
         const s = normalizarSub(row.nome);
@@ -608,12 +608,10 @@ serve(async (req: Request) => {
       if (r.sub) whatsapp[r.sub] = r.link_grupo || "";
     });
 
-    // Contadores oficiais por sub
+    // Contadores oficiais operacionais por sub (inscrições ativas)
     const counts: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
     inscricoes.forEach((item: any) => {
       if (item.arquivado) return;
-      const statusPag = String(item.pagamento_status || "").trim().toLowerCase();
-      if (!["approved", "confirmado", "pago"].includes(statusPag)) return;
       const s = normalizarSub(item.sub);
       if (s && counts[s] !== undefined) counts[s]++;
     });

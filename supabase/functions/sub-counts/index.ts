@@ -74,7 +74,7 @@ serve(async (req: Request) => {
     try {
       // 1. Consulta RPC canônica e estritamente somente leitura de contagem
       const counts: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-      const capacities: Record<string, number> = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
+      const capacities: Record<string, number> = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
 
       const { data: rpcData, error: rpcError } = await supabase.rpc("contagem_inscricoes_por_sub");
 
@@ -102,7 +102,7 @@ serve(async (req: Request) => {
           });
         }
       } catch (_subsErr) {
-        // Mantém capacidades padrão (85)
+        // Mantém capacidades padrão (95)
       }
 
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -167,8 +167,8 @@ serve(async (req: Request) => {
         });
       }
 
-      // Validação de capacidade (85 vagas por sub, consultando public.subs com fallback 85)
-      let maxCapacidade = 85;
+      // Validação de capacidade (95 vagas por sub, consultando public.subs com fallback 95)
+      let maxCapacidade = 95;
       try {
         const { data: subRow } = await supabase
           .from("subs")
@@ -179,7 +179,7 @@ serve(async (req: Request) => {
           maxCapacidade = subRow.capacidade;
         }
       } catch (_capErr) {
-        maxCapacidade = 85;
+        maxCapacidade = 95;
       }
 
       const { data: rpcData } = await supabase.rpc("contagem_inscricoes_por_sub");

@@ -1634,14 +1634,28 @@ serve(async (req: Request) => {
             }, 400, req);
           }
 
-          // Revalidar se a vaga da Sub ainda está dentro do limite oficial de 85
+          // Revalidar se a vaga da Sub ainda está dentro do limite oficial de 95
+          let maxCapacidade = 95;
+          try {
+            const { data: subCapRow } = await supabase
+              .from("subs")
+              .select("capacidade")
+              .ilike("nome", inscRecord.sub)
+              .maybeSingle();
+            if (subCapRow && typeof subCapRow.capacidade === "number" && subCapRow.capacidade > 0) {
+              maxCapacidade = subCapRow.capacidade;
+            }
+          } catch (_cErr) {
+            maxCapacidade = 95;
+          }
+
           const { data: subCountData } = await supabase.rpc("contagem_inscricoes_por_sub");
           if (Array.isArray(subCountData)) {
             const subRow = subCountData.find((s: any) => String(s.sub || "").toLowerCase() === String(inscRecord.sub || "").toLowerCase());
             const currentTotal = subRow ? Number(subRow.total || 0) : 0;
-            if (currentTotal >= 85) {
+            if (currentTotal >= maxCapacidade) {
               return jsonResponse({
-                error: `As vagas para o Sub ${inscRecord.sub} estão atualmente esgotadas (85/85). Entre em contato com a coordenação.`
+                error: `As vagas para o Sub ${inscRecord.sub} estão atualmente esgotadas (${maxCapacidade}/${maxCapacidade}). Entre em contato com a coordenação.`
               }, 400, req);
             }
           }

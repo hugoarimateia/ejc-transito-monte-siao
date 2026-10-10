@@ -241,7 +241,7 @@ let latestCountRequestId = 0;
 async function updateSubCounts() {
   const currentRequestId = ++latestCountRequestId;
   let counts = null;
-  let capacities = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
+  let capacities = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
   let remoteLoaded = false;
 
   // 1. Consulta o endpoint central oficial com anti-cache estrito (suporte a Edge Functions e Rollback)
@@ -297,7 +297,7 @@ async function updateSubCounts() {
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;
-    const capacity = Number((capacities && capacities[sub]) || button.dataset.capacity || 85);
+    const capacity = Number((capacities && capacities[sub]) || button.dataset.capacity || 95);
     const current = Number(counts[sub] || 0);
     const countEl = document.querySelector(`[data-count-for="${sub}"]`);
     const progressEl = document.querySelector(`[data-progress-for="${sub}"]`);

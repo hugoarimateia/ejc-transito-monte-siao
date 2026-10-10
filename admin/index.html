@@ -492,19 +492,19 @@
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
-          <strong id="statSubVerde">0 / 85</strong>
+          <strong id="statSubVerde">0 / 95</strong>
         </div>
         <div class="stat-box red">
           <span>Sub Vermelho</span>
-          <strong id="statSubVermelho">0 / 85</strong>
+          <strong id="statSubVermelho">0 / 95</strong>
         </div>
         <div class="stat-box yellow">
           <span>Sub Amarelo</span>
-          <strong id="statSubAmarelo">0 / 85</strong>
+          <strong id="statSubAmarelo">0 / 95</strong>
         </div>
         <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
-          <strong id="statSubLaranja">0 / 85</strong>
+          <strong id="statSubLaranja">0 / 95</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -1900,7 +1900,7 @@
 
     let inscricoesData = [];
     let inscricoesArquivadasData = [];
-    let serverCapacities = { Verde: 85, Vermelho: 85, Amarelo: 85, Laranja: 85 };
+    let serverCapacities = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
     let pagamentosData = [];
     let auditoriaData = [];
     let wppLinksData = {
@@ -2420,11 +2420,10 @@
 
     function renderizarEstatisticas() {
       const subs = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-      let totalConfirmados = 0;
+      let totalOperacionais = 0;
 
       inscricoesData.forEach(item => {
         if (item.arquivado) return;
-        if (!isApproved(item.pagamento_status)) return;
         const subRaw = (item.sub === "Azul") ? "Laranja" : item.sub;
         const s = (subRaw && subRaw.includes("Verd")) ? "Verde"
           : (subRaw && subRaw.includes("Verm")) ? "Vermelho"
@@ -2434,15 +2433,15 @@
 
         if (subs[s] !== undefined) {
           subs[s]++;
-          totalConfirmados++;
+          totalOperacionais++;
         }
       });
 
-      document.getElementById("statTotalInscritos").textContent = totalConfirmados;
-      document.getElementById("statSubVerde").textContent = `${subs.Verde} / ${(serverCapacities && serverCapacities.Verde) || 85}`;
-      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 85}`;
-      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 85}`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 85}`;
+      document.getElementById("statTotalInscritos").textContent = totalOperacionais;
+      document.getElementById("statSubVerde").textContent = `${subs.Verde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
+      document.getElementById("statSubVermelho").textContent = `${subs.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
+      document.getElementById("statSubAmarelo").textContent = `${subs.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subs.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
 
       // Cálculos financeiros
       let totalGeral = 0;
