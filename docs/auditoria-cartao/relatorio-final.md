@@ -60,6 +60,8 @@ Classificação das afirmações: **[VERIFICADO]** (comprovado no código, logs,
 
 ---
 
+---
+
 ## SEÇÃO D — RESULTADOS DOS TESTES DE ACEITAÇÃO
 
 A suíte automatizada executou 12 verificações estritas, obtendo **100% de aprovação (12/12 PASS)**:
@@ -79,6 +81,11 @@ A suíte automatizada executou 12 verificações estritas, obtendo **100% de apr
 | **T11** | Persistência Prévia da Tentativa | ✅ **PASS** | Gravação com status `processing` antes do gateway ativa em ambos os ambientes. |
 | **T12** | Idempotência no Gateway | ✅ **PASS** | Cabeçalho `X-Idempotency-Key: CARD-${txid}` transmitido obrigatoriamente. |
 
+### D.2 Evidências em Produção (Live Verification)
+- **Supabase Edge Function (`guppedddwnuvluhiaaas.supabase.co/functions/v1/checkout-process`) [VERIFICADO]:** Testada diretamente com requisição de cartão sem token. Resposta: HTTP 400 `{ success: false, error: 'Token do cartão não fornecido...', code: 'CARD_TOKEN_REQUIRED' }`.
+- **Roteamento Cloudflare Pages (`https://www.transitoejc.site/api/checkout-process`) [VERIFICADO]:** Testada via rota pública. Resposta: HTTP 400 com payload idêntico, comprovando a atualização ativa na borda.
+- **Não-regressão do Pix em Produção [VERIFICADO]:** Geração de cobrança Pix executada com sucesso (`PIXMV5F5UKW1ZXS`), gerando QR Code e Copia e Cola via Mercado Pago com status `pending` e HTTP 200.
+
 ---
 
 ## SEÇÃO E — CRITÉRIO FINAL DE ACEITE E CONCLUSÃO
@@ -91,4 +98,4 @@ A suíte automatizada executou 12 verificações estritas, obtendo **100% de apr
 - [x] Não há risco de duplicidade nem aprovação indevida (idempotência ponta a ponta).
 - [x] O fluxo do Pix, preços, lotes e limites de parcelas permanecem 100% íntegros e preservados.
 
-**Status Final:** Aprovado tecnicamente e pronto para homologação final da equipe.
+**Status Final:** Publicado em produção (`main`), verificado nos endpoints oficiais e pronto para homologação com cartões de teste pela equipe.
