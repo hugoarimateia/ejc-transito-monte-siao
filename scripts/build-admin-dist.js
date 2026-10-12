@@ -143,17 +143,71 @@ const ADMIN_EDGE_ADAPTER = `
   const originalFetch = window.fetch;
 
   window.fetch = function(input, init) {
-    let url =
+    let rawUrl =
       typeof input === "string"
         ? input
         : (input && input.url ? input.url : "");
 
+    let pathname = "";
+    let search = "";
+    try {
+      const baseOrigin =
+        (typeof window !== "undefined" && window.location && window.location.origin)
+          ? window.location.origin
+          : "https://ejc-admin.pages.dev";
+      const parsed = new URL(rawUrl, baseOrigin);
+      pathname = parsed.pathname;
+      search = parsed.search;
+    } catch (_) {
+      const qIdx = rawUrl.indexOf("?");
+      if (qIdx >= 0) {
+        pathname = rawUrl.slice(0, qIdx);
+        search = rawUrl.slice(qIdx);
+      } else {
+        pathname = rawUrl;
+        search = "";
+      }
+    }
+
     const method =
       (init && init.method ? init.method.toUpperCase() : "GET");
 
+    // Identificação flexível de rotas (suporta "/", sem "/", URLs absolutas e relativas)
+    const isPhotoRoute =
+      pathname === "/api/admin/inscritos-foto" ||
+      pathname === "/api/admin/inscritos-foto/" ||
+      pathname === "/api/inscritos-foto" ||
+      pathname === "/api/inscritos-foto/" ||
+      rawUrl.includes("api/admin/inscritos-foto") ||
+      rawUrl.includes("api/inscritos-foto");
+
+    const isDadosRoute =
+      pathname === "/api/admin/inscritos-dados" ||
+      pathname === "/api/admin/inscritos-dados/" ||
+      pathname === "/api/inscritos-dados" ||
+      pathname === "/api/inscritos-dados/" ||
+      rawUrl.includes("api/admin/inscritos-dados") ||
+      rawUrl.includes("api/inscritos-dados");
+
+    const isAdminRoute =
+      pathname === "/api/admin" ||
+      pathname === "/api/admin/" ||
+      rawUrl === "/api/admin" ||
+      rawUrl.endsWith("/api/admin");
+
+    const isPaymentSettingsRoute =
+      pathname === "/api/payment-settings" ||
+      pathname === "/api/payment-settings/" ||
+      rawUrl.includes("api/payment-settings");
+
+    const isCheckoutProcessRoute =
+      pathname === "/api/checkout-process" ||
+      pathname === "/api/checkout-process/" ||
+      rawUrl.includes("api/checkout-process");
+
     // POST /api/admin com action=login -> admin-read
     // Outras ações em POST /api/admin -> admin-write
-    if (url === "/api/admin" && method === "POST") {
+    if (isAdminRoute && method === "POST") {
       try {
         const bodyObj = init && init.body
           ? JSON.parse(init.body)
@@ -168,45 +222,69 @@ const ADMIN_EDGE_ADAPTER = `
     }
 
     // GET /api/admin -> admin-read
-    if (url === "/api/admin" && method === "GET") {
+    if (isAdminRoute && method === "GET") {
       return originalFetch(ADMIN_READ_URL, init);
     }
 
     // GET /api/payment-settings -> admin-read
-    if (url.startsWith("/api/payment-settings") && method === "GET") {
-      const targetUrl =
-        ADMIN_READ_URL + "?view=payment-settings";
-
+    if (isPaymentSettingsRoute && method === "GET") {
+      const targetUrl = ADMIN_READ_URL + "?view=payment-settings";
       return originalFetch(targetUrl, init);
     }
 
     // POST ou PUT /api/payment-settings -> admin-write
-    if (url.startsWith("/api/payment-settings") && (method === "POST" || method === "PUT")) {
+    if (isPaymentSettingsRoute && (method === "POST" || method === "PUT")) {
       return originalFetch(ADMIN_WRITE_URL, init);
     }
 
     // POST /api/checkout-process -> checkout-process Edge Function
-    if (url.startsWith("/api/checkout-process") && method === "POST") {
+    if (isCheckoutProcessRoute && method === "POST") {
       return originalFetch(CHECKOUT_PROCESS_URL, init);
     }
 
+    // POST /api/admin/inscritos-foto -> admin-write (upload de foto)
+    if (isPhotoRoute && method === "POST") {
+      try {
+        let bodyObj = init && init.body ? JSON.parse(init.body) : {};
+        if (!bodyObj.action) {
+          bodyObj.action = "upload_participant_photo";
+        }
+        return originalFetch(ADMIN_WRITE_URL, {
+          ...init,
+          method: "POST",
+          body: JSON.stringify(bodyObj)
+        });
+      } catch (e) {
+        return originalFetch(ADMIN_WRITE_URL, init);
+      }
+    }
+
+    // GET /api/admin/inscritos-foto -> admin-read
+    if (isPhotoRoute && method === "GET") {
+      return originalFetch(ADMIN_READ_URL + search, init);
+    }
+
     // GET /api/admin/inscritos-dados?sub=... -> admin-read
-    if (
-      url.startsWith("/api/admin/inscritos-dados") &&
-      method === "GET"
-    ) {
-      const qIdx = url.indexOf("?");
-      const query =
-        qIdx >= 0
-          ? url.slice(qIdx)
-          : "?sub=todos";
+    if (isDadosRoute && method === "GET") {
+      const query = search ? (search.includes("view=") ? search : search + "&view=inscritos-dados") : "?view=inscritos-dados";
+      return originalFetch(ADMIN_READ_URL + query, init);
+    }
 
-      const targetUrl =
-        ADMIN_READ_URL +
-        "?view=inscritos-dados&" +
-        (query.startsWith("?") ? query.slice(1) : query);
-
-      return originalFetch(targetUrl, init);
+    // PATCH, POST ou PUT /api/admin/inscritos-dados -> admin-write (atualizar dados do participante)
+    if (isDadosRoute && (method === "PATCH" || method === "POST" || method === "PUT")) {
+      try {
+        let bodyObj = init && init.body ? JSON.parse(init.body) : {};
+        if (!bodyObj.action) {
+          bodyObj.action = "update_participant";
+        }
+        return originalFetch(ADMIN_WRITE_URL, {
+          ...init,
+          method: "POST",
+          body: JSON.stringify(bodyObj)
+        });
+      } catch (e) {
+        return originalFetch(ADMIN_WRITE_URL, init);
+      }
     }
 
     return originalFetch.apply(this, arguments);
@@ -245,6 +323,152 @@ copyFile(
   path.join(__dirname, "admin-static", "_redirects"),
   path.join(DIST, "_redirects")
 );
+
+// 8b. Gera _worker.js no bundle para roteamento nativo no Cloudflare Pages
+// Previne HTTP 405 caso requisições POST/PATCH alcancem diretamente a infraestrutura da Cloudflare.
+const adminWorkerContent = `
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    const isPhotoRoute =
+      url.pathname.includes('/api/admin/inscritos-foto') ||
+      url.pathname.includes('/api/inscritos-foto');
+
+    const isDadosRoute =
+      url.pathname.includes('/api/admin/inscritos-dados') ||
+      url.pathname.includes('/api/inscritos-dados');
+
+    // 1. Intercepta /api/admin/inscritos-foto e /api/inscritos-foto
+    if (isPhotoRoute) {
+      if (request.method === 'POST') {
+        let bodyData = {};
+        try {
+          bodyData = await request.clone().json();
+        } catch (_) {}
+        if (!bodyData.action) {
+          bodyData.action = "upload_participant_photo";
+        }
+
+        const targetUrl = new URL('/functions/v1/admin-write', 'https://guppedddwnuvluhiaaas.supabase.co');
+        const modifiedHeaders = new Headers(request.headers);
+        modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+        modifiedHeaders.set('Content-Type', 'application/json');
+
+        const upstreamRes = await fetch(targetUrl.toString(), {
+          method: 'POST',
+          headers: modifiedHeaders,
+          body: JSON.stringify(bodyData)
+        });
+
+        const respHeaders = new Headers(upstreamRes.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        respHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token');
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          statusText: upstreamRes.statusText,
+          headers: respHeaders
+        });
+      }
+
+      if (request.method === 'GET') {
+        const targetUrl = new URL('/functions/v1/admin-read' + url.search, 'https://guppedddwnuvluhiaaas.supabase.co');
+        const modifiedHeaders = new Headers(request.headers);
+        modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+        const upstreamRes = await fetch(targetUrl.toString(), {
+          method: 'GET',
+          headers: modifiedHeaders
+        });
+        const respHeaders = new Headers(upstreamRes.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          statusText: upstreamRes.statusText,
+          headers: respHeaders
+        });
+      }
+
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
+          }
+        });
+      }
+    }
+
+    // 2. Intercepta /api/admin/inscritos-dados e /api/inscritos-dados
+    if (isDadosRoute) {
+      if (['PATCH', 'POST', 'PUT'].includes(request.method)) {
+        let bodyData = {};
+        try {
+          bodyData = await request.clone().json();
+        } catch (_) {}
+        if (!bodyData.action) {
+          bodyData.action = "update_participant";
+        }
+
+        const targetUrl = new URL('/functions/v1/admin-write', 'https://guppedddwnuvluhiaaas.supabase.co');
+        const modifiedHeaders = new Headers(request.headers);
+        modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+        modifiedHeaders.set('Content-Type', 'application/json');
+
+        const upstreamRes = await fetch(targetUrl.toString(), {
+          method: 'POST',
+          headers: modifiedHeaders,
+          body: JSON.stringify(bodyData)
+        });
+
+        const respHeaders = new Headers(upstreamRes.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        respHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token');
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          statusText: upstreamRes.statusText,
+          headers: respHeaders
+        });
+      }
+
+      if (request.method === 'GET') {
+        const query = url.search ? (url.search.includes('view=') ? url.search : url.search + '&view=inscritos-dados') : '?view=inscritos-dados';
+        const targetUrl = new URL('/functions/v1/admin-read' + query, 'https://guppedddwnuvluhiaaas.supabase.co');
+        const modifiedHeaders = new Headers(request.headers);
+        modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+        const upstreamRes = await fetch(targetUrl.toString(), {
+          method: 'GET',
+          headers: modifiedHeaders
+        });
+        const respHeaders = new Headers(upstreamRes.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          statusText: upstreamRes.statusText,
+          headers: respHeaders
+        });
+      }
+
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
+          }
+        });
+      }
+    }
+
+    // 3. Demais arquivos estáticos do Cloudflare Pages
+    return env.ASSETS.fetch(request);
+  }
+};
+`;
+
+fs.writeFileSync(path.join(DIST, "_worker.js"), adminWorkerContent.trim(), "utf8");
 
 // 9. Resumo.
 let totalFiles = 0;

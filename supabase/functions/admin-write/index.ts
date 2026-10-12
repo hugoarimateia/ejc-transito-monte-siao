@@ -19,6 +19,7 @@
 // ==============================================================================
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1.0.20";
 import { validateWhatsAppPayload } from "./whatsapp-validator.ts";
 
 // --- ESTRUTURA DE PERMISSÕES ADMINISTRATIVAS ---
@@ -85,6 +86,12 @@ const ALLOWED_PARTICIPANT_FIELDS = new Set([
   "sub",
   "tamanho_camisa",
   "modelo_camisa",
+  "quer_camisa_adicional",
+  "quantidade_camisas_adicionais",
+  "tamanho_camisa_adicional",
+  "modelo_camisa_adicional",
+  "talento",
+  "foto_caminho",
   "observacoes"
 ]);
 
@@ -1242,16 +1249,32 @@ async function handleAdminAction(
       };
     }
 
-    if (Object.keys(insUpdates).length > 0) {
-      await supabase.from("inscricoes").update(insUpdates).eq("id", inscricaoId);
+    // Separa campos exclusivos de inscritos_dados (observacoes) dos campos nativos de inscricoes
+    const { observacoes, ...inscricoesUpdates } = insUpdates;
+
+    if (Object.keys(inscricoesUpdates).length > 0) {
+      const { error: insUpErr } = await supabase.from("inscricoes").update(inscricoesUpdates).eq("id", inscricaoId);
+      if (insUpErr) {
+        return { status: 500, body: { error: `Erro ao atualizar inscricoes: ${insUpErr.message}` } };
+      }
     }
 
+    const dadosComplementares: Record<string, any> = {
+      inscricao_id: inscricaoId,
+      atualizado_em: new Date().toISOString(),
+      atualizado_por: authRole.label || "admin"
+    };
+    if (body.tamanho_camisa) dadosComplementares.tamanho_camisa = body.tamanho_camisa;
+    if (body.foto_caminho) dadosComplementares.foto_caminho = body.foto_caminho;
+    if (observacoes !== undefined) dadosComplementares.observacoes = observacoes;
     if (body.dados_adicionais && typeof body.dados_adicionais === "object") {
-      await supabase.from("inscritos_dados").upsert({
-        inscricao_id: inscricaoId,
-        ...body.dados_adicionais,
-        atualizado_em: new Date().toISOString()
-      });
+      Object.assign(dadosComplementares, body.dados_adicionais);
+    }
+
+    try {
+      await supabase.from("inscritos_dados").upsert(dadosComplementares, { onConflict: "inscricao_id" });
+    } catch (errCompl: any) {
+      console.warn("[admin-write OP12] Aviso ao atualizar inscritos_dados:", errCompl.message);
     }
 
     await recordAudit(supabase, "ATUALIZACAO_DADOS_PARTICIPANTE", { inscricao_id: inscricaoId, updates: Object.keys(insUpdates) }, clientIp, authRole.role, isDryRun);
@@ -1262,12 +1285,12 @@ async function handleAdminAction(
   // --------------------------------------------------------------------------
   // OP13: upload_participant_photo (HARDENED COM VALIDAÇÃO DE SUB E PARTICIPANTE)
   // --------------------------------------------------------------------------
-  if (action === "upload_participant_photo") {
+  if (action === "upload_participant_photo" || action === "upload_inscritos_foto") {
     if (authRole.role === "financeiro") {
       return { status: 403, body: { error: "Permissão negada. O perfil financeiro não gerencia fotos de crachá.", action, role: authRole.role } };
     }
 
-    const inscricaoId = String(body.participant_id || body.inscricao_id || "").trim();
+    const inscricaoId = String(body.participant_id || body.inscricao_id || body.id || "").trim();
     if (!UUID_REGEX.test(inscricaoId)) {
       return { status: 400, body: { error: "Identificador 'participant_id' ausente ou formato UUID inválido." } };
     }
@@ -1283,21 +1306,32 @@ async function handleAdminAction(
       return { status: 404, body: { error: "Participante não encontrado no banco de dados." } };
     }
 
-    const sub = String(body.sub || "").trim().toLowerCase();
+    // Identifica e valida sub (se informado ou herdado do registro)
+    const rawSub = String(body.sub || pIns.sub || "").trim().toLowerCase();
+    const sub = rawSub === "azul" ? "laranja" : rawSub;
     const validSubs = new Set(["verde", "vermelho", "amarelo", "laranja"]);
-    if (!validSubs.has(sub)) {
+    const hasValidSub = validSubs.has(sub);
+
+    // Se o sub foi explicitamente fornecido, valida contra o conjunto permitido
+    if (body.sub && !hasValidSub) {
       return { status: 400, body: { error: "Sub inválido. Deve ser verde, vermelho, amarelo ou laranja." } };
     }
 
-    // Valida compatibilidade do sub com o cadastro real
+    // Valida compatibilidade do sub informado com o cadastro real se ambos existirem
     const insSubNorm = String(pIns.sub || "").trim().toLowerCase().replace("azul", "laranja");
-    if (insSubNorm && insSubNorm !== sub) {
+    if (body.sub && insSubNorm && insSubNorm !== sub) {
       return { status: 400, body: { error: `Sub informado (${sub}) é incompatível com o Sub cadastrado do participante (${insSubNorm}).` } };
     }
 
-    const mime = String(body.mime_type || body.mime || "").trim().toLowerCase();
-    const validMimes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-    if (!validMimes.has(mime)) {
+    const mime = String(body.mime_type || body.mimeType || body.mime || "image/jpeg").trim().toLowerCase();
+    const validMimes: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp"
+    };
+    const targetExt = validMimes[mime];
+    if (!targetExt) {
       return { status: 400, body: { error: "MIME type inválido. Somente JPEG, PNG e WEBP são permitidos." } };
     }
 
@@ -1306,14 +1340,10 @@ async function handleAdminAction(
       return { status: 400, body: { error: "Extensão de arquivo inválida. Permitido apenas .jpg, .jpeg, .png, .webp." } };
     }
 
-    const sizeBytes = Number(body.size_bytes || body.size || 0);
-    if (sizeBytes > 5 * 1024 * 1024) {
-      return { status: 400, body: { error: "Tamanho de arquivo excede o limite máximo permitido de 5 MB." } };
-    }
-
-    const targetExt = mime === "image/png" ? "png" : (mime === "image/webp" ? "webp" : "jpg");
     const serverGeneratedUuid = crypto.randomUUID();
-    const targetPath = `participantes/${sub}/${serverGeneratedUuid}.${targetExt}`;
+    const targetPath = hasValidSub
+      ? `participantes/${sub}/${serverGeneratedUuid}.${targetExt}`
+      : `inscritos/${inscricaoId}/${serverGeneratedUuid}.${targetExt}`;
 
     if (isDryRun) {
       return {
@@ -1329,7 +1359,7 @@ async function handleAdminAction(
           details: {
             participant_id: inscricaoId,
             nome_completo: pIns.nome_completo,
-            sub,
+            sub: hasValidSub ? sub : null,
             mime_type: mime,
             max_size_allowed_mb: 5,
             server_generated_uuid: serverGeneratedUuid,
@@ -1341,13 +1371,148 @@ async function handleAdminAction(
       };
     }
 
-    // Caminho real: upload validado para R2 antes de atualizar referências no banco
-    await supabase.from("inscricoes").update({ foto_caminho: targetPath }).eq("id", inscricaoId);
-    await supabase.from("inscritos_dados").update({ foto_caminho: targetPath }).eq("inscricao_id", inscricaoId);
+    // Processamento e validação estrita da imagem em modo real
+    const rawBase64 = String(body.fileBase64 || body.file_base64 || body.base64 || "").trim();
+    if (!rawBase64) {
+      return { status: 400, body: { error: "Arquivo de imagem (Base64) é obrigatório." } };
+    }
 
-    await recordAudit(supabase, "UPLOAD_FOTO_ADMINISTRATIVA", { inscricao_id: inscricaoId, photo_path: targetPath }, clientIp, authRole.role, isDryRun);
+    const pureBase64 = rawBase64.replace(/^data:image\/[a-z]+;base64,/i, "");
+    let fileBytes: Uint8Array;
+    try {
+      const binStr = atob(pureBase64);
+      fileBytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) {
+        fileBytes[i] = binStr.charCodeAt(i);
+      }
+    } catch (_) {
+      return { status: 400, body: { error: "Formato Base64 inválido." } };
+    }
 
-    return { status: 200, body: { success: true, message: "Referência de foto atualizada com sucesso.", foto_caminho: targetPath } };
+    if (fileBytes.length === 0) {
+      return { status: 400, body: { error: "Arquivo de imagem vazio." } };
+    }
+    if (fileBytes.length > 5 * 1024 * 1024) {
+      return { status: 400, body: { error: "A imagem não pode exceder o tamanho máximo de 5MB." } };
+    }
+
+    // Validação de magic bytes
+    let isValidMagic = false;
+    if (mime === "image/jpeg" || mime === "image/jpg") {
+      isValidMagic = fileBytes.length >= 3 && fileBytes[0] === 0xff && fileBytes[1] === 0xd8 && fileBytes[2] === 0xff;
+    } else if (mime === "image/png") {
+      isValidMagic = fileBytes.length >= 8 && fileBytes[0] === 0x89 && fileBytes[1] === 0x50 && fileBytes[2] === 0x4e && fileBytes[3] === 0x47;
+    } else if (mime === "image/webp") {
+      isValidMagic = fileBytes.length >= 12 &&
+        fileBytes[0] === 0x52 && fileBytes[1] === 0x49 && fileBytes[2] === 0x46 && fileBytes[3] === 0x46 &&
+        fileBytes[8] === 0x57 && fileBytes[9] === 0x45 && fileBytes[10] === 0x42 && fileBytes[11] === 0x50;
+    }
+
+    if (!isValidMagic) {
+      return { status: 400, body: { error: "O conteúdo do arquivo não corresponde a uma imagem válida (assinatura binária incompatível)." } };
+    }
+
+    // Gravação segura no Cloudflare R2
+    let r2Success = false;
+    const accountId = Deno.env.get("R2_ACCOUNT_ID") || "0d0228f378b5e4f3f63c67b4210bf3ea";
+    const bucketName = Deno.env.get("R2_BUCKET_NAME") || "ejc-fotos";
+    const accessKeyId = Deno.env.get("R2_ACCESS_KEY_ID") || "";
+    const secretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY") || "";
+
+    if (accessKeyId && secretAccessKey) {
+      try {
+        const s3Client = new AwsClient({
+          accessKeyId,
+          secretAccessKey,
+          service: "s3",
+          region: "auto"
+        });
+        const s3Url = `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${targetPath}`;
+        const s3Res = await s3Client.fetch(s3Url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": mime
+          },
+          body: fileBytes
+        });
+        if (s3Res.ok) {
+          r2Success = true;
+        } else {
+          console.warn(`[admin-write OP13] Falha upload R2: HTTP ${s3Res.status}`);
+        }
+      } catch (errR2: any) {
+        console.warn(`[admin-write OP13] Erro conexão R2:`, errR2.message);
+      }
+    }
+
+    // Gravação de contingência / espelhamento no Supabase Storage
+    let supaStorageSuccess = false;
+    try {
+      const { error: supaErr1 } = await supabase.storage
+        .from("inscritos-fotos")
+        .upload(targetPath, fileBytes, {
+          contentType: mime,
+          upsert: true
+        });
+      if (!supaErr1) {
+        supaStorageSuccess = true;
+      } else {
+        const { error: supaErr2 } = await supabase.storage
+          .from("fotos")
+          .upload(targetPath, fileBytes, {
+            contentType: mime,
+            upsert: true
+          });
+        if (!supaErr2) supaStorageSuccess = true;
+      }
+    } catch (errSupa: any) {
+      console.warn(`[admin-write OP13] Erro storage Supabase:`, errSupa.message);
+    }
+
+    if (!r2Success && !supaStorageSuccess) {
+      return {
+        status: 502,
+        body: { error: "Falha ao gravar arquivo de imagem no armazenamento seguro (R2 e Storage indisponíveis)." }
+      };
+    }
+
+    // Atualização do vínculo da foto no banco de dados
+    const { error: upInsErr } = await supabase
+      .from("inscricoes")
+      .update({ foto_caminho: targetPath })
+      .eq("id", inscricaoId);
+
+    if (upInsErr) {
+      return { status: 500, body: { error: `Falha ao vincular nova foto na tabela inscricoes: ${upInsErr.message}` } };
+    }
+
+    try {
+      await supabase.from("inscritos_dados").upsert({
+        inscricao_id: inscricaoId,
+        foto_caminho: targetPath,
+        foto_uploaded_at: new Date().toISOString(),
+        atualizado_por: authRole.label || "admin",
+        atualizado_em: new Date().toISOString()
+      }, { onConflict: "inscricao_id" });
+    } catch (_) {}
+
+    await recordAudit(
+      supabase,
+      "UPLOAD_FOTO_ADMINISTRATIVA",
+      { inscricao_id: inscricaoId, photo_path: targetPath, r2_written: r2Success, storage_written: supaStorageSuccess },
+      clientIp,
+      authRole.role,
+      isDryRun
+    );
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        message: "Foto atualizada e vinculada com sucesso.",
+        foto_caminho: targetPath
+      }
+    };
   }
 
   // Operação não reconhecida
@@ -1393,7 +1558,13 @@ serve(async (req: Request) => {
     );
   }
 
-  const action = String(body.action || body.operacao || "").trim();
+  let action = String(body.action || body.operacao || "").trim();
+  if (!action && (body.inscricao_id || body.participant_id) && (body.fileBase64 || body.file_base64 || body.base64)) {
+    action = "upload_participant_photo";
+  } else if (!action && (body.inscricao_id || body.id) && (body.nome_completo || body.tamanho_camisa || body.whatsapp || body.modelo_camisa)) {
+    action = "update_participant";
+  }
+
   if (!action) {
     return new Response(
       JSON.stringify({ error: "Parâmetro 'action' é obrigatório no payload." }),

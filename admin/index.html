@@ -5852,11 +5852,29 @@
             })
           });
 
-          const photoData = await photoRes.json();
-          if (!photoRes.ok || !photoData.success) {
-            throw new Error(photoData.error || "Falha no envio da foto.");
+          let photoData = null;
+          const photoText = await photoRes.text().catch(() => "");
+          if (photoText) {
+            try {
+              photoData = JSON.parse(photoText);
+            } catch (jsonErr) {
+              console.error("[Salvar Inscrito - Foto] Resposta não-JSON do servidor:", photoText);
+            }
+          }
+
+          if (!photoRes.ok || !photoData || !photoData.success) {
+            const errMsg = (photoData && (photoData.error || photoData.message))
+              || (photoRes.status ? `Falha ao salvar foto (HTTP ${photoRes.status}${photoRes.statusText ? ' ' + photoRes.statusText : ''})` : "Falha na comunicação com o servidor.");
+            throw new Error(errMsg);
           }
           novaFotoCaminho = photoData.foto_caminho;
+
+          // Atualiza cache em memória para exibição imediata do novo avatar
+          if (novaFotoCaminho && fotoUploadBlob) {
+            adminPhotoBlobCache.set(novaFotoCaminho, fotoUploadBlob);
+            const newObjUrl = URL.createObjectURL(fotoUploadBlob);
+            adminPhotoObjectUrlCache.set(novaFotoCaminho, newObjUrl);
+          }
         }
 
         // 2. Atualiza todos os dados do inscrito via API
@@ -5884,9 +5902,20 @@
           })
         });
 
-        const updateData = await updateRes.json();
-        if (!updateRes.ok || !updateData.success) {
-          throw new Error(updateData.error || "Falha ao salvar dados complementares.");
+        let updateData = null;
+        const updateText = await updateRes.text().catch(() => "");
+        if (updateText) {
+          try {
+            updateData = JSON.parse(updateText);
+          } catch (jsonErr) {
+            console.error("[Salvar Inscrito - Dados] Resposta não-JSON do servidor:", updateText);
+          }
+        }
+
+        if (!updateRes.ok || !updateData || !updateData.success) {
+          const errMsg = (updateData && (updateData.error || updateData.message))
+            || (updateRes.status ? `Falha ao salvar dados complementares (HTTP ${updateRes.status}${updateRes.statusText ? ' ' + updateRes.statusText : ''})` : "Falha ao salvar dados complementares.");
+          throw new Error(errMsg);
         }
 
         if (fb) {
