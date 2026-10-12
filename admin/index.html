@@ -4709,6 +4709,7 @@
     let inscritoModalAtual = null;
     let fotoUploadBase64 = null;
     let fotoUploadMime = null;
+    let fotoUploadBlob = null;
 
     const SUB_CONFIG_FRONT = {
       verde: { nome: "Verde", cor: "#24a764", rgb: [36, 167, 100], coordenadores: "Abraão e Sara" },
@@ -5660,6 +5661,7 @@
       inscritoModalAtual = item;
       fotoUploadBase64 = null;
       fotoUploadMime = null;
+      fotoUploadBlob = null;
 
       const modal = document.getElementById("modalInscritoSub");
       document.getElementById("modalInscritoNome").textContent = item.nome_completo || "Participante";
@@ -5760,6 +5762,9 @@
     function fecharModalInscrito() {
       const modal = document.getElementById("modalInscritoSub");
       if (modal && typeof modal.close === "function") modal.close();
+      fotoUploadBase64 = null;
+      fotoUploadMime = null;
+      fotoUploadBlob = null;
     }
 
     const modalInscritoEl = document.getElementById("modalInscritoSub");
@@ -5770,14 +5775,24 @@
     }
 
     function handleFotoSelecionada(input) {
-      if (!input.files || !input.files[0]) return;
+      if (!input.files || !input.files[0]) {
+        fotoUploadBlob = null;
+        fotoUploadBase64 = null;
+        fotoUploadMime = null;
+        return;
+      }
       const file = input.files[0];
 
       if (file.size > 5 * 1024 * 1024) {
         alert("A foto selecionada excede o limite máximo permitido de 5MB.");
         input.value = "";
+        fotoUploadBlob = null;
+        fotoUploadBase64 = null;
+        fotoUploadMime = null;
         return;
       }
+
+      fotoUploadBlob = file;
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -5870,10 +5885,15 @@
           novaFotoCaminho = photoData.foto_caminho;
 
           // Atualiza cache em memória para exibição imediata do novo avatar
-          if (novaFotoCaminho && fotoUploadBlob) {
-            adminPhotoBlobCache.set(novaFotoCaminho, fotoUploadBlob);
-            const newObjUrl = URL.createObjectURL(fotoUploadBlob);
-            adminPhotoObjectUrlCache.set(novaFotoCaminho, newObjUrl);
+          if (novaFotoCaminho) {
+            const blobToCache = (typeof fotoUploadBlob !== "undefined" && fotoUploadBlob) ? fotoUploadBlob : null;
+            if (blobToCache) {
+              adminPhotoBlobCache.set(novaFotoCaminho, blobToCache);
+              try {
+                const newObjUrl = URL.createObjectURL(blobToCache);
+                adminPhotoObjectUrlCache.set(novaFotoCaminho, newObjUrl);
+              } catch (_) {}
+            }
           }
         }
 
