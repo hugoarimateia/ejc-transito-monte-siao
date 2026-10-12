@@ -1725,202 +1725,219 @@ module.exports = async (req, res) => {
     }
 
     // --------------------------------------------------------------------------
-    // PROCESSAMENTO CARTÃO DE CRÉDITO REAL COM MERCADO PAGO CHECKOUT PRO
+    // PROCESSAMENTO CARTÃO DE CRÉDITO (CHECKOUT TRANSPARENTE OFICIAL)
     // --------------------------------------------------------------------------
     if (metodoFinal === "credit_card" || metodoFinal === "credit_card_pro") {
       const activeSettings = (activeData && activeData.settings) ? activeData.settings : (activeData || {});
       const cardMaxInst = Number(activeSettings.card_max_installments || activeSettings.max_parcelas || 6);
+      const valorFinalCobranca = valorNumerico;
 
-      // 1. Cálculo protegido e transparente do valor oficial
-      const valorFinalCobranca = valorNumerico; // base oficial já validada com lote/desconto
+      console.log(`[CHECKOUT_CARD_START] TXID: ${txid}, Valor: R$ ${valorFinalCobranca.toFixed(2)}, Sub: ${subFinal || "Geral"}, MaxInst: ${cardMaxInst}`);
 
-      console.log(`[CHECKOUT_PRO_CREATE_START] TXID: ${txid}, Valor: R$ ${valorFinalCobranca.toFixed(2)}, Sub: ${subFinal || "Geral"}, MaxParcelas: ${cardMaxInst}`);
+      // Validação estrita do token gerado pelo Card Payment Brick (Zero fallback para login externo)
+      const cardToken = (token || cartao_token);
+      if (!cardToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Token do cartão não fornecido. O formulário seguro do cartão deve ser preenchido para autorização direta.",
+          code: "CARD_TOKEN_REQUIRED"
+        });
+      }
 
-      if (mercadoPago.isConfigured()) {
-        try {
-          const descricaoCob = tipo === "inscricao" 
-            ? `Inscrição EJC Trânsito ${loteAtual} (${subFinal || "Geral"})` 
-            : "Contribuição EJC Trânsito";
+      if (!mercadoPago.isConfigured()) {
+        return res.status(503).json({
+          success: false,
+          error: "MERCADOPAGO_ACCESS_TOKEN não está configurado."
+        });
+      }
 
-          // Se recebemos token direto de cartão (Card Brick / Checkout Transparente):
-          const cardToken = (token || cartao_token);
-          if (cardToken) {
-            console.log(`[PROCESSAR_CARTAO_MP] Processando cobrança direta com token para TXID ${txid}...`);
-            const mpCardRes = await mercadoPago.criarPagamentoCartao({
-              token: cardToken,
-              transaction_amount: valorFinalCobranca,
-              installments: Math.max(1, parseInt(String(installments || parcelas || 1), 10) || 1),
-              payment_method_id: payment_method_id ? String(payment_method_id) : undefined,
-              issuer_id: issuer_id ? String(issuer_id) : undefined,
-              payer: {
-                email: String(email).trim().toLowerCase(),
-                identification: (cpf || req.body?.payer?.identification?.number)
-                  ? { type: "CPF", number: String(cpf || req.body?.payer?.identification?.number).replace(/\D/g, "") }
-                  : undefined
-              },
-              txid: txid,
-              description: descricaoCob,
-              notification_url: getWebhookNotificationUrl()
-            });
+      const rawParcelas = Math.max(1, parseInt(String(installments || parcelas || 1), 10) || 1);
+      const parcelasFinal = Math.min(rawParcelas, cardMaxInst);
+      const cleanCpf = (cpf || req.body?.payer?.identification?.number)
+        ? String(cpf || req.body?.payer?.identification?.number).replace(/\D/g, "")
+        : null;
 
-            const isCardApproved = mpCardRes.status === "approved";
-            if (isCardApproved) {
-              await confirmarPagamentoResiliente({
-                txid: txid,
-                gateway: "mercadopago_credit_card",
-                payload: mpCardRes.raw || mpCardRes,
-                executado_por: "card_brick"
-              });
-            } else {
-              await persistirTransacaoSupabase({
-                txid: txid,
-                nome_pagador: nomeFinal,
-                email: String(email).trim().toLowerCase(),
-                whatsapp_pagador: whatsapp ? String(whatsapp) : null,
-                cpf_pagador: (cpf || req.body?.payer?.identification?.number) ? String(cpf || req.body?.payer?.identification?.number).replace(/\D/g, "") : null,
-                valor: valorFinalCobranca,
-                metodo: "credit_card",
-                parcelas: mpCardRes.installments || 1,
-                cartao_ultimos_digitos: mpCardRes.card?.last_four_digits || null,
-                cartao_bandeira: mpCardRes.payment_method_id || null,
-                status: mpCardRes.status,
-                tipo: tipo ? String(tipo) : "inscricao",
-                inscricao_id: safeUuidOrNull(inscricao_id),
-                metadata: {
-                  payment_id: mpCardRes.id,
-                  external_reference: txid,
-                  status_detail: mpCardRes.status_detail,
-                  sub: subFinal,
-                  lote: loteAtual
-                }
-              });
-            }
-
-            return res.status(200).json({
-              success: true,
-              metodo: "credit_card",
-              provedor: "mercadopago_direct_card",
-              txid: txid,
-              payment_id: mpCardRes.id,
-              status: mpCardRes.status,
-              status_detail: mpCardRes.status_detail,
-              mensagem_usuario: getFriendlyCardErrorMessage(mpCardRes.status_detail, mpCardRes.status),
-              valor: valorFinalCobranca
-            });
+      // 1. Gravação prévia da tentativa em public.pagamentos (status: processing)
+      // Garante de forma atômica que a linha da transação existe no banco antes da chamada ao Mercado Pago,
+      // viabilizando a reconciliação e confirmação imediata via RPC confirmar_pagamento_unificado.
+      try {
+        await persistirTransacaoSupabase({
+          txid: txid,
+          nome_pagador: nomeFinal,
+          email: String(email).trim().toLowerCase(),
+          whatsapp_pagador: whatsapp ? String(whatsapp) : null,
+          cpf_pagador: cleanCpf,
+          valor: valorFinalCobranca,
+          metodo: "credit_card",
+          parcelas: parcelasFinal,
+          cartao_ultimos_digitos: cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : null,
+          cartao_bandeira: payment_method_id ? String(payment_method_id).slice(0, 30) : (cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : null),
+          status: "processing",
+          tipo: tipo ? String(tipo) : "inscricao",
+          inscricao_id: safeUuidOrNull(inscricao_id),
+          metadata: {
+            order_id: orderId,
+            external_reference: txid,
+            sub: subFinal,
+            lote: loteAtual,
+            provedor: "mercadopago_direct_card",
+            tentativa_iniciada_em: new Date().toISOString()
           }
+        });
+      } catch (ePersistPre) {
+        console.warn(`[CHECKOUT_CARD_PRE_PERSIST_WARN] TXID: ${txid}`, ePersistPre);
+      }
 
-          const publicBase = getPublicBaseUrl();
-          const prefResult = await mercadoPago.criarPreferenciaCheckoutPro({
-            txid: txid,
-            valor: valorFinalCobranca,
-            nome: nomeFinal,
-            email: email,
-            telefone: whatsapp,
-            descricao: descricaoCob,
-            maxParcelas: cardMaxInst,
-            notificationUrl: getWebhookNotificationUrl(),
-            backUrls: {
-              success: `${publicBase}/checkout.html?retorno_mp=success&txid=${encodeURIComponent(txid)}`,
-              pending: `${publicBase}/checkout.html?retorno_mp=pending&txid=${encodeURIComponent(txid)}`,
-              failure: `${publicBase}/checkout.html?retorno_mp=failure&txid=${encodeURIComponent(txid)}`
-            }
-          });
+      try {
+        const descricaoCob = tipo === "inscricao" 
+          ? `Inscrição EJC Trânsito ${loteAtual} (${subFinal || "Geral"})` 
+          : "Contribuição EJC Trânsito";
 
-          console.log(`[CHECKOUT_PRO_CREATE_SUCCESS] TXID: ${txid}, Preference ID: ${prefResult.id}`);
+        console.log(`[PROCESSAR_CARTAO_MP] Enviando cobrança direta com token para TXID ${txid}...`);
+        const mpCardRes = await mercadoPago.criarPagamentoCartao({
+          token: cardToken,
+          transaction_amount: valorFinalCobranca,
+          installments: parcelasFinal,
+          payment_method_id: payment_method_id ? String(payment_method_id) : undefined,
+          issuer_id: issuer_id ? String(issuer_id) : undefined,
+          payer: {
+            email: String(email).trim().toLowerCase(),
+            identification: cleanCpf
+              ? { type: "CPF", number: cleanCpf }
+              : undefined
+          },
+          txid: txid,
+          description: descricaoCob,
+          notification_url: getWebhookNotificationUrl()
+        });
 
-          // 2. Persistência da intenção no Supabase com external_reference vinculando a inscrição
-          const dbPersistRes = await persistirTransacaoSupabase({
-            txid: txid,
-            nome_pagador: nomeFinal,
-            email: email.trim().toLowerCase(),
-            whatsapp_pagador: whatsapp || null,
-            cpf_pagador: cpf || null,
-            valor: valorFinalCobranca,
-            metodo: "credit_card",
-            parcelas: 1, // Definido pelo cliente diretamente no ambiente seguro do Mercado Pago
-            cartao_ultimos_digitos: null,
-            cartao_bandeira: "Cartão",
-            status: "pending",
-            tipo: tipo || "inscricao",
-            expiracao: new Date(Date.now() + 86400000).toISOString(),
-            inscricao_id: safeUuidOrNull(inscricao_id),
-            metadata: {
-              order_id: orderId,
-              preference_id: prefResult.id,
-              init_point: prefResult.init_point,
-              checkout_url: prefResult.init_point,
-              external_reference: txid,
-              sub: subFinal,
-              lote: loteAtual,
-              provedor: "mercadopago_checkout_pro",
-              inscricao_id: safeUuidOrNull(inscricao_id)
-            }
-          });
+        const cardLast4 = mpCardRes.card?.last_four_digits || (cartao_ultimos_digitos ? String(cartao_ultimos_digitos).slice(-4) : null);
+        const cardBandeira = mpCardRes.payment_method_id || (cartao_bandeira ? String(cartao_bandeira).slice(0, 30) : "credit_card");
+        const effectiveInstallments = mpCardRes.installments || parcelasFinal;
 
-          // 3. Salva no store local para redundância
-          try {
-            const localData = settingsStore.loadLocalStore();
-            if (!Array.isArray(localData.pagamentos)) localData.pagamentos = [];
-            localData.pagamentos.unshift({
-              txid: txid,
-              order_id: orderId,
-              external_reference: txid,
-              nome_pagador: nomeFinal,
-              email: email.trim().toLowerCase(),
-              whatsapp_pagador: whatsapp || null,
-              valor: valorFinalCobranca,
-              metodo: "credit_card",
-              status: "pending",
-              tipo: tipo || "inscricao",
-              parcelas: 1,
-              inscricao_id: safeUuidOrNull(inscricao_id),
-              sub: subFinal,
-              metadata: {
-                order_id: orderId,
-                preference_id: prefResult.id,
-                init_point: prefResult.init_point,
-                provedor: "mercadopago_checkout_pro",
-                sub: subFinal,
-                lote: loteAtual
-              },
-              pago_em: null,
-              criado_em: new Date().toISOString()
-            });
-            if (localData.pagamentos.length > 200) localData.pagamentos.pop();
-            settingsStore.saveLocalStore(localData);
-          } catch (localErr) {
-            console.warn("[Checkout Process] Erro ao salvar Cartão localmente:", localErr.message);
+        // 2. Atualiza a transação com os metadados oficiais retornados pelo gateway
+        await persistirTransacaoSupabase({
+          txid: txid,
+          nome_pagador: nomeFinal,
+          email: String(email).trim().toLowerCase(),
+          whatsapp_pagador: whatsapp ? String(whatsapp) : null,
+          cpf_pagador: cleanCpf,
+          valor: valorFinalCobranca,
+          metodo: "credit_card",
+          parcelas: effectiveInstallments,
+          cartao_ultimos_digitos: cardLast4,
+          cartao_bandeira: cardBandeira,
+          status: mpCardRes.status,
+          tipo: tipo ? String(tipo) : "inscricao",
+          inscricao_id: safeUuidOrNull(inscricao_id),
+          metadata: {
+            payment_id: mpCardRes.id,
+            order_id: orderId,
+            external_reference: txid,
+            status_detail: mpCardRes.status_detail,
+            sub: subFinal,
+            lote: loteAtual,
+            provedor: "mercadopago_direct_card"
           }
+        });
 
-          // 4. Retorna a URL oficial de Checkout Pro ao frontend
+        // 3. Reconciliação e Confirmação de acordo com o status
+        if (mpCardRes.status === "approved") {
+          console.log(`[CHECKOUT_CARD_APPROVED] TXID: ${txid}, MP ID: ${mpCardRes.id}. Confirmando inscrição de forma resiliente...`);
+          const confirmRes = await confirmarPagamentoResiliente({
+            txid: txid,
+            gateway: "mercadopago_credit_card",
+            payload: mpCardRes.raw || mpCardRes,
+            executado_por: "card_brick"
+          });
+          console.log(`[CHECKOUT_CARD_APPROVED] Resultado confirmação:`, confirmRes.confirmedOnDatabase);
+
           return res.status(200).json({
             success: true,
             metodo: "credit_card",
-            provedor: "mercadopago_checkout_pro",
+            provedor: "mercadopago_direct_card",
             txid: txid,
+            payment_id: mpCardRes.id,
             order_id: orderId,
-            external_reference: txid,
-            preference_id: prefResult.id,
-            init_point: prefResult.init_point,
-            checkout_url: prefResult.init_point,
-            sandbox_init_point: prefResult.sandbox_init_point,
+            status: "approved",
+            status_detail: mpCardRes.status_detail,
+            mensagem_usuario: getFriendlyCardErrorMessage(mpCardRes.status_detail, mpCardRes.status),
             valor: valorFinalCobranca,
-            status: "pending",
-            db_persist: dbPersistRes
-          });
-
-        } catch (mpErr) {
-          console.error(`[CHECKOUT_PRO_CREATE_ERROR] TXID: ${txid}, Erro:`, mpErr.message);
-          return res.status(502).json({
-            success: false,
-            error: "Não foi possível iniciar o ambiente seguro do Mercado Pago neste momento. Por favor, tente novamente ou utilize o Pix Instantâneo.",
-            detail: mpErr.message
+            cartao_ultimos_digitos: cardLast4,
+            cartao_bandeira: cardBandeira,
+            parcelas: effectiveInstallments
           });
         }
-      } else {
-        return res.status(503).json({
+
+        if (mpCardRes.status === "in_process" || mpCardRes.status === "pending") {
+          console.log(`[CHECKOUT_CARD_IN_PROCESS] TXID: ${txid}, MP ID: ${mpCardRes.id}, StatusDetail: ${mpCardRes.status_detail}`);
+          return res.status(200).json({
+            success: true,
+            metodo: "credit_card",
+            provedor: "mercadopago_direct_card",
+            txid: txid,
+            payment_id: mpCardRes.id,
+            order_id: orderId,
+            status: mpCardRes.status,
+            status_detail: mpCardRes.status_detail,
+            mensagem_usuario: getFriendlyCardErrorMessage(mpCardRes.status_detail, mpCardRes.status),
+            valor: valorFinalCobranca,
+            cartao_ultimos_digitos: cardLast4,
+            cartao_bandeira: cardBandeira,
+            parcelas: effectiveInstallments
+          });
+        }
+
+        // Caso rejeitado pela operadora / risco:
+        console.warn(`[CHECKOUT_CARD_REJECTED] TXID: ${txid}, MP ID: ${mpCardRes.id}, StatusDetail: ${mpCardRes.status_detail}`);
+        const msgAmigavel = getFriendlyCardErrorMessage(mpCardRes.status_detail, mpCardRes.status) || "O pagamento não foi aprovado pela operadora do cartão.";
+        return res.status(200).json({
           success: false,
-          error: "MERCADOPAGO_ACCESS_TOKEN não está configurado na Vercel."
+          metodo: "credit_card",
+          provedor: "mercadopago_direct_card",
+          txid: txid,
+          payment_id: mpCardRes.id,
+          status: mpCardRes.status,
+          status_detail: mpCardRes.status_detail,
+          mensagem_usuario: msgAmigavel,
+          error: msgAmigavel,
+          valor: valorFinalCobranca
+        });
+
+      } catch (mpErr) {
+        const errMsg = mpErr instanceof Error ? mpErr.message : String(mpErr);
+        console.error(`[CHECKOUT_CARTAO_ERROR] TXID: ${txid}, Erro MP:`, errMsg);
+
+        // Registra a recusa / erro no banco para auditoria
+        await persistirTransacaoSupabase({
+          txid: txid,
+          nome_pagador: nomeFinal,
+          email: String(email).trim().toLowerCase(),
+          whatsapp_pagador: whatsapp ? String(whatsapp) : null,
+          cpf_pagador: cleanCpf,
+          valor: valorFinalCobranca,
+          metodo: "credit_card",
+          parcelas: parcelasFinal,
+          status: "rejected",
+          tipo: tipo ? String(tipo) : "inscricao",
+          inscricao_id: safeUuidOrNull(inscricao_id),
+          metadata: {
+            order_id: orderId,
+            external_reference: txid,
+            error_details: errMsg,
+            sub: subFinal,
+            lote: loteAtual,
+            provedor: "mercadopago_direct_card"
+          }
+        }).catch(() => {});
+
+        return res.status(400).json({
+          success: false,
+          status: "rejected",
+          status_detail: "error_authorization",
+          mensagem_usuario: "Não foi possível autorizar o cartão. Verifique os dados preenchidos ou tente outro cartão.",
+          error: "Não foi possível autorizar o cartão. Verifique os dados digitados ou tente outro cartão.",
+          detail: errMsg
         });
       }
     }
