@@ -598,16 +598,98 @@ async function handleAdminAction(
       .limit(1)
       .maybeSingle();
 
-    if (pErr || !pData) {
-      return { status: 404, body: { error: "Pagamento não encontrado." } };
+    let targetPayment = pData;
+
+    if (!targetPayment) {
+      // Se não localizado em pagamentos, verifica se é um ID de inscrição válido em public.inscricoes
+      if (UUID_REGEX.test(rawId)) {
+        const { data: insData, error: insErr } = await supabase
+          .from("inscricoes")
+          .select("id, nome_completo, sub, whatsapp, email, pagamento_status, arquivado, comprovante_caminho, forma_pagamento")
+          .eq("id", rawId)
+          .maybeSingle();
+
+        if (insErr || !insData) {
+          return { status: 404, body: { error: "Pagamento ou inscrição não encontrado." } };
+        }
+
+        if (insData.arquivado === true || insData.pagamento_status === "cancelado") {
+          return {
+            status: 400,
+            body: { error: "Inscrição encontra-se cancelada ou arquivada. Não é permitido aprovar pagamento de inscrição inativa." }
+          };
+        }
+
+        if (insData.pagamento_status === "confirmado") {
+          return {
+            status: 200,
+            body: {
+              success: true,
+              status: "approved",
+              already_confirmed: true,
+              message: "Inscrição já se encontra previamente confirmada."
+            }
+          };
+        }
+
+        // Cria registro financeiro auditado na tabela pagamentos para garantir conciliação
+        const manualTxid = `MANUAL-${insData.id.replace(/-/g, "").substring(0, 10).toUpperCase()}`;
+        const newPaymentRow = {
+          txid: manualTxid,
+          inscricao_id: insData.id,
+          nome_pagador: insData.nome_completo,
+          email: insData.email || null,
+          whatsapp_pagador: insData.whatsapp || null,
+          metodo: insData.forma_pagamento || "manual_pix",
+          status: "pending",
+          valor: 0,
+          criado_em: new Date().toISOString(),
+          metadata: {
+            origem: "aprovacao_manual_inscricao",
+            operador: authRole.label,
+            comprovante_caminho: insData.comprovante_caminho || null
+          }
+        };
+
+        const { data: createdPay, error: createPayErr } = await supabase
+          .from("pagamentos")
+          .upsert(newPaymentRow, { onConflict: "txid" })
+          .select("id, status, txid, inscricao_id, valor, metodo")
+          .single();
+
+        if (createPayErr || !createdPay) {
+          // Fallback seguro: atualiza diretamente na tabela inscricoes se não puder gravar em pagamentos
+          const { error: directUpErr } = await supabase
+            .from("inscricoes")
+            .update({
+              pagamento_status: "confirmado",
+              pagamento_confirmado_em: new Date().toISOString(),
+              observacao_pagamento: `Aprovado manualmente via painel administrativo por ${authRole.label}`
+            })
+            .eq("id", insData.id);
+
+          if (directUpErr) throw directUpErr;
+
+          await recordAudit(supabase, "APROVACAO_MANUAL_INSCRICAO", { inscricao_id: insData.id, operador: authRole.label }, clientIp, authRole.role, isDryRun);
+
+          return {
+            status: 200,
+            body: { success: true, message: "Inscrição aprovada com sucesso via coordenação.", inscricao_id: insData.id }
+          };
+        }
+
+        targetPayment = createdPay;
+      } else {
+        return { status: 404, body: { error: "Pagamento não encontrado." } };
+      }
     }
 
     // Valida inscrição vinculada para verificar se não está cancelada/arquivada
-    if (pData.inscricao_id) {
+    if (targetPayment.inscricao_id) {
       const { data: insData, error: insErr } = await supabase
         .from("inscricoes")
         .select("id, pagamento_status, arquivado")
-        .eq("id", pData.inscricao_id)
+        .eq("id", targetPayment.inscricao_id)
         .maybeSingle();
 
       if (!insErr && insData) {
@@ -621,7 +703,7 @@ async function handleAdminAction(
     }
 
     // Idempotência estrita: se já aprovado/confirmado, retorna sem duplicar efeitos
-    if (pData.status === "approved" || pData.status === "confirmado") {
+    if (targetPayment.status === "approved" || targetPayment.status === "confirmado") {
       return {
         status: 200,
         body: {
@@ -645,11 +727,11 @@ async function handleAdminAction(
           role: authRole.role,
           target_resources: ["pagamentos", "inscricoes", "email_dispatches", "auditoria_transacoes"],
           details: {
-            payment_id: pData.id,
-            txid: pData.txid,
-            current_status: pData.status,
+            payment_id: targetPayment.id,
+            txid: targetPayment.txid,
+            current_status: targetPayment.status,
             target_status: "approved",
-            inscricao_id: pData.inscricao_id,
+            inscricao_id: targetPayment.inscricao_id,
             mechanism: "confirmar_pagamento_unificado_rpc",
             external_effects: "nenhum (Brevo e Mercado Pago estritamente isolados no dry-run)"
           }
@@ -659,7 +741,7 @@ async function handleAdminAction(
 
     // Executa a confirmação unificada no banco através da RPC nativa (com lock FOR UPDATE)
     const { data: rpcRes, error: rpcErr } = await supabase.rpc("confirmar_pagamento_unificado", {
-      p_txid: pData.txid,
+      p_txid: targetPayment.txid,
       p_gateway: "admin_manual",
       p_executado_por: authRole.label,
       p_payload: { aprovado_via: "admin-write", operador: authRole.label }

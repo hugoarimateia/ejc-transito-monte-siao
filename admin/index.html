@@ -2309,7 +2309,38 @@
             serverCapacities = d.capacities;
           }
           if (Array.isArray(d.pagamentos)) {
-            pagamentosData = d.pagamentos;
+            pagamentosData = d.pagamentos.slice();
+
+            // Reconciliação Visual (Etapa 9): Inscrições com comprovante ou pagamento informado sem linha em pagamentos
+            if (Array.isArray(d.inscricoes)) {
+              const linkedInscIds = new Set(pagamentosData.map(p => String(p.inscricao_id || "")).filter(Boolean));
+              const linkedPhones = new Set(pagamentosData.map(p => String(p.whatsapp_pagador || "").replace(/\D/g, "")).filter(Boolean));
+
+              d.inscricoes.forEach(ins => {
+                if (ins.arquivado) return;
+                const cleanPhone = String(ins.whatsapp || "").replace(/\D/g, "");
+                const isAlreadyLinked = linkedInscIds.has(String(ins.id)) || (cleanPhone && linkedPhones.has(cleanPhone));
+
+                if (!isAlreadyLinked && (ins.comprovante_caminho || ins.pagamento_informado || ins.pagamento_status === "informado" || ins.pagamento_status === "pendente")) {
+                  pagamentosData.push({
+                    id: `virtual_${ins.id}`,
+                    txid: `INSC-${String(ins.id).replace(/-/g, "").substring(0, 8).toUpperCase()}`,
+                    inscricao_id: ins.id,
+                    nome_pagador: ins.nome_completo,
+                    email: ins.email || "",
+                    whatsapp_pagador: ins.whatsapp || "",
+                    metodo: ins.forma_pagamento || "manual_comprovante",
+                    status: (ins.pagamento_status === "confirmado" || ins.pagamento_status === "approved") ? "approved" : (ins.comprovante_caminho ? "aguardando_analise" : (ins.pagamento_status || "pending")),
+                    valor: 0,
+                    criado_em: ins.criado_em || new Date().toISOString(),
+                    comprovante_caminho: ins.comprovante_caminho,
+                    comprovante_email_enviado: ins.pagamento_status === "confirmado",
+                    tipo: ins.comprovante_caminho ? "Comprovante Manual" : "Inscrição Pendente",
+                    is_unlinked_inscricao: true
+                  });
+                }
+              });
+            }
           }
           if (Array.isArray(d.auditoria)) {
             auditoriaData = d.auditoria;
@@ -2655,9 +2686,14 @@
           <td><span class="status-badge status-recusado">${item.pagamento_status || 'Cancelado'}</span></td>
           <td style="max-width: 250px; font-size: .82rem; color: var(--muted); word-break: break-word;">${motivo}</td>
           <td>
-            <span class="badge-vaga-liberada" style="color: #dc2626; border-color: rgba(220, 38, 38, 0.25); background: rgba(220, 38, 38, 0.1);">
-              <i class="fa-solid fa-ban"></i> Não ocupa vaga
-            </span>
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+              <span class="badge-vaga-liberada" style="color: #dc2626; border-color: rgba(220, 38, 38, 0.25); background: rgba(220, 38, 38, 0.1); font-size: .72rem; padding: 2px 6px;">
+                <i class="fa-solid fa-ban"></i> Não ocupa vaga
+              </span>
+              <button type="button" class="action-btn" onclick="desarquivarInscricao('${item.id}', '${item.nome_completo ? item.nome_completo.replace(/'/g, "\\'") : ''}', '${displaySub}')" title="Desarquivar / Restaurar Inscrição" style="background:#ecfdf5; color:#047857; border:1px solid #10b981; font-size:.76rem; font-weight:700; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                <i class="fa-solid fa-box-open"></i> Desarquivar
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -2939,11 +2975,89 @@
             </button>
           </div>
         ` : ''}
+        ${(item.comprovante_caminho || item.pagamento_informado || item.pagamento_status === 'informado' || item.pagamento_status === 'pendente') && item.pagamento_status !== 'confirmado' && item.pagamento_status !== 'approved' ? `
+          <div style="margin-top: 12px;">
+            <button type="button" class="button button-primary" onclick="aprovarInscricaoComprovanteDirect('${item.id}', '${item.nome_completo ? item.nome_completo.replace(/'/g, "\\'") : ''}')" style="font-size: .84rem; padding: 7px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: #059669; color: #fff; border: none; border-radius: 6px; font-weight: 700;">
+              <i class="fa-solid fa-check"></i> Aprovar Pagamento Desta Inscrição
+            </button>
+          </div>
+        ` : ''}
         <div style="margin-top: 14px; padding: 10px 12px; background: rgba(8, 125, 249, 0.06); border-radius: 8px; border: 1px dashed var(--border-color); font-size: .8rem; color: var(--muted);">
-          <i class="fa-solid fa-lock" style="color: var(--blue);"></i> <strong>Gestão Financeira:</strong> A aprovação e conferência de pagamentos foram centralizadas exclusivamente na aba <a href="#pagamentos" onclick="document.getElementById('detailModal').close(); ativarAba('pagamentos');" style="color: var(--blue); font-weight: 700; text-decoration: underline;">Pagamentos e Checkout</a>.
+          <i class="fa-solid fa-lock" style="color: var(--blue);"></i> <strong>Gestão Financeira:</strong> A aprovação e conferência de pagamentos foram centralizadas na aba <a href="#pagamentos" onclick="document.getElementById('detailModal').close(); ativarAba('pagamentos');" style="color: var(--blue); font-weight: 700; text-decoration: underline;">Pagamentos e Checkout</a>.
         </div>
       `;
       document.getElementById("detailModal").showModal();
+    };
+
+    window.aprovarInscricaoComprovanteDirect = async function(inscricaoId, nome) {
+      if (!confirm(`Deseja aprovar e confirmar oficialmente o pagamento da inscrição de ${nome || 'participante'}?`)) return;
+
+      const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+      try {
+        const res = await fetch("/api/admin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": token,
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: "approve_payment",
+            inscricao_id: inscricaoId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Falha ao aprovar pagamento da inscrição.");
+        }
+
+        alert(`✓ Pagamento de ${nome || 'participante'} aprovado e confirmado com sucesso!`);
+        try { document.getElementById("detailModal").close(); } catch (_) {}
+        carregarDadosAdmin();
+      } catch (err) {
+        console.error("[Aprovar Inscrição]", err);
+        alert(`Erro ao aprovar: ${err.message}`);
+      }
+    };
+
+    window.desarquivarInscricao = async function(id, nome, sub) {
+      const motivo = prompt(`Informe o motivo do desarquivamento da inscrição de ${nome || 'participante'} (Sub ${sub || ''}):`, "Restauração autorizada pela coordenação");
+      if (motivo === null) return;
+      if (!motivo.trim()) {
+        alert("O motivo do desarquivamento é obrigatório para fins de auditoria.");
+        return;
+      }
+
+      if (!confirm(`Confirma o desarquivamento de ${nome || 'participante'} para a Sub ${sub}? A vaga será revalidada contra a capacidade oficial.`)) return;
+
+      const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || "";
+      try {
+        const res = await fetch("/api/admin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": token,
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: "desarquivar_inscricao",
+            id: id,
+            motivo: motivo.trim()
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Falha ao desarquivar inscrição.");
+        }
+
+        alert(`✓ Inscrição de ${nome || 'participante'} desarquivada com sucesso!`);
+        carregarDadosAdmin();
+      } catch (err) {
+        console.error("[Desarquivar Inscrição]", err);
+        alert(`Erro ao desarquivar: ${err.message}`);
+      }
     };
 
     window.confirmarPagamentoInscricao = function() {
@@ -3110,7 +3224,7 @@
 
       // Chama API administrativa central no backend para disparar RPC e e-mail
       try {
-        const res = await fetch("/api/payment-settings", {
+        const res = await fetch("/api/admin", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3119,17 +3233,19 @@
           },
           body: JSON.stringify({
             action: "approve_payment",
-            identificador: txid,
+            txid: txid,
+            payment_id: p?.id,
+            inscricao_id: p?.inscricao_id || undefined,
             usuario: currentUserRole || "admin_coordenacao",
             admin_pass: currentAdminPass
           })
         });
         const apiData = await res.json();
-        if (apiData?.emailDispatched) {
-          if (p) p.comprovante_email_enviado = true;
+        if (apiData?.success && p) {
+          p.comprovante_email_enviado = true;
         }
       } catch (errApi) {
-        console.warn("[Admin] Falha ao acionar API payment-settings:", errApi);
+        console.warn("[Admin] Falha ao acionar API admin approve_payment:", errApi);
       }
 
       // Aciona reconciliação unificada no backend (/api/checkout-process)
@@ -3160,7 +3276,7 @@
         }
       }
 
-      renderizarTudo();
+      carregarDadosAdmin();
       alert("✓ Transação aprovada e comprovante despachado com sucesso!");
     };
 

@@ -213,7 +213,7 @@ const ADMIN_EDGE_ADAPTER = `
           ? JSON.parse(init.body)
           : {};
 
-        if (bodyObj.action === "login") {
+        if (bodyObj.action === "login" || bodyObj.action === "get_comprovante_url" || bodyObj.action === "get_comprovante") {
           return originalFetch(ADMIN_READ_URL, init);
         } else if (bodyObj.action) {
           return originalFetch(ADMIN_WRITE_URL, init);

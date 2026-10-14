@@ -175,14 +175,36 @@ BEGIN
       AND (arquivado IS NULL OR arquivado = false);
 
     IF v_existe_nome > 0 THEN
-        RETURN json_build_object('allowed', false, 'message', 'Este nome já possui uma inscrição realizada.');
+        RETURN json_build_object(
+            'allowed', false,
+            'conflict', 'nome',
+            'message', 'Este nome já possui uma inscrição realizada.'
+        );
+    END IF;
+
+    -- Validação de unicidade por WhatsApp
+    IF p_whatsapp IS NOT NULL AND TRIM(p_whatsapp) <> '' THEN
+        SELECT COUNT(*) INTO v_existe_whatsapp FROM public.inscricoes
+        WHERE whatsapp = TRIM(p_whatsapp)
+           OR (
+               length(regexp_replace(p_whatsapp, '\D', '', 'g')) >= 10
+               AND regexp_replace(whatsapp, '\D', '', 'g') = regexp_replace(p_whatsapp, '\D', '', 'g')
+           );
+
+        IF v_existe_whatsapp > 0 THEN
+            RETURN json_build_object(
+                'allowed', false,
+                'conflict', 'whatsapp',
+                'message', 'Já existe uma inscrição realizada com este número de WhatsApp.'
+            );
+        END IF;
     END IF;
 
     RETURN json_build_object('allowed', true, 'message', 'Inscrição liberada.');
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.pode_realizar_inscricao(text, text) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.pode_realizar_inscricao(text, text, text) TO anon, authenticated, service_role;
 
 -- 6. FUNÇÃO RPC: REALIZAR INSCRIÇÃO COM LINK PROTEGIDO
 CREATE OR REPLACE FUNCTION public.realizar_inscricao_com_link(
@@ -227,6 +249,37 @@ BEGIN
         RAISE EXCEPTION 'limite de vagas atingido para este Sub (% vagas preenchidas)', v_capacidade;
     END IF;
 
+    -- Verificação prévia de nome
+    IF EXISTS (
+        SELECT 1
+        FROM public.inscricoes
+        WHERE LOWER(TRIM(nome_completo)) = LOWER(TRIM(p_nome_completo))
+          AND (arquivado IS NULL OR arquivado = false)
+    ) THEN
+        RETURN json_build_object(
+            'success', false,
+            'conflict', 'nome',
+            'message', 'Este nome já possui uma inscrição realizada.'
+        );
+    END IF;
+
+    -- Verificação prévia de whatsapp
+    IF EXISTS (
+        SELECT 1
+        FROM public.inscricoes
+        WHERE whatsapp = TRIM(p_whatsapp)
+           OR (
+               length(regexp_replace(p_whatsapp, '\D', '', 'g')) >= 10
+               AND regexp_replace(whatsapp, '\D', '', 'g') = regexp_replace(p_whatsapp, '\D', '', 'g')
+           )
+    ) THEN
+        RETURN json_build_object(
+            'success', false,
+            'conflict', 'whatsapp',
+            'message', 'Já existe uma inscrição realizada com este número de WhatsApp.'
+        );
+    END IF;
+
     -- Geração segura de token com fallback
     BEGIN
         v_token := encode(extensions.gen_random_bytes(24), 'hex');
@@ -234,21 +287,44 @@ BEGIN
         v_token := md5(random()::text || clock_timestamp()::text) || md5(random()::text);
     END;
 
-    INSERT INTO public.inscricoes (
-        nome_completo, sub, whatsapp, modelo_camisa, tamanho_camisa,
-        quer_camisa_adicional, quantidade_camisas_adicionais,
-        modelo_camisa_adicional, tamanho_camisa_adicional,
-        talento, foto_caminho, comprovante_caminho,
-        forma_pagamento, pagamento_informado, pagamento_status,
-        justificativa_pagamento, observacao_pagamento, token_acesso
-    ) VALUES (
-        p_nome_completo, p_sub, p_whatsapp, p_modelo_camisa, p_tamanho_camisa,
-        p_quer_camisa_adicional, p_quantidade_camisas_adicionais,
-        p_modelo_camisa_adicional, p_tamanho_camisa_adicional,
-        p_talento, p_foto_caminho, p_comprovante_caminho,
-        p_forma_pagamento, p_pagamento_informado, p_pagamento_status,
-        p_justificativa_pagamento, p_observacao_pagamento, v_token
-    ) RETURNING id INTO v_inscricao_id;
+    BEGIN
+        INSERT INTO public.inscricoes (
+            nome_completo, sub, whatsapp, modelo_camisa, tamanho_camisa,
+            quer_camisa_adicional, quantidade_camisas_adicionais,
+            modelo_camisa_adicional, tamanho_camisa_adicional,
+            talento, foto_caminho, comprovante_caminho,
+            forma_pagamento, pagamento_informado, pagamento_status,
+            justificativa_pagamento, observacao_pagamento, token_acesso
+        ) VALUES (
+            p_nome_completo, p_sub, p_whatsapp, p_modelo_camisa, p_tamanho_camisa,
+            p_quer_camisa_adicional, p_quantidade_camisas_adicionais,
+            p_modelo_camisa_adicional, p_tamanho_camisa_adicional,
+            p_talento, p_foto_caminho, p_comprovante_caminho,
+            p_forma_pagamento, p_pagamento_informado, p_pagamento_status,
+            p_justificativa_pagamento, p_observacao_pagamento, v_token
+        ) RETURNING id INTO v_inscricao_id;
+    EXCEPTION
+        WHEN unique_violation THEN
+            IF SQLERRM ILIKE '%inscricoes_whatsapp_unique%' THEN
+                RETURN json_build_object(
+                    'success', false,
+                    'conflict', 'whatsapp',
+                    'message', 'Já existe uma inscrição realizada com este número de WhatsApp.'
+                );
+            ELSIF SQLERRM ILIKE '%inscricao_unica_por_nome%' THEN
+                RETURN json_build_object(
+                    'success', false,
+                    'conflict', 'nome',
+                    'message', 'Este nome já possui uma inscrição realizada.'
+                );
+            ELSE
+                RETURN json_build_object(
+                    'success', false,
+                    'conflict', 'unique',
+                    'message', 'Já existe um cadastro com estes dados identificadores.'
+                );
+            END IF;
+    END;
 
     RETURN json_build_object(
         'success', true,
@@ -272,6 +348,15 @@ DECLARE
 BEGIN
     IF NEW.arquivado THEN
         RETURN NEW;
+    END IF;
+
+    -- REGRA DE OCUPAÇÃO LÍQUIDA:
+    -- Se for um UPDATE e o participante já estiver ativo no mesmo Sub,
+    -- a alteração de dados cadastrais não consome uma nova vaga (ocupação líquida = 0).
+    IF TG_OP = 'UPDATE' THEN
+        IF (OLD.arquivado IS NULL OR OLD.arquivado = false) AND OLD.sub = NEW.sub THEN
+            RETURN NEW;
+        END IF;
     END IF;
 
     SELECT capacidade

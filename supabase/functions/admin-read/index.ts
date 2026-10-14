@@ -305,8 +305,28 @@ serve(async (req: Request) => {
     let presignedUrl = "";
     let resolutionSource = "";
 
-    // Tentativa 1: Presigned GET S3 URL para o bucket privado ejc-comprovantes
-    if (accessKeyId && secretAccessKey) {
+    // Tentativa 1: Supabase Storage bucket 'fotos' (onde os comprovantes foram historicamente gravados)
+    if (rawPath.startsWith("comprovantes/")) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://guppedddwnuvluhiaaas.supabase.co";
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+        const { data: signedData, error: signedErr } = await supabaseClient.storage
+          .from("fotos")
+          .createSignedUrl(rawPath, expiresIn);
+
+        if (signedData?.signedUrl && !signedErr) {
+          presignedUrl = signedData.signedUrl;
+          resolutionSource = "supabase_storage_fotos_signed";
+        }
+      } catch (sbErr) {
+        console.warn("[admin-read] Falha ao tentar Supabase Storage fotos:", sbErr);
+      }
+    }
+
+    // Tentativa 2: Presigned GET S3 URL para o bucket privado ejc-comprovantes no Cloudflare R2
+    if (!presignedUrl && accessKeyId && secretAccessKey) {
       try {
         const s3Client = new AwsClient({
           accessKeyId,
@@ -342,17 +362,14 @@ serve(async (req: Request) => {
           new Request(s3Url, { method: "GET" }),
           { aws: { signQuery: true } }
         );
-        const candidateUrl = signedReq.url.toString();
-
-        // Define a URL pré-assinada do R2 privado como resolução primária (Alternative B)
-        presignedUrl = candidateUrl;
+        presignedUrl = signedReq.url.toString();
         resolutionSource = "r2_private_presigned";
       } catch (err) {
         console.error("Erro ao gerar URL R2 presigned:", err);
       }
     }
 
-    // Fallback garantido: Supabase Storage bucket 'fotos' com URL assinada temporária
+    // Tentativa 3: Fallback adicional Supabase Storage caso a chave não começasse com comprovantes/
     if (!presignedUrl) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://guppedddwnuvluhiaaas.supabase.co";
@@ -363,11 +380,9 @@ serve(async (req: Request) => {
           .from("fotos")
           .createSignedUrl(rawPath, expiresIn);
 
-        if (signedData?.signedUrl) {
+        if (signedData?.signedUrl && !signedErr) {
           presignedUrl = signedData.signedUrl;
           resolutionSource = "supabase_storage_signed_fallback";
-        } else if (signedErr) {
-          console.error("Erro no fallback Supabase Storage:", signedErr.message);
         }
       } catch (err) {
         console.error("Exceção no fallback Supabase Storage:", err);
