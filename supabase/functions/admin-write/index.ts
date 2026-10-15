@@ -1430,6 +1430,17 @@ async function handleAdminAction(
       }
     } catch (_) {}
 
+    const countsConfirmadosMap: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+    try {
+      const { data: rpcPagos } = await supabase.rpc("contagem_inscricoes_pagas_por_sub");
+      if (Array.isArray(rpcPagos)) {
+        rpcPagos.forEach((r: any) => {
+          const s = normalizarSub(r.sub);
+          if (s && countsConfirmadosMap[s] !== undefined) countsConfirmadosMap[s] = Number(r.total || 0);
+        });
+      }
+    } catch (_) {}
+
     const summary = {
       total_solicitado: targetIds.length,
       restaurados: results.filter(r => r.status === "restaurado").length,
@@ -1446,7 +1457,8 @@ async function handleAdminAction(
         summary,
         results,
         counts: countsMap,
-        counts_operacionais: countsMap
+        counts_operacionais: countsMap,
+        counts_confirmados: countsConfirmadosMap
       }
     };
   }

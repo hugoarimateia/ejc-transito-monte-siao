@@ -2451,6 +2451,10 @@
             window.__adminCountsOperacionais = d.counts_operacionais || d.counts;
             window.__adminTotalOperacional = d.total_operacional || d.total;
           }
+          if (d.counts_confirmados) {
+            window.__adminCountsConfirmados = d.counts_confirmados;
+            window.__adminTotalConfirmados = d.total_confirmados;
+          }
           if (Array.isArray(d.pagamentos)) {
             pagamentosData = d.pagamentos.slice();
 
@@ -2621,37 +2625,48 @@
         }
       });
 
-      // 3. Contagem operacional canônica de vagas ocupadas por Sub (Fonte Única e idêntica à Landing Page)
-      const subsOperacionais = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+      // 3. Contagem canônica financeira de participantes com pagamento confirmado por Sub (Dashboard Administrativo)
+      const subsConfirmados = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+      let totalConfirmados = 0;
+
       inscricoesData.forEach(item => {
         if (item.arquivado) return;
-        const pagStatus = String(item.pagamento_status || "").trim().toLowerCase();
-        if (pagStatus === "cancelado") return;
-
-        const subRaw = (item.sub === "Azul") ? "Laranja" : item.sub;
-        const s = (subRaw && subRaw.includes("Verd")) ? "Verde"
-          : (subRaw && subRaw.includes("Verm")) ? "Vermelho"
-          : (subRaw && subRaw.includes("Amar")) ? "Amarelo"
-          : (subRaw && (subRaw.includes("Laran") || subRaw.includes("Azul"))) ? "Laranja"
-          : subRaw;
-
-        if (subsOperacionais[s] !== undefined) {
-          subsOperacionais[s]++;
+        const iStatus = String(item.pagamento_status || "").trim().toLowerCase();
+        const isConfirmado = (iStatus === "confirmado" || iStatus === "approved" || iStatus === "pago") || approvedPaymentInscricoes.has(item.id);
+        if (isConfirmado) {
+          totalConfirmados++;
+          const subRaw = (item.sub === "Azul") ? "Laranja" : item.sub;
+          const s = (subRaw && subRaw.includes("Verd")) ? "Verde"
+            : (subRaw && subRaw.includes("Verm")) ? "Vermelho"
+            : (subRaw && subRaw.includes("Amar")) ? "Amarelo"
+            : (subRaw && (subRaw.includes("Laran") || subRaw.includes("Azul"))) ? "Laranja"
+            : subRaw;
+          if (subsConfirmados[s] !== undefined) {
+            subsConfirmados[s]++;
+          }
         }
       });
 
-      const serverCounts = window.__adminCountsOperacionais || {};
-      const opVerde = serverCounts.Verde !== undefined ? Number(serverCounts.Verde) : subsOperacionais.Verde;
-      const opVermelho = serverCounts.Vermelho !== undefined ? Number(serverCounts.Vermelho) : subsOperacionais.Vermelho;
-      const opAmarelo = serverCounts.Amarelo !== undefined ? Number(serverCounts.Amarelo) : subsOperacionais.Amarelo;
-      const opLaranja = serverCounts.Laranja !== undefined ? Number(serverCounts.Laranja) : subsOperacionais.Laranja;
-      const totalOperacional = window.__adminTotalOperacional !== undefined ? Number(window.__adminTotalOperacional) : (opVerde + opVermelho + opAmarelo + opLaranja);
+      // Se o backend enviar counts_confirmados da RPC canônica contagem_inscricoes_pagas_por_sub, utiliza-a preferencialmente
+      if (window.__adminCountsConfirmados && typeof window.__adminCountsConfirmados === "object") {
+        ["Verde", "Vermelho", "Amarelo", "Laranja"].forEach(s => {
+          if (typeof window.__adminCountsConfirmados[s] === "number") {
+            subsConfirmados[s] = window.__adminCountsConfirmados[s];
+          }
+        });
+        if (typeof window.__adminTotalConfirmados === "number") {
+          totalConfirmados = window.__adminTotalConfirmados;
+        } else {
+          totalConfirmados = Object.values(subsConfirmados).reduce((a, b) => a + b, 0);
+        }
+      }
 
-      document.getElementById("statTotalInscritos").textContent = totalOperacional;
-      document.getElementById("statSubVerde").textContent = `${opVerde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
-      document.getElementById("statSubVermelho").textContent = `${opVermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
-      document.getElementById("statSubAmarelo").textContent = `${opAmarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${opLaranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
+      // Indicadores do Dashboard da Página Inicial representam estritamente participantes com pagamento confirmado (REGRA 2)
+      document.getElementById("statTotalInscritos").textContent = totalConfirmados;
+      document.getElementById("statSubVerde").textContent = `${subsConfirmados.Verde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
+      document.getElementById("statSubVermelho").textContent = `${subsConfirmados.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
+      document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subsConfirmados.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
 
       // 4. Cálculos financeiros estritamente categorizados sem dupla contagem
       let totalGeral = 0;              // Total arrecadado real comprovado
