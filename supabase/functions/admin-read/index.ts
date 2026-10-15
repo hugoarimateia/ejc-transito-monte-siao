@@ -439,11 +439,12 @@ serve(async (req: Request) => {
 
       const officialSubName = subConfig ? subConfig.nome : "Todos";
 
-      // 1. Consulta estritamente somente leitura de inscrições ativas
+      // 1. Consulta estritamente somente leitura de inscrições ativas e ocupando vaga (excluindo cancelados)
       let query = supabase
         .from("inscricoes")
         .select("*")
         .eq("arquivado", false)
+        .neq("pagamento_status", "cancelado")
         .order("sub", { ascending: true })
         .order("nome_completo", { ascending: true });
 
@@ -516,9 +517,26 @@ serve(async (req: Request) => {
         };
       }));
 
-      const total = inscritos.length;
+      let canonicalTotal = inscritos.length;
+      if (!isAll && officialSubName) {
+        try {
+          const { data: vagasRpc } = await supabase.rpc("obter_vagas_ocupadas_sub", { p_sub: officialSubName });
+          if (typeof vagasRpc === "number") {
+            canonicalTotal = vagasRpc;
+          }
+        } catch (_) {}
+      } else {
+        try {
+          const { data: rpcCounts } = await supabase.rpc("contagem_inscricoes_por_sub");
+          if (Array.isArray(rpcCounts)) {
+            canonicalTotal = rpcCounts.reduce((acc: number, r: any) => acc + Number(r.total || 0), 0);
+          }
+        } catch (_) {}
+      }
+
+      const total = canonicalTotal;
       const completos = inscritos.filter((i: any) => i.status_cadastro === "completo").length;
-      const pendentes = total - completos;
+      const pendentes = Math.max(0, total - completos);
 
       return new Response(JSON.stringify({
         success: true,
@@ -647,13 +665,28 @@ serve(async (req: Request) => {
 
     const totalConfirmados = Object.values(countsConfirmados).reduce((a, b) => a + b, 0);
 
-    // Contadores operacionais por sub (todas as inscrições ativas válidas)
+    // Contadores operacionais canônicos por sub via RPC oficial (mesma fonte da Landing Page)
     const countsOperacionais: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-    inscricoes.forEach((item: any) => {
-      if (item.arquivado) return;
-      const s = normalizarSub(item.sub);
-      if (s && countsOperacionais[s] !== undefined) countsOperacionais[s]++;
-    });
+    try {
+      const { data: rpcSubCounts } = await supabase.rpc("contagem_inscricoes_por_sub");
+      if (Array.isArray(rpcSubCounts)) {
+        rpcSubCounts.forEach((r: any) => {
+          const s = normalizarSub(r.sub);
+          if (s && countsOperacionais[s] !== undefined) {
+            countsOperacionais[s] = Number(r.total || 0);
+          }
+        });
+      }
+    } catch (errRpc) {
+      console.warn("[admin-read] Falha ao consultar RPC contagem_inscricoes_por_sub, usando fallback:", errRpc);
+      inscricoes.forEach((item: any) => {
+        if (item.arquivado) return;
+        const iStatus = String(item.pagamento_status || "").trim().toLowerCase();
+        if (iStatus === "cancelado") return;
+        const s = normalizarSub(item.sub);
+        if (s && countsOperacionais[s] !== undefined) countsOperacionais[s]++;
+      });
+    }
 
     const totalOperacional = Object.values(countsOperacionais).reduce((a, b) => a + b, 0);
 
@@ -671,8 +704,8 @@ serve(async (req: Request) => {
       pagamentos,
       auditoria,
       whatsapp,
-      counts: countsConfirmados,
-      total: totalConfirmados,
+      counts: countsOperacionais,
+      total: totalOperacional,
       counts_confirmados: countsConfirmados,
       total_confirmados: totalConfirmados,
       counts_operacionais: countsOperacionais,

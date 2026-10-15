@@ -1202,30 +1202,40 @@ async function handleAdminAction(
   // --------------------------------------------------------------------------
   // OP11: desarchive
   // --------------------------------------------------------------------------
-  if (action === "desarchive" || action === "desarquivar_inscricao") {
+  // --------------------------------------------------------------------------
+  // OP11: desarchive / desarquivar_inscricao / desarquivar_multiplas_inscricoes
+  // --------------------------------------------------------------------------
+  if (
+    action === "desarchive" ||
+    action === "desarquivar_inscricao" ||
+    action === "desarquivar_multiplas_inscricoes" ||
+    action === "restaurar_arquivadas_lote" ||
+    action === "restaurar_selecionadas"
+  ) {
     if (authRole.role !== "superadmin") {
       return { status: 403, body: { error: "Permissão negada. Apenas Super Admin pode desarquivar inscrições.", action, role: authRole.role } };
     }
 
-    const targetId = String(body.id || body.inscricao_id || "").trim();
-    const targetEmail = String(body.email || "").trim();
-
-    if (!targetId && !targetEmail) {
-      return { status: 400, body: { error: "Informe o ID ou E-mail da inscrição a desarquivar." } };
+    let rawIds: string[] = [];
+    if (Array.isArray(body.ids)) {
+      rawIds = body.ids.map((x: any) => String(x || "").trim()).filter(Boolean);
+    } else if (body.id || body.inscricao_id) {
+      rawIds = [String(body.id || body.inscricao_id).trim()];
+    } else if (body.email) {
+      const { data: byEmail } = await supabase
+        .from("inscricoes")
+        .select("id")
+        .eq("email", String(body.email).trim())
+        .maybeSingle();
+      if (byEmail?.id) rawIds = [byEmail.id];
     }
 
-    if (targetId && !UUID_REGEX.test(targetId)) {
-      return { status: 400, body: { error: "ID inválido." } };
+    if (rawIds.length === 0) {
+      return { status: 400, body: { error: "Informe ao menos um ID de inscrição a desarquivar." } };
     }
 
-    let q = supabase.from("inscricoes").select("id, nome_completo, sub, arquivado");
-    if (targetId) q = q.eq("id", targetId);
-    else q = q.eq("email", targetEmail);
-
-    const { data: targetIns, error: targetErr } = await q.maybeSingle();
-    if (targetErr || !targetIns) {
-      return { status: 404, body: { error: "Inscrição não encontrada para desarquivamento." } };
-    }
+    const targetIds = Array.from(new Set(rawIds));
+    const motivoAudit = String(body.motivo || "Restauração autorizada pela coordenação").trim();
 
     if (isDryRun) {
       return {
@@ -1233,32 +1243,212 @@ async function handleAdminAction(
         body: {
           ok: true,
           dry_run: true,
-          action: "desarchive",
+          action,
           authorized: true,
           would_mutate: true,
           role: authRole.role,
-          target_resources: ["inscricoes"],
+          target_resources: ["inscricoes", "auditoria_transacoes"],
           details: {
-            inscricao_id: targetIns.id,
-            nome_completo: targetIns.nome_completo,
-            current_arquivado: targetIns.arquivado,
-            target_arquivado: false
+            total_solicitado: targetIds.length,
+            ids: targetIds,
+            motivo: motivoAudit
           }
         }
       };
     }
 
-    const { data: unarchived, error: unarchiveErr } = await supabase
-      .from("inscricoes")
-      .update({ arquivado: false, motivo_arquivamento: null })
-      .eq("id", targetIns.id)
-      .select();
+    const results: Array<{
+      id: string;
+      nome?: string;
+      sub?: string;
+      status: "restaurado" | "already_active" | "not_found" | "conflict" | "capacity_exceeded" | "error";
+      message: string;
+    }> = [];
 
-    if (unarchiveErr) throw unarchiveErr;
+    for (const curId of targetIds) {
+      if (!UUID_REGEX.test(curId)) {
+        results.push({
+          id: curId,
+          status: "error",
+          message: "Formato de ID inválido (deve ser UUID)."
+        });
+        continue;
+      }
 
-    await recordAudit(supabase, "DESARQUIVAMENTO_INSCRICAO", { targetId: targetIns.id }, clientIp, authRole.role, isDryRun);
+      // 1. Busca dados da inscrição arquivada
+      const { data: targetIns, error: fetchErr } = await supabase
+        .from("inscricoes")
+        .select("id, nome_completo, whatsapp, email, sub, arquivado, pagamento_status, criado_em")
+        .eq("id", curId)
+        .maybeSingle();
 
-    return { status: 200, body: { success: true, message: "Inscrição desarquivada com sucesso.", rows: unarchived } };
+      if (fetchErr || !targetIns) {
+        results.push({
+          id: curId,
+          status: "not_found",
+          message: "Inscrição não encontrada no banco de dados."
+        });
+        continue;
+      }
+
+      // 2. Se já estiver ativa / não arquivada
+      if (targetIns.arquivado === false) {
+        results.push({
+          id: targetIns.id,
+          nome: targetIns.nome_completo,
+          sub: targetIns.sub,
+          status: "already_active",
+          message: "Inscrição já se encontra ativa / desarquivada anteriormente."
+        });
+        continue;
+      }
+
+      // 3. Validação de conflito com inscrição ativa existente (mesmo WhatsApp ou mesmo nome)
+      let conflictFound = false;
+      let conflictMsg = "";
+      const cleanWpp = String(targetIns.whatsapp || "").replace(/\D/g, "");
+      const cleanName = String(targetIns.nome_completo || "").trim().toLowerCase();
+
+      if (cleanWpp && cleanWpp.length >= 10) {
+        const { data: activeMatches } = await supabase
+          .from("inscricoes")
+          .select("id, nome_completo, sub, whatsapp")
+          .eq("arquivado", false)
+          .neq("id", targetIns.id);
+
+        if (Array.isArray(activeMatches)) {
+          const match = activeMatches.find((m: any) => {
+            const mWpp = String(m.whatsapp || "").replace(/\D/g, "");
+            const mName = String(m.nome_completo || "").trim().toLowerCase();
+            const sameWpp = mWpp && cleanWpp && (mWpp === cleanWpp || (mWpp.length >= 10 && cleanWpp.length >= 10 && mWpp.slice(-8) === cleanWpp.slice(-8)));
+            const sameName = cleanName && mName && cleanName === mName;
+            return sameWpp || sameName;
+          });
+
+          if (match) {
+            conflictFound = true;
+            conflictMsg = `Conflito cadastral: já existe inscrição ativa no sistema (${match.nome_completo}, Sub ${match.sub}) com dados coincidentes.`;
+          }
+        }
+      }
+
+      if (conflictFound) {
+        results.push({
+          id: targetIns.id,
+          nome: targetIns.nome_completo,
+          sub: targetIns.sub,
+          status: "conflict",
+          message: conflictMsg
+        });
+        continue;
+      }
+
+      // 4. Validação de capacidade da Sub de destino
+      let currentOccupied = 0;
+      try {
+        const { data: occ } = await supabase.rpc("obter_vagas_ocupadas_sub", { p_sub: targetIns.sub });
+        currentOccupied = Number(occ || 0);
+      } catch (_) {}
+
+      let cap = 95;
+      try {
+        const { data: subRow } = await supabase
+          .from("subs")
+          .select("capacidade")
+          .eq("nome", targetIns.sub)
+          .maybeSingle();
+        if (subRow && typeof subRow.capacidade === "number") cap = subRow.capacidade;
+      } catch (_) {}
+
+      if (currentOccupied >= cap) {
+        results.push({
+          id: targetIns.id,
+          nome: targetIns.nome_completo,
+          sub: targetIns.sub,
+          status: "capacity_exceeded",
+          message: `Capacidade máxima atingida para o Sub ${targetIns.sub} (${currentOccupied}/${cap}). Reativação impedida para respeitar o limite.`
+        });
+        continue;
+      }
+
+      // 5. Execução atômica da reativação com preservação integral de dados, histórico e pagamentos
+      try {
+        const { error: unarchiveErr } = await supabase
+          .from("inscricoes")
+          .update({
+            arquivado: false,
+            motivo_arquivamento: null
+          })
+          .eq("id", targetIns.id);
+
+        if (unarchiveErr) {
+          throw unarchiveErr;
+        }
+
+        await recordAudit(
+          supabase,
+          "DESARQUIVAMENTO_INSCRICAO",
+          {
+            inscricao_id: targetIns.id,
+            nome_completo: targetIns.nome_completo,
+            sub: targetIns.sub,
+            motivo: motivoAudit,
+            operacao: "restauracao_manual"
+          },
+          clientIp,
+          authRole.role,
+          isDryRun
+        );
+
+        results.push({
+          id: targetIns.id,
+          nome: targetIns.nome_completo,
+          sub: targetIns.sub,
+          status: "restaurado",
+          message: "Inscrição restaurada com sucesso."
+        });
+      } catch (mutateErr: any) {
+        results.push({
+          id: targetIns.id,
+          nome: targetIns.nome_completo,
+          sub: targetIns.sub,
+          status: "error",
+          message: mutateErr.message || "Falha na persistência da reativação no banco de dados."
+        });
+      }
+    }
+
+    // 6. Consulta contagens canônicas atualizadas após todas as restaurações
+    const countsMap: Record<string, number> = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
+    try {
+      const { data: rpcCounts } = await supabase.rpc("contagem_inscricoes_por_sub");
+      if (Array.isArray(rpcCounts)) {
+        rpcCounts.forEach((r: any) => {
+          const s = normalizarSub(r.sub);
+          if (s && countsMap[s] !== undefined) countsMap[s] = Number(r.total || 0);
+        });
+      }
+    } catch (_) {}
+
+    const summary = {
+      total_solicitado: targetIds.length,
+      restaurados: results.filter(r => r.status === "restaurado").length,
+      ignorados: results.filter(r => r.status === "already_active").length,
+      conflitos: results.filter(r => r.status === "conflict").length,
+      falhas: results.filter(r => ["capacity_exceeded", "not_found", "error"].includes(r.status)).length
+    };
+
+    return {
+      status: 200,
+      body: {
+        success: summary.restaurados > 0 || (summary.falhas === 0 && summary.conflitos === 0),
+        message: `Processamento concluído: ${summary.restaurados} restaurada(s), ${summary.ignorados} já ativa(s), ${summary.conflitos} conflito(s), ${summary.falhas} falha(s).`,
+        summary,
+        results,
+        counts: countsMap,
+        counts_operacionais: countsMap
+      }
+    };
   }
 
   // --------------------------------------------------------------------------

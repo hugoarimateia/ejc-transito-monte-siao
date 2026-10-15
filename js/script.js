@@ -133,10 +133,28 @@ const supabaseClient = (hasSupabaseConfig && window.supabase)
   ? window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY)
   : null;
 
-function setFeedback(message, type = "") {
+function setFeedback(message, type = "", isHtml = false) {
   if (!formFeedback) return;
-  formFeedback.textContent = message;
+  if (isHtml || /<[a-z][\s\S]*>/i.test(message)) {
+    formFeedback.innerHTML = message;
+  } else {
+    formFeedback.textContent = message;
+  }
   formFeedback.className = `form-feedback ${type}`.trim();
+}
+
+function formatPhoneNumber(phone) {
+  if (!phone || typeof phone !== "string") return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  } else if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return phone.trim();
 }
 
 function selectSub(sub) {
@@ -440,9 +458,17 @@ async function cleanupFotoR2(storageKey, cleanupToken) {
 }
 
 // Submissão do Formulário com Fallback Resiliente
+let isSubmittingSignup = false;
+
 if (signupForm) {
   signupForm.addEventListener("submit", async event => {
     event.preventDefault();
+
+    if (isSubmittingSignup) {
+      console.warn("[Signup] Envio já em processamento; ignorando submissão concorrente.");
+      return;
+    }
+
     if (!selectedSubInput?.value) {
       setFeedback("Escolha um Sub antes de finalizar.", "error");
       return;
@@ -461,6 +487,14 @@ if (signupForm) {
       setFeedback("Por favor, informe um endereço de e-mail válido para recebimento do comprovante.", "error");
       return;
     }
+
+    const rawPhone = String(formData.get("whatsapp") || "").trim();
+    const phoneDigits = rawPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      setFeedback("Por favor, informe um número de WhatsApp válido com DDD (10 ou 11 dígitos).", "error");
+      return;
+    }
+    const normalizedPhone = formatPhoneNumber(rawPhone);
 
     const paymentChoice = formData.get("pagamento_informado");
     const isCheckout = paymentChoice === "checkout";
@@ -484,6 +518,7 @@ if (signupForm) {
       }
     }
 
+    isSubmittingSignup = true;
     if (submitSignup) submitSignup.disabled = true;
     if (whatsappSuccess) {
       whatsappSuccess.hidden = true;
@@ -493,7 +528,6 @@ if (signupForm) {
     setFeedback("Verificando cadastro e processando...", "loading");
 
     const normalizedName = String(formData.get("nome_completo") || "").trim();
-    const normalizedPhone = String(formData.get("whatsapp") || "").trim();
     const chosenSub = selectedSubInput.value;
     const wantsExtraShirt = formData.get("quer_camisa_adicional") === "true";
     const [shirtSize, shirtModel = "Tradicional"] = String(formData.get("tamanho_camisa") || "").split("|");
@@ -516,12 +550,28 @@ if (signupForm) {
       try {
         const { data: canRegister } = await supabaseClient.rpc("pode_realizar_inscricao", {
           p_nome_completo: normalizedName,
-          p_sub: chosenSub
+          p_sub: chosenSub,
+          p_whatsapp: normalizedPhone
         });
 
         if (canRegister && canRegister.allowed === false) {
-          setFeedback(canRegister.message || "Já existe uma inscrição com este nome.", "error");
+          if (canRegister.conflict === "whatsapp" || String(canRegister.message || "").toLowerCase().includes("whatsapp")) {
+            setFeedback(
+              `Já existe uma inscrição realizada com este número de WhatsApp. Se esta é a sua inscrição, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a> ou contate a coordenação.`,
+              "error",
+              true
+            );
+          } else if (canRegister.conflict === "nome" || String(canRegister.message || "").toLowerCase().includes("nome")) {
+            setFeedback(
+              `Este nome completo já possui uma inscrição realizada. Se você já se inscreveu, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a>.`,
+              "error",
+              true
+            );
+          } else {
+            setFeedback(canRegister.message || "As vagas deste Sub foram encerradas.", "error");
+          }
           if (submitSignup) submitSignup.disabled = false;
+          isSubmittingSignup = false;
           return;
         }
 
@@ -548,6 +598,7 @@ if (signupForm) {
           console.error("[Signup] Erro no upload R2:", r2Err);
           setFeedback(`Erro no envio da foto: ${r2Err.message || "Falha no armazenamento seguro."}`, "error");
           if (submitSignup) submitSignup.disabled = false;
+          isSubmittingSignup = false;
           return;
         }
 
@@ -577,17 +628,79 @@ if (signupForm) {
         });
 
         if (insertError) {
-          // CONSISTÊNCIA / CLEANUP (PARTE 6): RPC falhou após upload no R2
-          console.warn("[Signup] RPC falhou após upload no R2. Acionando cleanup imediato:", insertError.message);
+          const isWhatsappConflict = 
+            insertError.code === "23505" || 
+            insertError.status === 409 ||
+            String(insertError.message || "").toLowerCase().includes("inscricoes_whatsapp_unique") ||
+            String(insertError.details || "").toLowerCase().includes("whatsapp");
+
+          const isNameConflict =
+            String(insertError.message || "").toLowerCase().includes("inscricao_unica_por_nome") ||
+            String(insertError.details || "").toLowerCase().includes("nome_completo");
+
+          // CONSISTÊNCIA / CLEANUP SEGURO: RPC falhou após upload no R2
+          console.warn("[Signup] RPC retornou erro após upload no R2. Acionando cleanup imediato da foto temporária.");
           if (r2UploadData?.storageKey && r2UploadData?.cleanupToken) {
             await cleanupFotoR2(r2UploadData.storageKey, r2UploadData.cleanupToken).catch(err => {
-              console.error("[Signup] Falha no cleanup do R2:", err);
+              console.error("[Signup] Falha no cleanup seguro do R2:", err);
             });
           }
+
+          if (isWhatsappConflict) {
+            console.warn("[Signup] Conflito HTTP 409: WhatsApp já cadastrado em inscrição existente.");
+            setFeedback(
+              `Já existe uma inscrição realizada com este número de WhatsApp. Se esta é a sua inscrição, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a> ou contate a coordenação.`,
+              "error",
+              true
+            );
+            if (submitSignup) submitSignup.disabled = false;
+            isSubmittingSignup = false;
+            return;
+          }
+
+          if (isNameConflict) {
+            setFeedback(
+              `Este nome completo já possui uma inscrição realizada. Se você já se inscreveu, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a>.`,
+              "error",
+              true
+            );
+            if (submitSignup) submitSignup.disabled = false;
+            isSubmittingSignup = false;
+            return;
+          }
+
           throw new Error(insertError.message);
         }
 
-        if (!insertError) {
+        if (registrationResult && registrationResult.success === false) {
+          // Limpeza segura da foto temporária
+          if (r2UploadData?.storageKey && r2UploadData?.cleanupToken) {
+            await cleanupFotoR2(r2UploadData.storageKey, r2UploadData.cleanupToken).catch(err => {
+              console.error("[Signup] Falha no cleanup seguro do R2:", err);
+            });
+          }
+
+          if (registrationResult.conflict === "whatsapp" || String(registrationResult.message || "").toLowerCase().includes("whatsapp")) {
+            setFeedback(
+              `Já existe uma inscrição realizada com este número de WhatsApp. Se esta é a sua inscrição, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a> ou contate a coordenação.`,
+              "error",
+              true
+            );
+          } else if (registrationResult.conflict === "nome" || String(registrationResult.message || "").toLowerCase().includes("nome")) {
+            setFeedback(
+              `Este nome completo já possui uma inscrição realizada. Se você já se inscreveu, confira seus dados em <a href="/verificar-inscricao" style="color:inherit;text-decoration:underline;font-weight:700;">Verificar Inscrição</a>.`,
+              "error",
+              true
+            );
+          } else {
+            setFeedback(registrationResult.message || "Não foi possível concluir a inscrição no servidor.", "error");
+          }
+          if (submitSignup) submitSignup.disabled = false;
+          isSubmittingSignup = false;
+          return;
+        }
+
+        if (registrationResult && registrationResult.success === true) {
           registrationSuccess = true;
           if (registrationResult?.token) userToken = registrationResult.token;
           if (registrationResult?.id) registeredId = registrationResult.id;
@@ -601,11 +714,22 @@ if (signupForm) {
           }
         }
       } catch (err) {
-        console.warn("Falha no envio ao Supabase remoto, acionando persistência resiliente.", err);
+        console.warn("Falha no envio ao Supabase remoto:", err);
       }
     }
 
-    // 2. Persistência Resiliente Local (garantia de gravação)
+    if (!registrationSuccess) {
+      if (whatsappSuccess) {
+        whatsappSuccess.hidden = true;
+        whatsappSuccess.style.display = "none";
+      }
+      setFeedback("Não foi possível concluir a inscrição no servidor. Verifique sua conexão e tente novamente.", "error");
+      if (submitSignup) submitSignup.disabled = false;
+      isSubmittingSignup = false;
+      return;
+    }
+
+    // 2. Persistência Resiliente Local (apenas com confirmação autoritativa do servidor)
     try {
       const localInscricoes = JSON.parse(localStorage.getItem("ejc_inscricoes") || "[]");
       
@@ -767,6 +891,7 @@ if (signupForm) {
     }
 
     if (submitSignup) submitSignup.disabled = false;
+    isSubmittingSignup = false;
   });
 }
 
