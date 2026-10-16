@@ -1799,6 +1799,173 @@ async function handleAdminAction(
     };
   }
 
+  // --------------------------------------------------------------------------
+  // OP14: update_sub_capacity / alterar_capacidade_sub
+  // Gestão Manual de Capacidade de Subgrupos (Exclusivo Superadmin/Coordenação)
+  // --------------------------------------------------------------------------
+  if (
+    action === "update_sub_capacity" ||
+    action === "alterar_capacidade_sub" ||
+    action === "update_capacity"
+  ) {
+    if (authRole.role !== "superadmin") {
+      return {
+        status: 403,
+        body: {
+          error: "Permissão negada. Apenas o perfil Coordenação/Superadmin pode alterar a capacidade dos Subgrupos.",
+          action,
+          role: authRole.role
+        }
+      };
+    }
+
+    const rawSub = String(body.sub || body.subgrupo || "").trim();
+    const sub = normalizarSub(rawSub);
+    if (!sub || !["Verde", "Vermelho", "Amarelo", "Laranja"].includes(sub)) {
+      return {
+        status: 400,
+        body: { error: `Subgrupo inválido: '${rawSub}'. Deve ser Verde, Vermelho, Amarelo ou Laranja.` }
+      };
+    }
+
+    const rawNovaCapacidade = body.capacidade !== undefined ? body.capacidade : body.nova_capacidade;
+    const novaCapacidade = Number(rawNovaCapacidade);
+
+    if (
+      rawNovaCapacidade === undefined ||
+      rawNovaCapacidade === null ||
+      rawNovaCapacidade === "" ||
+      !Number.isInteger(novaCapacidade) ||
+      novaCapacidade < 1 ||
+      novaCapacidade > 500
+    ) {
+      return {
+        status: 400,
+        body: { error: "Capacidade inválida. Deve ser um número inteiro positivo entre 1 e 500." }
+      };
+    }
+
+    // 1. Consulta a capacidade atual no banco e a ocupação operacional canônica
+    const { data: subRow, error: subErr } = await supabase
+      .from("subs")
+      .select("id, nome, capacidade")
+      .eq("nome", sub)
+      .maybeSingle();
+
+    if (subErr || !subRow) {
+      return { status: 404, body: { error: `Subgrupo '${sub}' não encontrado no banco de dados.` } };
+    }
+
+    const capacidadeAnterior = Number(subRow.capacidade);
+
+    // Consulta ocupação operacional atual (regra canônica da aba Dados dos Participantes)
+    let ocupacaoOperacional = 0;
+    try {
+      const { data: rpcCounts } = await supabase.rpc("contagem_inscricoes_por_sub");
+      if (Array.isArray(rpcCounts)) {
+        const found = rpcCounts.find((r: any) => normalizarSub(r.sub) === sub);
+        if (found) ocupacaoOperacional = Number(found.total || 0);
+      }
+    } catch (_) {}
+
+    const isExcedida = ocupacaoOperacional > novaCapacidade;
+    const confirmarExcedida = Boolean(body.confirmar_reducao_excedida === true || body.confirmarExcedida === true);
+
+    // Se for redução que cause excesso e o Superadmin ainda não tiver confirmado expressamente:
+    if (isExcedida && !confirmarExcedida) {
+      const excesso = ocupacaoOperacional - novaCapacidade;
+      return {
+        status: 409,
+        body: {
+          alerta_excesso: true,
+          error: `Atenção: A nova capacidade (${novaCapacidade}) é menor do que a quantidade atual de inscritos elegíveis (${ocupacaoOperacional}) no Sub ${sub}. O limite será excedido em ${excesso} participante(s). Nenhuma inscrição será cancelada ou apagada, mas novas inscrições ficarão bloqueadas. Confirme a operação para prosseguir.`,
+          sub,
+          capacidade_atual: capacidadeAnterior,
+          nova_capacidade_proposta: novaCapacidade,
+          ocupacao_operacional: ocupacaoOperacional,
+          excesso
+        }
+      };
+    }
+
+    if (isDryRun) {
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          dry_run: true,
+          action,
+          authorized: true,
+          would_mutate: true,
+          role: authRole.role,
+          target_resources: ["subs", "auditoria_transacoes"],
+          details: {
+            sub,
+            capacidade_anterior: capacidadeAnterior,
+            nova_capacidade: novaCapacidade,
+            ocupacao_operacional: ocupacaoOperacional,
+            excedida: isExcedida
+          }
+        }
+      };
+    }
+
+    // 2. Persistência real na tabela public.subs (Fonte única de capacidade)
+    const { error: updErr } = await supabase
+      .from("subs")
+      .update({ capacidade: novaCapacidade })
+      .eq("nome", sub);
+
+    if (updErr) {
+      return {
+        status: 500,
+        body: { error: `Erro ao persistir capacidade no banco de dados: ${updErr.message}` }
+      };
+    }
+
+    // 3. Auditoria transparente da alteração
+    await registrarAuditoria(
+      supabase,
+      "alterar_capacidade_sub",
+      {
+        sub,
+        capacidade_anterior: capacidadeAnterior,
+        nova_capacidade: novaCapacidade,
+        ocupacao_operacional: ocupacaoOperacional,
+        excedida: isExcedida,
+        motivo: body.motivo || "Ajuste manual de capacidade via Dashboard Superadmin"
+      },
+      clientIp,
+      authRole.label
+    );
+
+    // 4. Consulta capacidades e contagens atualizadas para retorno imediato
+    const { data: allSubs } = await supabase.from("subs").select("nome, capacidade");
+    const updatedCapacities: Record<string, number> = { Verde: 105, Vermelho: 105, Amarelo: 105, Laranja: 105 };
+    if (Array.isArray(allSubs)) {
+      allSubs.forEach((r: any) => {
+        const s = normalizarSub(r.nome);
+        if (s && r.capacidade !== undefined && r.capacidade !== null) {
+          updatedCapacities[s] = Number(r.capacidade);
+        }
+      });
+    }
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        message: `Capacidade do Sub ${sub} atualizada com sucesso de ${capacidadeAnterior} para ${novaCapacidade} vagas.`,
+        sub,
+        capacidade_anterior: capacidadeAnterior,
+        nova_capacidade: novaCapacidade,
+        ocupacao_operacional: ocupacaoOperacional,
+        excedida: isExcedida,
+        capacities: updatedCapacities
+      }
+    };
+  }
+
   // Operação não reconhecida
   return { status: 400, body: { error: `Operação administrativa não reconhecida: '${action}'.` } };
 }

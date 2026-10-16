@@ -259,7 +259,7 @@ let latestCountRequestId = 0;
 async function updateSubCounts() {
   const currentRequestId = ++latestCountRequestId;
   let counts = null;
-  let capacities = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
+  let capacities = { Verde: 105, Vermelho: 105, Amarelo: 105, Laranja: 105 };
   let remoteLoaded = false;
 
   // 1. Consulta o endpoint central oficial com anti-cache estrito (suporte a Edge Functions e Rollback)
@@ -315,11 +315,18 @@ async function updateSubCounts() {
 
   subButtons.forEach(button => {
     const sub = button.dataset.sub;
-    const capacity = Number((capacities && capacities[sub]) || button.dataset.capacity || 95);
+    const capacity = Number((capacities && capacities[sub]) || button.dataset.capacity || 105);
     const current = Number(counts[sub] || 0);
     const countEl = document.querySelector(`[data-count-for="${sub}"]`);
     const progressEl = document.querySelector(`[data-progress-for="${sub}"]`);
-    if (countEl) countEl.textContent = current;
+    const counterEl = button.querySelector(".sub-counter");
+
+    if (counterEl) {
+      counterEl.innerHTML = `<b data-count-for="${sub}">${current}</b>/${capacity} inscritos`;
+    } else if (countEl) {
+      countEl.textContent = current;
+    }
+
     if (progressEl) progressEl.style.width = `${Math.min(100, (current / capacity) * 100)}%`;
     if (current >= capacity) {
       button.disabled = true;

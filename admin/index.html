@@ -492,19 +492,19 @@
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
-          <strong id="statSubVerde">0 / 95</strong>
+          <strong id="statSubVerde">0 / 105</strong>
         </div>
         <div class="stat-box red">
           <span>Sub Vermelho</span>
-          <strong id="statSubVermelho">0 / 95</strong>
+          <strong id="statSubVermelho">0 / 105</strong>
         </div>
         <div class="stat-box yellow">
           <span>Sub Amarelo</span>
-          <strong id="statSubAmarelo">0 / 95</strong>
+          <strong id="statSubAmarelo">0 / 105</strong>
         </div>
         <div class="stat-box orange" style="border-left-color: #f97316;">
           <span>Sub Laranja</span>
-          <strong id="statSubLaranja">0 / 95</strong>
+          <strong id="statSubLaranja">0 / 105</strong>
         </div>
         <div class="stat-box revenue">
           <span>Total Arrecadado</span>
@@ -541,6 +541,7 @@
             <div class="admin-nav-group-buttons">
               <button type="button" class="admin-tab-btn" data-tab="inscricoes"><i class="fa-solid fa-list-check"></i> Lista de Inscritos</button>
               <button type="button" class="admin-tab-btn" data-tab="inscritos-dados" id="tabBtnInscritosDados"><i class="fa-solid fa-address-card"></i> Dados dos Participantes</button>
+              <button type="button" class="admin-tab-btn" data-tab="capacidades" id="tabBtnCapacidades" style="display: none;"><i class="fa-solid fa-gauge-high"></i> Gestão de Capacidade</button>
               <button type="button" class="admin-tab-btn btn-tab-cancelar" data-tab="cancelar-inscricao"><i class="fa-solid fa-user-xmark"></i> Cancelar Inscrição</button>
               <button type="button" class="admin-tab-btn" data-tab="arquivados" id="tabBtnArquivados"><i class="fa-solid fa-box-archive"></i> Histórico / Arquivados</button>
               <button type="button" class="admin-tab-btn" data-tab="verificacoes" id="tabBtnVerificacoes"><i class="fa-solid fa-user-shield"></i> Verificações & Saneamento</button>
@@ -574,6 +575,47 @@
               <button type="button" class="admin-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> Visão Completa</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO EXCLUSIVA SUPERADMIN: GESTÃO DE CAPACIDADE DOS SUBGRUPOS -->
+      <div class="table-container" id="sectionGestaoCapacidade" style="display: none; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; font-size: 1.3rem; color: var(--blue-dark);">
+                <i class="fa-solid fa-gauge-high" style="color: var(--blue);"></i> Gestão de Capacidade dos Subgrupos
+              </h3>
+              <span class="status-badge" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #10b981;">
+                <i class="fa-solid fa-shield-halved"></i> Coordenação / Superadmin
+              </span>
+            </div>
+            <p style="margin: 6px 0 0; color: var(--muted); font-size: .88rem; max-width: 900px;">
+              Gerenciamento dinâmico da capacidade máxima de vagas de cada Subgrupo (inicial 105 vagas por Sub, total nominal de 420). As alterações são persistidas no banco de dados e refletem imediatamente nas validações de novas inscrições e na Landing Page. Nenhuma redução cancela ou oculta inscrições ativas existentes.
+            </p>
+          </div>
+          <button type="button" class="button button-secondary" onclick="carregarDados()" title="Recarregar dados do servidor" style="font-size: .82rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+          </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table" id="tabelaGestaoCapacidades">
+            <thead>
+              <tr>
+                <th style="width: 180px;">Subgrupo</th>
+                <th style="text-align: center; width: 140px;">Capacidade Atual</th>
+                <th style="text-align: center; width: 160px;">Ocupação Operacional</th>
+                <th style="text-align: center; width: 160px;">Disponibilidade</th>
+                <th style="width: 170px;">Nova Capacidade</th>
+                <th style="width: 140px;">Ação</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="gestaoCapacidadesTableBody">
+              <!-- Preenchido dinamicamente por renderizarGestaoCapacidades() -->
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -1989,6 +2031,67 @@
     </div>
   </dialog>
 
+  <!-- MODAL DE CONFIRMAÇÃO PARA REDUÇÃO DE CAPACIDADE EXCEDIDA -->
+  <dialog class="modal-detail" id="modalConfirmReducaoCapacidade" style="max-width: 600px; width: 95%;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle, #e2e8f0); padding-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 44px; height: 44px; border-radius: 50%; background: #fffbeb; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; border: 1px solid #fde68a;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-family: 'Archivo Black', sans-serif; color: #b45309; font-size: 1.25rem;">
+            Aviso de Capacidade Excedida
+          </h3>
+          <span style="color: var(--muted); font-size: .84rem;">Redução abaixo da quantidade de inscritos elegíveis</span>
+        </div>
+      </div>
+      <button type="button" onclick="fecharModalConfirmReducaoCapacidade()" style="border: 0; background: none; font-size: 1.5rem; cursor: pointer; color: var(--muted);" title="Fechar">×</button>
+    </div>
+
+    <div class="alert-banner alert-warning" style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; margin-bottom: 16px; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px;">
+      <i class="fa-solid fa-circle-exclamation" style="color: #b45309; font-size: 1.1rem; margin-top: 2px;"></i>
+      <div style="font-size: .86rem; line-height: 1.5;">
+        <strong>Atenção Superadmin:</strong> A nova capacidade proposta é menor do que a quantidade de participantes atualmente ativos e elegíveis neste Subgrupo.
+      </div>
+    </div>
+
+    <!-- DETALHES DO IMPACTO -->
+    <div style="margin-bottom: 16px; background: var(--bg-surface, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 8px; padding: 12px 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: .88rem;">
+        <div><strong>Subgrupo:</strong> <span id="modalReducaoSub" style="font-weight: 700;">-</span></div>
+        <div><strong>Capacidade Atual:</strong> <span id="modalReducaoCapAtual" style="font-weight: 700;">-</span></div>
+        <div><strong>Nova Capacidade Proposta:</strong> <span id="modalReducaoNovaCap" style="font-weight: 700; color: #b45309;">-</span></div>
+        <div><strong>Ocupação Atual (Inscritos):</strong> <span id="modalReducaoOcupacao" style="font-weight: 700; color: #047857;">-</span></div>
+      </div>
+      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-subtle, #e2e8f0); font-size: .86rem; color: #b45309;">
+        <strong>Excesso resultante:</strong> <span id="modalReducaoExcesso" style="font-weight: 800;">-</span> participante(s) acima da nova capacidade.
+      </div>
+    </div>
+
+    <!-- PROTEÇÃO DAS INSCRIÇÕES -->
+    <div style="font-size: .84rem; color: var(--ink); line-height: 1.5; margin-bottom: 18px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 14px; border-radius: 8px;">
+      <i class="fa-solid fa-shield-check" style="color: #047857;"></i>
+      <strong>Garantia de Integridade:</strong> Nenhuma inscrição será cancelada, arquivada ou apagada. O sistema entrará em estado de capacidade excedida, bloqueando apenas <em>novas</em> inscrições para este Sub até que haja vagas disponíveis.
+    </div>
+
+    <!-- MOTIVO DA AUDITORIA -->
+    <div style="margin-bottom: 20px;">
+      <label for="modalReducaoMotivo" style="display: block; font-weight: 700; font-size: .86rem; margin-bottom: 6px; color: var(--ink);">
+        Justificativa / Motivo da Redução (Auditoria):
+      </label>
+      <input type="text" id="modalReducaoMotivo" value="Redução manual autorizada pelo Superadmin" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border-color, #cbd5e1); border-radius: 8px; font-size: .9rem;">
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-subtle, #e2e8f0); padding-top: 14px;">
+      <button type="button" class="button button-secondary" onclick="fecharModalConfirmReducaoCapacidade()" style="min-height: 40px; font-size: .86rem;">
+        Cancelar
+      </button>
+      <button type="button" class="button" id="btnConfirmarReducaoExcedida" onclick="executarConfirmacaoReducaoExcedida()" style="min-height: 40px; font-size: .86rem; background: #b45309; color: #fff; border: 1.5px solid #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+        <i class="fa-solid fa-check"></i> Confirmar Redução Excedida
+      </button>
+    </div>
+  </dialog>
+
   <script src="../js/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/env-config.js"></script>
@@ -2047,7 +2150,7 @@
 
     let inscricoesData = [];
     let inscricoesArquivadasData = [];
-    let serverCapacities = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
+    let serverCapacities = { Verde: 105, Vermelho: 105, Amarelo: 105, Laranja: 105 };
     let pagamentosData = [];
     let auditoriaData = [];
     let wppLinksData = {
@@ -2188,6 +2291,16 @@
         btnResetInsc.style.display = (currentUserRole === "superadmin") ? "inline-flex" : "none";
       }
 
+      // Gestão de Capacidade (somente Super Admin)
+      const tabBtnCapacidades = document.getElementById("tabBtnCapacidades");
+      if (tabBtnCapacidades) {
+        tabBtnCapacidades.style.display = (currentUserRole === "superadmin") ? "inline-flex" : "none";
+      }
+      const secCapacidades = document.getElementById("sectionGestaoCapacidade");
+      if (secCapacidades) {
+        secCapacidades.style.display = (currentUserRole === "superadmin") ? "block" : "none";
+      }
+
       // Configuração das Abas
       configurarAbas();
 
@@ -2206,6 +2319,7 @@
       const secCancelar = document.getElementById("sectionCancelarInscricao");
       const secArquivados = document.getElementById("sectionArquivados");
       const secVerificacoes = document.getElementById("sectionVerificacoes");
+      const secCapacidades = document.getElementById("sectionGestaoCapacidade");
 
       tabBtns.forEach(b => {
         if (b.getAttribute("data-tab") === targetTab) {
@@ -2214,6 +2328,8 @@
           b.classList.remove("active");
         }
       });
+
+      const isSuper = (currentUserRole === "superadmin");
 
       if (targetTab === "all") {
         if (secInsc) secInsc.style.display = "block";
@@ -2224,6 +2340,7 @@
         if (secCancelar) secCancelar.style.display = "none";
         if (secArquivados) secArquivados.style.display = "none";
         if (secVerificacoes) secVerificacoes.style.display = "none";
+        if (secCapacidades) secCapacidades.style.display = isSuper ? "block" : "none";
       } else {
         if (secInsc) secInsc.style.display = (targetTab === "inscricoes") ? "block" : "none";
         if (secPay) secPay.style.display = (targetTab === "pagamentos") ? "block" : "none";
@@ -2233,6 +2350,7 @@
         if (secCancelar) secCancelar.style.display = (targetTab === "cancelar-inscricao") ? "block" : "none";
         if (secArquivados) secArquivados.style.display = (targetTab === "arquivados") ? "block" : "none";
         if (secVerificacoes) secVerificacoes.style.display = (targetTab === "verificacoes") ? "block" : "none";
+        if (secCapacidades) secCapacidades.style.display = (isSuper && (targetTab === "capacidades" || targetTab === "inscricoes")) ? "block" : "none";
       }
 
       if (targetTab === "inscritos-dados") {
@@ -2243,6 +2361,8 @@
         renderizarTabelaArquivados();
       } else if (targetTab === "verificacoes") {
         carregarVerificacoesAdmin();
+      } else if (targetTab === "capacidades") {
+        renderizarGestaoCapacidades();
       }
     }
 
@@ -2663,10 +2783,10 @@
 
       // Indicadores do Dashboard da Página Inicial representam estritamente participantes com pagamento confirmado (REGRA 2)
       document.getElementById("statTotalInscritos").textContent = totalConfirmados;
-      document.getElementById("statSubVerde").textContent = `${subsConfirmados.Verde} / ${(serverCapacities && serverCapacities.Verde) || 95}`;
-      document.getElementById("statSubVermelho").textContent = `${subsConfirmados.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 95}`;
-      document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 95}`;
-      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subsConfirmados.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 95}`;
+      document.getElementById("statSubVerde").textContent = `${subsConfirmados.Verde} / ${(serverCapacities && serverCapacities.Verde) || 105}`;
+      document.getElementById("statSubVermelho").textContent = `${subsConfirmados.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 105}`;
+      document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 105}`;
+      if (document.getElementById("statSubLaranja")) document.getElementById("statSubLaranja").textContent = `${subsConfirmados.Laranja} / ${(serverCapacities && serverCapacities.Laranja) || 105}`;
 
       // 4. Cálculos financeiros estritamente categorizados sem dupla contagem
       let totalGeral = 0;              // Total arrecadado real comprovado
@@ -2751,6 +2871,211 @@
       if (elConcSub) {
         elConcSub.textContent = totalPendenteConciliacao > 0 ? "Pendente de decisão/titular" : "100% conciliado";
       }
+
+      // Renderiza ou atualiza a tabela de gestão de capacidade para o Superadmin
+      renderizarGestaoCapacidades();
+    }
+
+    // =========================================================================
+    // UTILIDADE ADMINISTRATIVA: GESTÃO DE CAPACIDADE DOS SUBGRUPOS (SUPERADMIN)
+    // =========================================================================
+    function renderizarGestaoCapacidades() {
+      const sec = document.getElementById("sectionGestaoCapacidade");
+      const tbody = document.getElementById("gestaoCapacidadesTableBody");
+      const tabBtn = document.getElementById("tabBtnCapacidades");
+      if (!sec || !tbody) return;
+
+      const isSuper = (currentUserRole === "superadmin");
+      if (tabBtn) tabBtn.style.display = isSuper ? "inline-flex" : "none";
+
+      if (!isSuper) {
+        sec.style.display = "none";
+        return;
+      }
+
+      const activeTab = document.querySelector(".admin-tab-btn.active")?.getAttribute("data-tab");
+      if (activeTab === "all" || activeTab === "capacidades" || activeTab === "inscricoes") {
+        sec.style.display = "block";
+      }
+
+      const subsInfo = [
+        { nome: "Verde", cor: "#10b981", badgeBg: "#ecfdf5", badgeBorder: "#10b981", badgeColor: "#047857" },
+        { nome: "Vermelho", cor: "#ef4444", badgeBg: "#fef2f2", badgeBorder: "#ef4444", badgeColor: "#b91c1c" },
+        { nome: "Amarelo", cor: "#f59e0b", badgeBg: "#fffbeb", badgeBorder: "#f59e0b", badgeColor: "#b45309" },
+        { nome: "Laranja", cor: "#f97316", badgeBg: "#fff7ed", badgeBorder: "#f97316", badgeColor: "#c2410c" }
+      ];
+
+      const opCounts = window.__adminCountsOperacionais || {};
+
+      let html = "";
+      subsInfo.forEach(s => {
+        const subNome = s.nome;
+        const capAtual = (serverCapacities && typeof serverCapacities[subNome] === "number") ? serverCapacities[subNome] : 105;
+        const ocupacao = (opCounts[subNome] !== undefined) ? Number(opCounts[subNome]) : 0;
+        const disponivel = Math.max(0, capAtual - ocupacao);
+        const isExcedida = ocupacao > capAtual;
+
+        let dispBadge = "";
+        if (isExcedida) {
+          const excesso = ocupacao - capAtual;
+          dispBadge = `<span class="status-badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #ef4444; font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> Excedido (+${excesso})</span>`;
+        } else if (disponivel === 0) {
+          dispBadge = `<span class="status-badge" style="background:#fef3c7; color:#b45309; border:1px solid #f59e0b; font-weight:700;"><i class="fa-solid fa-ban"></i> Esgotado (0 livres)</span>`;
+        } else {
+          dispBadge = `<span class="status-badge" style="background:#ecfdf5; color:#047857; border:1px solid #10b981; font-weight:700;"><i class="fa-solid fa-check"></i> ${disponivel} livre(s)</span>`;
+        }
+
+        html += `
+          <tr>
+            <td>
+              <span class="status-badge" style="background:${s.badgeBg}; color:${s.badgeColor}; border:1px solid ${s.badgeBorder}; font-weight:800; font-size:.86rem;">
+                <i class="fa-solid fa-circle" style="color:${s.cor}; font-size:.65rem; margin-right:4px;"></i> Sub ${subNome}
+              </span>
+            </td>
+            <td style="text-align:center; font-weight:800; font-size:1.05rem; color:var(--ink);">
+              <span id="labelCapAtual_${subNome}">${capAtual}</span>
+            </td>
+            <td style="text-align:center; font-weight:700; font-size:.95rem; color:var(--ink);">
+              <span>${ocupacao}</span> <small style="color:var(--muted); font-size:.76rem;">elegíveis</small>
+            </td>
+            <td style="text-align:center;">
+              ${dispBadge}
+            </td>
+            <td>
+              <input type="number" id="inputNovaCap_${subNome}" value="${capAtual}" min="1" max="500" step="1"
+                     style="width: 100px; padding: 6px 10px; font-weight: 700; font-size: .95rem; border: 1.5px solid var(--border-color, #cbd5e1); border-radius: 6px; text-align: center;">
+            </td>
+            <td>
+              <button type="button" class="button button-primary" id="btnSalvarCap_${subNome}" onclick="salvarCapacidadeSub('${subNome}')"
+                      style="min-height: 34px; padding: 6px 14px; font-size: .84rem; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar
+              </button>
+            </td>
+            <td>
+              <span id="feedbackCap_${subNome}" style="font-size: .82rem; font-weight: 600;"></span>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    let pendingReducaoData = null;
+
+    async function salvarCapacidadeSub(sub, confirmarExcedida = false) {
+      const input = document.getElementById(`inputNovaCap_${sub}`);
+      const btn = document.getElementById(`btnSalvarCap_${sub}`);
+      const feedback = document.getElementById(`feedbackCap_${sub}`);
+      if (!input || !btn) return;
+
+      const novaCap = parseInt(input.value, 10);
+      if (isNaN(novaCap) || novaCap < 1 || novaCap > 500) {
+        alert("Por favor, informe uma capacidade válida (número inteiro entre 1 e 500).");
+        input.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
+      if (feedback) feedback.innerHTML = "";
+
+      const currentPass = sessionStorage.getItem("ejc_admin_pass") || "";
+      const endpoint = window.EJC_ENDPOINTS ? window.EJC_ENDPOINTS.adminWrite() : "/api/admin-write";
+
+      try {
+        const payload = {
+          action: "update_sub_capacity",
+          sub: sub,
+          capacidade: novaCap,
+          confirmar_reducao_excedida: Boolean(confirmarExcedida),
+          password: currentPass
+        };
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${currentPass}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.status === 409 && data.alerta_excesso) {
+          // Abre modal de confirmação explícita
+          pendingReducaoData = {
+            sub,
+            novaCapacidade: novaCap,
+            capacidadeAtual: data.capacidade_atual,
+            ocupacao: data.ocupacao_operacional,
+            excesso: data.excesso
+          };
+          abrirModalConfirmReducaoCapacidade(pendingReducaoData);
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          return;
+        }
+
+        if (res.ok && data.success) {
+          if (feedback) {
+            feedback.innerHTML = `<span style="color:#047857;"><i class="fa-solid fa-circle-check"></i> Salvo com sucesso!</span>`;
+            setTimeout(() => { if (feedback) feedback.innerHTML = ""; }, 4000);
+          }
+          if (data.capacities) {
+            serverCapacities = { ...serverCapacities, ...data.capacities };
+          } else {
+            serverCapacities[sub] = novaCap;
+          }
+          // Atualiza cards do Dashboard e tabela
+          renderizarEstatisticas();
+          renderizarGestaoCapacidades();
+        } else {
+          const errMsg = data.error || data.message || `Erro HTTP ${res.status}`;
+          if (feedback) {
+            feedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> ${errMsg}</span>`;
+          }
+          alert(`Erro ao salvar capacidade: ${errMsg}`);
+        }
+      } catch (err) {
+        console.error("[salvarCapacidadeSub]", err);
+        if (feedback) {
+          feedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Falha de comunicação</span>`;
+        }
+        alert(`Erro de comunicação com o servidor: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    function abrirModalConfirmReducaoCapacidade(dados) {
+      document.getElementById("modalReducaoSub").textContent = `Sub ${dados.sub}`;
+      document.getElementById("modalReducaoCapAtual").textContent = `${dados.capacidadeAtual} vagas`;
+      document.getElementById("modalReducaoNovaCap").textContent = `${dados.novaCapacidade} vagas`;
+      document.getElementById("modalReducaoOcupacao").textContent = `${dados.ocupacao} inscritos elegíveis`;
+      document.getElementById("modalReducaoExcesso").textContent = `+${dados.excesso}`;
+      const modal = document.getElementById("modalConfirmReducaoCapacidade");
+      if (modal && typeof modal.showModal === "function") {
+        modal.showModal();
+      }
+    }
+
+    function fecharModalConfirmReducaoCapacidade() {
+      const modal = document.getElementById("modalConfirmReducaoCapacidade");
+      if (modal && typeof modal.close === "function") {
+        modal.close();
+      }
+      pendingReducaoData = null;
+    }
+
+    async function executarConfirmacaoReducaoExcedida() {
+      if (!pendingReducaoData) return;
+      const sub = pendingReducaoData.sub;
+      fecharModalConfirmReducaoCapacidade();
+      await salvarCapacidadeSub(sub, true);
     }
 
     function renderizarTabelaInscricoes() {
@@ -3302,7 +3627,7 @@
         let htmlCaps = "";
         subsInvolved.forEach(s => {
           const occ = counts[s] !== undefined ? counts[s] : "?";
-          const max = (serverCapacities && serverCapacities[s]) || 95;
+          const max = (serverCapacities && serverCapacities[s]) || 105;
           const livres = (typeof occ === "number") ? Math.max(0, max - occ) : "?";
           const countInLote = selectedRecords.filter(r => (r.sub === "Azul" ? "Laranja" : r.sub) === s).length;
           const isWarning = typeof livres === "number" && countInLote > livres;

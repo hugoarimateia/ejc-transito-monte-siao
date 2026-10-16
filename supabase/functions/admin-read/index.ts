@@ -613,7 +613,7 @@ serve(async (req: Request) => {
     const wppRows = wppRes.data || [];
     const subsRows = subsRes.data || [];
 
-    const capacities: Record<string, number> = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
+    const capacities: Record<string, number> = { Verde: 105, Vermelho: 105, Amarelo: 105, Laranja: 105 };
     if (Array.isArray(subsRows)) {
       subsRows.forEach((row: any) => {
         const s = normalizarSub(row.nome);
