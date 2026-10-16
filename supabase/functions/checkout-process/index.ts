@@ -779,6 +779,7 @@ interface ActiveFinancialConfig {
   valor_inscricao: number | null;
   valor_promocional: number | null;
   preco_efetivo: number | null;
+  taxa_cartao_1x: number;
   lote_atual: string;
   modalidade_pix: string;
   pix_chave: string;
@@ -839,6 +840,7 @@ async function getActiveFinancialSettings(): Promise<ActiveFinancialConfig> {
     valor_inscricao: rawRegular,
     valor_promocional: rawPromo,
     preco_efetivo: effectivePrice,
+    taxa_cartao_1x: Number(remote?.taxa_cartao_1x !== undefined && remote?.taxa_cartao_1x !== null ? remote.taxa_cartao_1x : 1.50),
     lote_atual: String(remote?.lote_atual || "1º Lote Oficial"),
     modalidade_pix: String(remote?.modalidade_pix || "api_webhook"),
     pix_chave: String(remote?.pix_chave || Deno.env.get("NEXT_PUBLIC_PIX_CHAVE") || ""),
@@ -1903,9 +1905,19 @@ serve(async (req: Request) => {
     // --------------------------------------------------------------------------
     if (metodoFinal === "credit_card" || metodoFinal === "credit_card_pro") {
       const cardMaxInst = financialConfig.card_max_installments || 6;
-      const valorFinalCobranca = valorNumerico;
+      const rawParcelas = Math.max(1, parseInt(String(installments || parcelas || 1), 10) || 1);
+      const parcelasFinal = Math.min(rawParcelas, cardMaxInst);
 
-      console.log(`[CHECKOUT_CARD_START] TXID: ${txid}, Valor: R$ ${valorFinalCobranca.toFixed(2)}, Sub: ${subFinal || "Geral"}, MaxInst: ${cardMaxInst}`);
+      // Regra de Composição Financeira EJC:
+      // Cartão de crédito em 1x: taxa adicional padrão de R$ 1,50 (configurada em taxa_cartao_1x)
+      // Demais parcelamentos (>= 2x): utilizam as condições oficiais de parcelamento do Mercado Pago sem taxa de 1x
+      const taxaCartao1x = Number(financialConfig.taxa_cartao_1x ?? 1.50);
+      const isCartao1x = (parcelasFinal === 1);
+      const valorBaseInscricao = valorNumerico;
+      const taxaAdicionalCobrada = isCartao1x ? taxaCartao1x : 0;
+      const valorFinalCobranca = Number((valorBaseInscricao + taxaAdicionalCobrada).toFixed(2));
+
+      console.log(`[CHECKOUT_CARD_START] TXID: ${txid}, Base: R$ ${valorBaseInscricao.toFixed(2)}, Taxa1x: R$ ${taxaAdicionalCobrada.toFixed(2)}, Total: R$ ${valorFinalCobranca.toFixed(2)}, Sub: ${subFinal || "Geral"}, MaxInst: ${cardMaxInst}`);
 
       // Validação estrita do token gerado pelo Card Payment Brick (Zero fallback para login externo)
       const cardToken = (token || cartao_token) as string | undefined;
@@ -1924,8 +1936,6 @@ serve(async (req: Request) => {
         }, 503, req);
       }
 
-      const rawParcelas = Math.max(1, parseInt(String(installments || parcelas || 1), 10) || 1);
-      const parcelasFinal = Math.min(rawParcelas, cardMaxInst);
       const cleanCpf = (cpf || body.payer?.identification?.number)
         ? String(cpf || body.payer?.identification?.number).replace(/\D/g, "")
         : null;
@@ -1954,6 +1964,9 @@ serve(async (req: Request) => {
             sub: subFinal,
             lote: financialConfig.lote_atual,
             provedor: "mercadopago_direct_card",
+            valor_base: valorBaseInscricao,
+            taxa_adicional_1x: taxaAdicionalCobrada,
+            total_cobrado: valorFinalCobranca,
             tentativa_iniciada_em: new Date().toISOString()
           }
         });
@@ -2006,7 +2019,10 @@ serve(async (req: Request) => {
             status_detail: mpCardRes.status_detail,
             sub: subFinal,
             lote: financialConfig.lote_atual,
-            provedor: "mercadopago_direct_card"
+            provedor: "mercadopago_direct_card",
+            valor_base: valorBaseInscricao,
+            taxa_adicional_1x: taxaAdicionalCobrada,
+            total_cobrado: valorFinalCobranca
           }
         });
 
@@ -2032,6 +2048,8 @@ serve(async (req: Request) => {
             status_detail: mpCardRes.status_detail,
             mensagem_usuario: getFriendlyCardErrorMessage(mpCardRes.status_detail, mpCardRes.status),
             valor: valorFinalCobranca,
+            valor_base: valorBaseInscricao,
+            taxa_adicional: taxaAdicionalCobrada,
             cartao_ultimos_digitos: cardLast4,
             cartao_bandeira: cardBandeira,
             parcelas: effectiveInstallments

@@ -276,6 +276,7 @@ serve(async (req: Request) => {
       valor_inscricao: valorInscricaoNum,
       valor_promocional: valorPromocionalNum,
       taxa_adicional: pixConfig.taxa_adicional,
+      taxa_cartao_1x: Number(s.taxa_cartao_1x !== undefined && s.taxa_cartao_1x !== null ? s.taxa_cartao_1x : 1.50),
       max_parcelas: pixConfig.max_parcelas,
       card_installment_mode: s.card_installment_mode || "mercado_pago",
       card_max_installments: Number(s.card_max_installments || s.max_parcelas || 6),

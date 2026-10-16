@@ -2412,13 +2412,24 @@
         }
         if (valTotal) valTotal.textContent = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
       } else {
-        if (rowMarkup) rowMarkup.style.display = "none";
+        const taxa1x = Number(activePixConfig.taxa_cartao_1x !== undefined && activePixConfig.taxa_cartao_1x !== null ? activePixConfig.taxa_cartao_1x : 1.50);
         if (effectiveMax === 1) {
+          const totalComTaxa = Number((baseAmount + taxa1x).toFixed(2));
+          if (rowMarkup) rowMarkup.style.display = taxa1x > 0 ? "flex" : "none";
+          if (valMarkup) {
+            valMarkup.textContent = taxa1x > 0 ? `Taxa processamento: R$ ${taxa1x.toFixed(2).replace('.', ',')}` : "Sem taxa";
+            valMarkup.style.color = "#0284c7";
+          }
           if (textInstallments) textInstallments.textContent = "À vista (1x no cartão)";
-          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+          if (valTotal) valTotal.textContent = `R$ ${totalComTaxa.toFixed(2).replace('.', ',')} (à vista)`;
         } else {
+          if (rowMarkup) rowMarkup.style.display = "flex";
+          if (valMarkup) {
+            valMarkup.textContent = taxa1x > 0 ? `Cartão 1x: +R$ ${taxa1x.toFixed(2).replace('.', ',')} (demais parcelas no emissor)` : "Conforme Mercado Pago";
+            valMarkup.style.color = "#0284c7";
+          }
           if (textInstallments) textInstallments.textContent = `Em até ${effectiveMax}x no cartão`;
-          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (à vista)`;
+          if (valTotal) valTotal.textContent = `R$ ${baseAmount.toFixed(2).replace('.', ',')} (base de referência)`;
         }
       }
     }
@@ -2646,6 +2657,14 @@
         parcelasFinal = Math.min(parcelasFinal, effectiveMax);
       }
 
+      // Regra Canônica: Cartão em 1x inclui taxa adicional padrão (R$ 1,50)
+      const taxa1x = Number(activePixConfig.taxa_cartao_1x !== undefined && activePixConfig.taxa_cartao_1x !== null ? activePixConfig.taxa_cartao_1x : 1.50);
+      let valorFinalEnvio = amountCharged;
+      if (parcelasFinal === 1 && !isManual) {
+        const baseAmount = valorTotal || activePixConfig.valorTaxaInscricao || amountCharged;
+        valorFinalEnvio = Number((baseAmount + taxa1x).toFixed(2));
+      }
+
       try {
         const response = await fetch("/api/checkout-process", {
           method: "POST",
@@ -2656,7 +2675,7 @@
           body: JSON.stringify({
             metodo: "credit_card",
             tipo: tipoCheckout,
-            valor: amountCharged,
+            valor: valorFinalEnvio,
             token: cardFormData.token,
             issuer_id: cardFormData.issuer_id,
             payment_method_id: cardFormData.payment_method_id,
