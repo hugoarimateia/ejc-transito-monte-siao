@@ -121,6 +121,7 @@ function getDefaultSettings() {
     valor_inscricao: process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO ? Number(process.env.NEXT_PUBLIC_PIX_VALOR_INSCRICAO) : null,
     valor_promocional: null,
     taxa_adicional: 0.0,
+    taxa_cartao_1x: 1.50,
     max_parcelas: 12,
     card_installment_mode: "mercado_pago", // "mercado_pago" (automático) ou "manual" (configuração comercial EJC)
     card_max_installments: 6,
@@ -373,6 +374,7 @@ async function getActiveSettings() {
             valor_promocional: parsedRemotePromo,
             configurado: Boolean(parsedRemotePrice !== null && parsedRemotePrice > 0),
             taxa_adicional: Number(remoteSettings.taxa_adicional || 0),
+            taxa_cartao_1x: Number(remoteSettings.taxa_cartao_1x !== undefined && remoteSettings.taxa_cartao_1x !== null ? remoteSettings.taxa_cartao_1x : 1.50),
             max_parcelas: Number(remoteSettings.max_parcelas || 12),
             card_installment_mode: remoteSettings.card_installment_mode || (localData.settings && localData.settings.card_installment_mode) || "mercado_pago",
             card_max_installments: Number(remoteSettings.card_max_installments || (localData.settings && localData.settings.card_max_installments) || 6),

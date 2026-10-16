@@ -991,8 +991,14 @@
 
                 <div class="form-field">
                   <label for="cardBasePricePreview" style="font-weight: 700;">Valor Base de Referência (R$):</label>
-                  <input type="text" id="cardBasePricePreview" readonly style="background: var(--bg-surface, #f1f5f9); font-weight: 700; cursor: not-allowed;" value="R$ 100,00">
+                  <input type="text" id="cardBasePricePreview" readonly style="background: var(--bg-surface, #f1f5f9); font-weight: 700; cursor: not-allowed;" value="R$ 50,00">
                   <small>Valor obtido automaticamente do Preço Oficial da Inscrição vigente.</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="inputTaxaCartao1x" style="font-weight: 700;">Taxa Cartão 1x (R$):</label>
+                  <input type="number" id="inputTaxaCartao1x" min="0" max="50" step="0.50" value="1.50" style="font-weight: 700;" placeholder="1.50">
+                  <small>Taxa adicional padrão cobrada no cartão em 1x (padrão R$ 1,50). Demais parcelas seguem condições do Mercado Pago.</small>
                 </div>
               </div>
 
@@ -2589,6 +2595,7 @@
                 const isAlreadyLinked = linkedInscIds.has(String(ins.id)) || (cleanPhone && linkedPhones.has(cleanPhone));
 
                 if (!isAlreadyLinked && (ins.comprovante_caminho || ins.pagamento_informado || ins.pagamento_status === "informado" || ins.pagamento_status === "pendente")) {
+                  const valorInscricaoOficial = Number(configFinanceiraAtiva?.valor_inscricao || 50.00);
                   pagamentosData.push({
                     id: `virtual_${ins.id}`,
                     txid: `INSC-${String(ins.id).replace(/-/g, "").substring(0, 8).toUpperCase()}`,
@@ -2598,7 +2605,7 @@
                     whatsapp_pagador: ins.whatsapp || "",
                     metodo: ins.forma_pagamento || "manual_comprovante",
                     status: (ins.pagamento_status === "confirmado" || ins.pagamento_status === "approved") ? "approved" : (ins.comprovante_caminho ? "aguardando_analise" : (ins.pagamento_status || "pending")),
-                    valor: 0,
+                    valor: valorInscricaoOficial,
                     criado_em: ins.criado_em || new Date().toISOString(),
                     comprovante_caminho: ins.comprovante_caminho,
                     comprovante_email_enviado: ins.pagamento_status === "confirmado",
@@ -3990,31 +3997,43 @@
       }
     });
 
-    // Aprovação manual de transação
+    // Aprovação manual de transação canônica, autorizada e sem falso sucesso
     window.aprovarTransacaoManual = async function(txid) {
-      if (!confirm(`Deseja aprovar manualmente a transação ${txid}?`)) return;
-
-      const p = pagamentosData.find(item => item.txid === txid);
-      if (p) {
-        p.status = "approved";
-        p.pago_em = new Date().toISOString();
+      if (!canUserEditFinance) {
+        alert("Acesso negado: seu perfil não possui permissão para aprovar pagamentos.");
+        return;
       }
 
-      // Persiste no localStorage
-      localStorage.setItem("ejc_pagamentos", JSON.stringify(pagamentosData));
+      const p = pagamentosData.find(item => item.txid === txid);
+      if (p && (p.status === "approved" || p.status === "confirmado")) {
+        alert("Este pagamento já se encontra previamente aprovado no sistema.");
+        return;
+      }
 
-      // Auditoria
-      auditoriaData.unshift({
-        transacao_id: txid,
-        acao: "status_alterado_admin",
-        executado_por: currentUserRole || "admin_coordenacao",
-        criado_em: new Date().toISOString()
-      });
-      localStorage.setItem("ejc_auditoria", JSON.stringify(auditoriaData));
+      const confirmMsg = p?.nome_pagador
+        ? `Confirma a aprovação manual do pagamento de ${p.nome_pagador} (Ref: ${txid})?`
+        : `Deseja aprovar manualmente a transação ${txid}?`;
+      if (!confirm(confirmMsg)) return;
 
-      // Chama API administrativa central no backend para disparar RPC e e-mail
+      // Feedback visual não-destrutivo durante o processamento seguro no backend
+      let btnEl = null;
       try {
-        const res = await fetch("/api/admin", {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        btnEl = buttons.find(b => (b.getAttribute("onclick") || "").includes(txid) && b.textContent.includes("Aprovar"));
+      } catch (_) {}
+
+      const originalBtnText = btnEl ? btnEl.innerHTML : "";
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aprovando...';
+      }
+
+      try {
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "/api/admin";
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -4030,44 +4049,43 @@
             admin_pass: currentAdminPass
           })
         });
-        const apiData = await res.json();
-        if (apiData?.success && p) {
-          p.comprovante_email_enviado = true;
+
+        let apiData = {};
+        const resText = await res.text();
+        if (resText && resText.trim()) {
+          try {
+            apiData = JSON.parse(resText);
+          } catch (eParse) {
+            apiData = { error: `Resposta inválida do servidor: ${resText.slice(0, 140)}` };
+          }
         }
+
+        if (!res.ok || !apiData.success) {
+          const errDetail = apiData.error || apiData.message || `HTTP ${res.status}`;
+          alert(`Falha ao aprovar transação no servidor:\n\n${errDetail}\n\nNenhuma alteração foi persistida.`);
+          return;
+        }
+
+        // Sucesso real comprovado pelo backend
+        if (apiData.already_confirmed) {
+          alert(`✓ Informação do Servidor: ${apiData.message || 'Este pagamento já se encontrava previamente confirmado.'}`);
+        } else if (apiData.email_sent === false) {
+          alert(`✓ Pagamento aprovado e persistido no banco de dados com sucesso!\n\nNota de e-mail: Comprovante registrado na fila para despacho pelo provedor.`);
+        } else {
+          alert(`✓ Pagamento aprovado no banco de dados e comprovante despachado com sucesso!`);
+        }
+
+        // Recarrega todos os dados autênticos do servidor para sincronização completa
+        await carregarDadosAdmin();
       } catch (errApi) {
-        console.warn("[Admin] Falha ao acionar API admin approve_payment:", errApi);
-      }
-
-      // Aciona reconciliação unificada no backend (/api/checkout-process)
-      try {
-        await fetch("/api/checkout-process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "confirm_payment",
-            txid: txid,
-            gateway: "admin_manual",
-            executado_por: currentUserRole || "admin_coordenacao"
-          })
-        });
-      } catch (errCheck) {}
-
-      // Tenta RPC direta no Supabase como garantia adicional (apenas se online)
-      if (window.supabase && window.EJC_SUPABASE_URL && window.EJC_SUPABASE_ANON_KEY && !window.EJC_SUPABASE_URL.includes("COLE_AQUI")) {
-        try {
-          const client = window.supabase.createClient(window.EJC_SUPABASE_URL, window.EJC_SUPABASE_ANON_KEY);
-          await client.rpc("confirmar_pagamento_unificado", {
-            p_txid: txid,
-            p_gateway: "admin_manual",
-            p_executado_por: currentUserRole || "admin_coordenacao"
-          });
-        } catch (err) {
-          console.warn("Supabase RPC:", err);
+        console.error("[Admin] Erro na aprovação manual:", errApi);
+        alert(`Erro de comunicação com o servidor: ${errApi.message || 'Falha de rede'}. O pagamento permanece pendente.`);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = originalBtnText;
         }
       }
-
-      carregarDadosAdmin();
-      alert("✓ Transação aprovada e comprovante despachado com sucesso!");
     };
 
     // Rejeição manual de transação
@@ -5217,6 +5235,14 @@
       const selectMax = document.getElementById("cardMaxInstallmentsSelect");
       if (selectMax) selectMax.value = String(maxInstallments);
 
+      const inputTaxa1x = document.getElementById("inputTaxaCartao1x");
+      if (inputTaxa1x) {
+        const valTaxa1x = (configFinanceiraAtiva.taxa_cartao_1x !== undefined && configFinanceiraAtiva.taxa_cartao_1x !== null)
+          ? Number(configFinanceiraAtiva.taxa_cartao_1x)
+          : 1.50;
+        inputTaxa1x.value = valTaxa1x.toFixed(2);
+      }
+
       // Sincroniza taxas
       if (Array.isArray(configFinanceiraAtiva.card_installment_rates) && configFinanceiraAtiva.card_installment_rates.length > 0) {
         currentCardRates = JSON.parse(JSON.stringify(DEFAULT_CARD_RATES)).map(def => {
@@ -5447,6 +5473,7 @@
             action: "update_card_settings",
             card_installment_mode: "mercado_pago",
             card_max_installments: maxInst,
+            taxa_cartao_1x: 1.50,
             card_installment_rates: currentCardRates,
             motivo: "Restauração do Modo Automático (Mercado Pago)",
             usuario: currentUserRole,
@@ -5528,6 +5555,9 @@
         `;
       }
 
+      const taxa1xVal = parseFloat(document.getElementById("inputTaxaCartao1x")?.value || "1.50");
+      const currentTaxa1x = Number(configFinanceiraAtiva.taxa_cartao_1x !== undefined && configFinanceiraAtiva.taxa_cartao_1x !== null ? configFinanceiraAtiva.taxa_cartao_1x : 1.50);
+
       diffBox.innerHTML = `
         <div class="diff-row">
           <span>Modo de Parcelamento:</span>
@@ -5536,6 +5566,10 @@
         <div class="diff-row">
           <span>Máximo de Parcelas:</span>
           <span><span class="diff-old">${configFinanceiraAtiva.card_max_installments || 6}x</span> → <span class="diff-new">${maxInst}x</span></span>
+        </div>
+        <div class="diff-row">
+          <span>Taxa Cartão 1x:</span>
+          <span><span class="diff-old">R$ ${currentTaxa1x.toFixed(2).replace('.', ',')}</span> → <span class="diff-new">R$ ${(isNaN(taxa1xVal) ? 1.50 : taxa1xVal).toFixed(2).replace('.', ',')}</span></span>
         </div>
         <div class="diff-row">
           <span>Valor Base de Inscrição:</span>
@@ -5548,6 +5582,7 @@
         action: "update_card_settings",
         card_installment_mode: modoSelecionado,
         card_max_installments: maxInst,
+        taxa_cartao_1x: isNaN(taxa1xVal) ? 1.50 : taxa1xVal,
         card_installment_rates: currentCardRates,
         usuario: currentUserRole,
         admin_pass: currentAdminPass

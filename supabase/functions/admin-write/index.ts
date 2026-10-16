@@ -65,6 +65,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "valor_inscricao",
   "valor_promocional",
   "taxa_adicional",
+  "taxa_cartao_1x",
   "max_parcelas",
   "modalidade_pix",
   "pix_chave",
@@ -388,6 +389,10 @@ async function handleAdminAction(
     if (isNaN(taxaAdicional) || taxaAdicional < 0 || taxaAdicional > 100) {
       return { status: 400, body: { error: "Taxa adicional deve ser um número entre 0 e 100." } };
     }
+    const taxaCartao1x = body.taxa_cartao_1x !== undefined ? Number(body.taxa_cartao_1x) : undefined;
+    if (taxaCartao1x !== undefined && (isNaN(taxaCartao1x) || taxaCartao1x < 0 || taxaCartao1x > 50)) {
+      return { status: 400, body: { error: "Taxa de cartão em 1x deve ser um valor numérico entre 0 e 50." } };
+    }
     const rates = Array.isArray(body.card_installment_rates) ? body.card_installment_rates : null;
 
     if (isDryRun) {
@@ -401,7 +406,7 @@ async function handleAdminAction(
           would_mutate: true,
           role: authRole.role,
           target_resources: ["configuracoes_financeiras"],
-          details: { installmentMode, maxInstallments, taxaAdicional, rates_count: rates?.length || 0 }
+          details: { installmentMode, maxInstallments, taxaAdicional, taxaCartao1x, rates_count: rates?.length || 0 }
         }
       };
     }
@@ -412,6 +417,7 @@ async function handleAdminAction(
       taxa_adicional: taxaAdicional,
       atualizado_em: new Date().toISOString()
     };
+    if (taxaCartao1x !== undefined) updateData.taxa_cartao_1x = taxaCartao1x;
     if (rates) updateData.card_installment_rates = rates;
 
     const { data: updatedCard, error: cardErr } = await supabase
@@ -579,121 +585,182 @@ async function handleAdminAction(
   }
 
   // --------------------------------------------------------------------------
-  // OP06: approve_payment (HARDENED COM IDEMPOTÊNCIA E VÍNCULO DE INSCRIÇÃO)
+  // OP06: approve_payment (CANÔNICO, RESILIENTE A UNLINKED E PÓS-PERSISTÊNCIA)
   // --------------------------------------------------------------------------
   if (action === "approve_payment") {
     if (!authRole.canApprovePayments) {
       return { status: 403, body: { error: "Permissão negada. Seu perfil não pode aprovar pagamentos.", action, role: authRole.role } };
     }
 
-    const rawId = body.payment_id || body.txid || body.inscricao_id;
+    const rawPaymentId = String(body.payment_id || "").trim();
+    const rawTxid = String(body.txid || "").trim();
+    const rawInscId = String(body.inscricao_id || "").trim();
+    const rawId = rawPaymentId || rawTxid || rawInscId;
     if (!rawId) {
       return { status: 400, body: { error: "Identificador do pagamento ou inscrição é obrigatório." } };
     }
 
-    const { data: pData, error: pErr } = await supabase
-      .from("pagamentos")
-      .select("id, status, txid, inscricao_id, valor, metodo")
-      .or(`id.eq.${encodeURIComponent(rawId)},txid.eq.${encodeURIComponent(rawId)},inscricao_id.eq.${encodeURIComponent(rawId)}`)
-      .limit(1)
-      .maybeSingle();
-
-    let targetPayment = pData;
-
-    if (!targetPayment) {
-      // Se não localizado em pagamentos, verifica se é um ID de inscrição válido em public.inscricoes
-      if (UUID_REGEX.test(rawId)) {
-        const { data: insData, error: insErr } = await supabase
-          .from("inscricoes")
-          .select("id, nome_completo, sub, whatsapp, email, pagamento_status, arquivado, comprovante_caminho, forma_pagamento")
-          .eq("id", rawId)
-          .maybeSingle();
-
-        if (insErr || !insData) {
-          return { status: 404, body: { error: "Pagamento ou inscrição não encontrado." } };
-        }
-
-        if (insData.arquivado === true || insData.pagamento_status === "cancelado") {
-          return {
-            status: 400,
-            body: { error: "Inscrição encontra-se cancelada ou arquivada. Não é permitido aprovar pagamento de inscrição inativa." }
-          };
-        }
-
-        if (insData.pagamento_status === "confirmado") {
-          return {
-            status: 200,
-            body: {
-              success: true,
-              status: "approved",
-              already_confirmed: true,
-              message: "Inscrição já se encontra previamente confirmada."
-            }
-          };
-        }
-
-        // Cria registro financeiro auditado na tabela pagamentos para garantir conciliação
-        const manualTxid = `MANUAL-${insData.id.replace(/-/g, "").substring(0, 10).toUpperCase()}`;
-        const newPaymentRow = {
-          txid: manualTxid,
-          inscricao_id: insData.id,
-          nome_pagador: insData.nome_completo,
-          email: insData.email || null,
-          whatsapp_pagador: insData.whatsapp || null,
-          metodo: insData.forma_pagamento || "manual_pix",
-          status: "pending",
-          valor: 0,
-          criado_em: new Date().toISOString(),
-          metadata: {
-            origem: "aprovacao_manual_inscricao",
-            operador: authRole.label,
-            comprovante_caminho: insData.comprovante_caminho || null
-          }
-        };
-
-        const { data: createdPay, error: createPayErr } = await supabase
-          .from("pagamentos")
-          .upsert(newPaymentRow, { onConflict: "txid" })
-          .select("id, status, txid, inscricao_id, valor, metodo")
-          .single();
-
-        if (createPayErr || !createdPay) {
-          // Fallback seguro: atualiza diretamente na tabela inscricoes se não puder gravar em pagamentos
-          const { error: directUpErr } = await supabase
-            .from("inscricoes")
-            .update({
-              pagamento_status: "confirmado",
-              pagamento_confirmado_em: new Date().toISOString(),
-              observacao_pagamento: `Aprovado manualmente via painel administrativo por ${authRole.label}`
-            })
-            .eq("id", insData.id);
-
-          if (directUpErr) throw directUpErr;
-
-          await recordAudit(supabase, "APROVACAO_MANUAL_INSCRICAO", { inscricao_id: insData.id, operador: authRole.label }, clientIp, authRole.role, isDryRun);
-
-          return {
-            status: 200,
-            body: { success: true, message: "Inscrição aprovada com sucesso via coordenação.", inscricao_id: insData.id }
-          };
-        }
-
-        targetPayment = createdPay;
-      } else {
-        return { status: 404, body: { error: "Pagamento não encontrado." } };
+    // Se o payment_id foi prefixado com "virtual_", extrai o UUID da inscrição
+    let extractedInscricaoId: string | null = null;
+    if (rawPaymentId.startsWith("virtual_")) {
+      const candidate = rawPaymentId.replace(/^virtual_/, "").trim();
+      if (UUID_REGEX.test(candidate)) {
+        extractedInscricaoId = candidate;
       }
     }
+    if (!extractedInscricaoId && UUID_REGEX.test(rawInscId)) {
+      extractedInscricaoId = rawInscId;
+    }
+    if (!extractedInscricaoId && UUID_REGEX.test(rawId)) {
+      extractedInscricaoId = rawId;
+    }
 
-    // Valida inscrição vinculada para verificar se não está cancelada/arquivada
+    // 1. Busca inicial em pagamentos por id, txid ou inscricao_id
+    let targetPayment: any = null;
+    const filterParts: string[] = [];
+    if (rawPaymentId && !rawPaymentId.startsWith("virtual_")) {
+      filterParts.push(`id.eq.${encodeURIComponent(rawPaymentId)}`);
+    }
+    if (rawTxid) {
+      filterParts.push(`txid.eq.${encodeURIComponent(rawTxid)}`);
+      filterParts.push(`gateway_transaction_id.eq.${encodeURIComponent(rawTxid)}`);
+    }
+    if (extractedInscricaoId) {
+      filterParts.push(`inscricao_id.eq.${encodeURIComponent(extractedInscricaoId)}`);
+    }
+    if (filterParts.length > 0) {
+      const { data: pData } = await supabase
+        .from("pagamentos")
+        .select("id, status, txid, inscricao_id, valor, metodo, email, nome_pagador, metadata")
+        .or(filterParts.join(","))
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      targetPayment = pData;
+    }
+
+    // 2. Se não localizado em pagamentos, tenta localizar a inscrição oficial correspondente
+    let insData: any = null;
+    if (!targetPayment) {
+      if (extractedInscricaoId) {
+        const { data: insRow } = await supabase
+          .from("inscricoes")
+          .select("id, nome_completo, sub, whatsapp, email, pagamento_status, arquivado, comprovante_caminho, forma_pagamento")
+          .eq("id", extractedInscricaoId)
+          .maybeSingle();
+        insData = insRow;
+      } else if (rawTxid.startsWith("INSC-")) {
+        const prefixHex = rawTxid.replace(/^INSC-/, "").toLowerCase();
+        const { data: insList } = await supabase
+          .from("inscricoes")
+          .select("id, nome_completo, sub, whatsapp, email, pagamento_status, arquivado, comprovante_caminho, forma_pagamento")
+          .order("criado_em", { ascending: false })
+          .limit(150);
+
+        if (insList) {
+          insData = insList.find((i: any) => i.id.replace(/-/g, "").toLowerCase().startsWith(prefixHex));
+        }
+      }
+
+      if (!insData) {
+        return { status: 404, body: { error: "Pagamento ou inscrição não encontrado no sistema." } };
+      }
+
+      if (insData.arquivado === true || insData.pagamento_status === "cancelado") {
+        return {
+          status: 400,
+          body: { error: "Inscrição encontra-se cancelada ou arquivada. Não é permitido aprovar pagamento de inscrição inativa." }
+        };
+      }
+
+      if (insData.pagamento_status === "confirmado" || insData.pagamento_status === "approved") {
+        return {
+          status: 200,
+          body: {
+            success: true,
+            status: "approved",
+            already_confirmed: true,
+            message: "Inscrição já se encontra previamente confirmada."
+          }
+        };
+      }
+
+      // Obtém o valor oficial canônico da inscrição de configuracoes_financeiras (padrão R$ 50,00)
+      const { data: activeCfg } = await supabase
+        .from("configuracoes_financeiras")
+        .select("valor_inscricao, valor_promocional")
+        .eq("ativo", true)
+        .order("versao", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const precoOficial = Number(
+        activeCfg?.valor_promocional && activeCfg.valor_promocional > 0 && activeCfg.valor_promocional < activeCfg.valor_inscricao
+          ? activeCfg.valor_promocional
+          : (activeCfg?.valor_inscricao || 50.00)
+      );
+
+      // Cria registro financeiro auditado na tabela pagamentos para conciliação inequívoca
+      const manualTxid = `MANUAL-${insData.id.replace(/-/g, "").substring(0, 10).toUpperCase()}`;
+      const newPaymentRow = {
+        txid: manualTxid,
+        inscricao_id: insData.id,
+        nome_pagador: insData.nome_completo,
+        email: insData.email || null,
+        whatsapp_pagador: insData.whatsapp || null,
+        metodo: insData.forma_pagamento || "manual_pix",
+        status: "pending",
+        valor: precoOficial,
+        criado_em: new Date().toISOString(),
+        metadata: {
+          origem: "aprovacao_manual_inscricao",
+          operador: authRole.label,
+          comprovante_caminho: insData.comprovante_caminho || null
+        }
+      };
+
+      const { data: createdPay, error: createPayErr } = await supabase
+        .from("pagamentos")
+        .upsert(newPaymentRow, { onConflict: "txid" })
+        .select("id, status, txid, inscricao_id, valor, metodo, email, nome_pagador, metadata")
+        .single();
+
+      if (createPayErr || !createdPay) {
+        // Fallback seguro: atualiza diretamente na tabela inscricoes se não puder gravar em pagamentos
+        const { error: directUpErr } = await supabase
+          .from("inscricoes")
+          .update({
+            pagamento_status: "confirmado",
+            pagamento_confirmado_em: new Date().toISOString(),
+            observacao_pagamento: `Aprovado manualmente via painel administrativo por ${authRole.label}`
+          })
+          .eq("id", insData.id);
+
+        if (directUpErr) throw directUpErr;
+
+        await recordAudit(supabase, "APROVACAO_MANUAL_INSCRICAO", { inscricao_id: insData.id, operador: authRole.label }, clientIp, authRole.role, isDryRun);
+
+        return {
+          status: 200,
+          body: { success: true, message: "Inscrição aprovada com sucesso via coordenação.", inscricao_id: insData.id }
+        };
+      }
+
+      targetPayment = createdPay;
+    }
+
+    // Se já encontramos targetPayment, valida a inscrição correspondente se houver
     if (targetPayment.inscricao_id) {
-      const { data: insData, error: insErr } = await supabase
+      const { data: linkedIns } = await supabase
         .from("inscricoes")
-        .select("id, pagamento_status, arquivado")
+        .select("id, pagamento_status, arquivado, nome_completo, email, sub")
         .eq("id", targetPayment.inscricao_id)
         .maybeSingle();
 
-      if (!insErr && insData) {
-        if (insData.arquivado === true || insData.pagamento_status === "cancelado") {
+      if (linkedIns) {
+        insData = linkedIns;
+        if (linkedIns.arquivado === true || linkedIns.pagamento_status === "cancelado") {
           return {
             status: 400,
             body: { error: "Inscrição vinculada a este pagamento encontra-se cancelada ou arquivada. Não é permitido aprovar pagamento de inscrição cancelada." }
@@ -732,6 +799,7 @@ async function handleAdminAction(
             current_status: targetPayment.status,
             target_status: "approved",
             inscricao_id: targetPayment.inscricao_id,
+            valor: targetPayment.valor,
             mechanism: "confirmar_pagamento_unificado_rpc",
             external_effects: "nenhum (Brevo e Mercado Pago estritamente isolados no dry-run)"
           }
@@ -749,7 +817,66 @@ async function handleAdminAction(
 
     if (rpcErr) throw rpcErr;
 
-    return { status: 200, body: { success: true, message: "Pagamento aprovado com sucesso via reconciliação unificada.", result: rpcRes } };
+    // Disparo seguro e pós-persistência do e-mail de confirmação via send-email
+    let emailDispatchResult: { sent: boolean; message?: string; error?: string | null } = { sent: false };
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+      const sendEmailUrl = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/send-email`;
+
+      const sendRes = await fetch(sendEmailUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRoleKey}`,
+          "x-admin-role": authRole.role
+        },
+        body: JSON.stringify({
+          event_type: "payment_approved",
+          txid: targetPayment.txid,
+          force_resend: false,
+          origem_aprovacao: "manual_coordenacao"
+        }),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      const sendData = await sendRes.json().catch(() => ({ success: false }));
+      if (sendRes.ok && sendData.success) {
+        emailDispatchResult = { sent: true, message: "Comprovante enviado com sucesso via e-mail." };
+      } else {
+        emailDispatchResult = { sent: false, error: sendData.error || "Envio de e-mail em fila ou pendente." };
+      }
+    } catch (eEmail) {
+      console.warn("[approve_payment send-email warn]:", eEmail);
+      emailDispatchResult = { sent: false, error: String(eEmail) };
+    }
+
+    await recordAudit(supabase, "APROVACAO_MANUAL_PAGAMENTO", {
+      payment_id: targetPayment.id,
+      txid: targetPayment.txid,
+      inscricao_id: targetPayment.inscricao_id,
+      valor: targetPayment.valor,
+      email_dispatched: emailDispatchResult.sent
+    }, clientIp, authRole.role, isDryRun);
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        persisted: true,
+        message: emailDispatchResult.sent 
+          ? "Pagamento aprovado e comprovante enviado por e-mail com sucesso."
+          : "Pagamento aprovado no banco de dados. E-mail de confirmação registrado para envio.",
+        txid: targetPayment.txid,
+        payment_id: targetPayment.id,
+        inscricao_id: targetPayment.inscricao_id,
+        valor: targetPayment.valor,
+        status: "approved",
+        email_sent: emailDispatchResult.sent,
+        email_result: emailDispatchResult,
+        result: rpcRes
+      }
+    };
   }
 
   // --------------------------------------------------------------------------
