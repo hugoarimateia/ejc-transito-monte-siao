@@ -53,6 +53,16 @@ window.EJC_ENDPOINTS = {
   },
   r2PresignedUrl: function() {
     return "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/r2-presigned-url";
+  },
+  adminWrite: function() {
+    return window.EJC_BACKEND_MODE === "supabase"
+      ? "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write"
+      : "/api/admin-write";
+  },
+  adminRead: function() {
+    return window.EJC_BACKEND_MODE === "supabase"
+      ? "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-read"
+      : "/api/admin";
   }
 };
 

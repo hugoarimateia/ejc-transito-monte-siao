@@ -61,6 +61,15 @@ const ROLES: Record<string, RolePermissions> = {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function normalizarSub(sub?: string | null): string | null {
+  const s = String(sub || "").trim().toLowerCase();
+  if (s.includes("verd")) return "Verde";
+  if (s.includes("verm")) return "Vermelho";
+  if (s.includes("amar")) return "Amarelo";
+  if (s.includes("laran") || s.includes("azul")) return "Laranja";
+  return null;
+}
+
 const ALLOWED_CONFIG_KEYS = new Set([
   "valor_inscricao",
   "valor_promocional",
@@ -1477,7 +1486,7 @@ async function handleAdminAction(
         currentOccupied = Number(occ || 0);
       } catch (_) {}
 
-      let cap = 95;
+      let cap = 105;
       try {
         const { data: subRow } = await supabase
           .from("subs")
@@ -2051,9 +2060,9 @@ async function handleAdminAction(
     }
 
     // 3. Auditoria transparente da alteração
-    await registrarAuditoria(
+    await recordAudit(
       supabase,
-      "alterar_capacidade_sub",
+      "ALTERACAO_CAPACIDADE_SUB",
       {
         sub,
         capacidade_anterior: capacidadeAnterior,
@@ -2063,7 +2072,8 @@ async function handleAdminAction(
         motivo: body.motivo || "Ajuste manual de capacidade via Dashboard Superadmin"
       },
       clientIp,
-      authRole.label
+      authRole.role,
+      isDryRun
     );
 
     // 4. Consulta capacidades e contagens atualizadas para retorno imediato

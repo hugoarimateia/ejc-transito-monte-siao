@@ -1636,8 +1636,8 @@ serve(async (req: Request) => {
             }, 400, req);
           }
 
-          // Revalidar se a vaga da Sub ainda está dentro do limite oficial de 95
-          let maxCapacidade = 95;
+          // Revalidar se a vaga da Sub ainda está dentro do limite oficial (fallback: 105)
+          let maxCapacidade = 105;
           try {
             const { data: subCapRow } = await supabase
               .from("subs")
@@ -1648,7 +1648,7 @@ serve(async (req: Request) => {
               maxCapacidade = subCapRow.capacidade;
             }
           } catch (_cErr) {
-            maxCapacidade = 95;
+            maxCapacidade = 105;
           }
 
           const { data: subCountData } = await supabase.rpc("contagem_inscricoes_por_sub");

@@ -205,6 +205,15 @@ const ADMIN_EDGE_ADAPTER = `
       pathname === "/api/checkout-process/" ||
       rawUrl.includes("api/checkout-process");
 
+    const isAdminWriteRoute =
+      pathname === "/api/admin-write" ||
+      pathname === "/api/admin-write/" ||
+      rawUrl.includes("api/admin-write");
+
+    if (isAdminWriteRoute && method === "POST") {
+      return originalFetch(ADMIN_WRITE_URL, init);
+    }
+
     // POST /api/admin com action=login -> admin-read
     // Outras ações em POST /api/admin -> admin-write
     if (isAdminRoute && method === "POST") {
@@ -462,7 +471,40 @@ export default {
       }
     }
 
-    // 3. Demais arquivos estáticos do Cloudflare Pages
+    // 3. Intercepta /api/admin-write
+    const isAdminWriteRoute = url.pathname.includes('/api/admin-write');
+    if (isAdminWriteRoute) {
+      if (request.method === 'POST') {
+        const targetUrl = new URL('/functions/v1/admin-write', 'https://guppedddwnuvluhiaaas.supabase.co');
+        const modifiedHeaders = new Headers(request.headers);
+        modifiedHeaders.set('host', 'guppedddwnuvluhiaaas.supabase.co');
+        const upstreamRes = await fetch(targetUrl.toString(), {
+          method: 'POST',
+          headers: modifiedHeaders,
+          body: request.body
+        });
+        const respHeaders = new Headers(upstreamRes.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        respHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token');
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          statusText: upstreamRes.statusText,
+          headers: respHeaders
+        });
+      }
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
+          }
+        });
+      }
+    }
+
+    // 4. Demais arquivos estáticos do Cloudflare Pages
     return env.ASSETS.fetch(request);
   }
 };

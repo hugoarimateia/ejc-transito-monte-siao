@@ -489,6 +489,7 @@
         <div class="stat-box">
           <span>Total Inscritos</span>
           <strong id="statTotalInscritos">0</strong>
+          <small id="statTotalInscritosSub" style="font-size: .72rem; color: var(--muted); display: block; margin-top: 4px; font-weight: 600;">Capacidade Total: 420 vagas</small>
         </div>
         <div class="stat-box green">
           <span>Sub Verde</span>
@@ -615,6 +616,9 @@
             <tbody id="gestaoCapacidadesTableBody">
               <!-- Preenchido dinamicamente por renderizarGestaoCapacidades() -->
             </tbody>
+            <tfoot id="gestaoCapacidadesTableFoot">
+              <!-- Preenchido dinamicamente por renderizarGestaoCapacidades() -->
+            </tfoot>
           </table>
         </div>
       </div>
@@ -2790,6 +2794,13 @@
 
       // Indicadores do Dashboard da Página Inicial representam estritamente participantes com pagamento confirmado (REGRA 2)
       document.getElementById("statTotalInscritos").textContent = totalConfirmados;
+      const totalCapacidadeDashboard = ["Verde", "Vermelho", "Amarelo", "Laranja"].reduce((acc, s) => {
+        return acc + Number((serverCapacities && serverCapacities[s]) || 105);
+      }, 0);
+      const elTotalInscSub = document.getElementById("statTotalInscritosSub");
+      if (elTotalInscSub) {
+        elTotalInscSub.textContent = `Capacidade Total: ${totalCapacidadeDashboard} vagas`;
+      }
       document.getElementById("statSubVerde").textContent = `${subsConfirmados.Verde} / ${(serverCapacities && serverCapacities.Verde) || 105}`;
       document.getElementById("statSubVermelho").textContent = `${subsConfirmados.Vermelho} / ${(serverCapacities && serverCapacities.Vermelho) || 105}`;
       document.getElementById("statSubAmarelo").textContent = `${subsConfirmados.Amarelo} / ${(serverCapacities && serverCapacities.Amarelo) || 105}`;
@@ -2889,6 +2900,7 @@
     function renderizarGestaoCapacidades() {
       const sec = document.getElementById("sectionGestaoCapacidade");
       const tbody = document.getElementById("gestaoCapacidadesTableBody");
+      const tfoot = document.getElementById("gestaoCapacidadesTableFoot");
       const tabBtn = document.getElementById("tabBtnCapacidades");
       if (!sec || !tbody) return;
 
@@ -2913,6 +2925,9 @@
       ];
 
       const opCounts = window.__adminCountsOperacionais || {};
+      let totalCapGeral = 0;
+      let totalOcupGeral = 0;
+      let totalDispGeral = 0;
 
       let html = "";
       subsInfo.forEach(s => {
@@ -2921,6 +2936,10 @@
         const ocupacao = (opCounts[subNome] !== undefined) ? Number(opCounts[subNome]) : 0;
         const disponivel = Math.max(0, capAtual - ocupacao);
         const isExcedida = ocupacao > capAtual;
+
+        totalCapGeral += capAtual;
+        totalOcupGeral += ocupacao;
+        totalDispGeral += disponivel;
 
         let dispBadge = "";
         if (isExcedida) {
@@ -2966,11 +2985,33 @@
       });
 
       tbody.innerHTML = html;
+
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr style="background: var(--bg-surface, #f8fafc); font-weight: 800; border-top: 2px solid var(--border-color, #cbd5e1);">
+            <td><strong>Total Geral</strong></td>
+            <td style="text-align:center; font-size:1.05rem; color:var(--ink);">
+              <span id="labelCapTotalGeral">${totalCapGeral}</span>
+            </td>
+            <td style="text-align:center; font-size:.95rem; color:var(--ink);">
+              <span>${totalOcupGeral}</span> <small style="color:var(--muted); font-size:.76rem;">elegíveis</small>
+            </td>
+            <td style="text-align:center;">
+              <span class="status-badge" style="background:#ecfdf5; color:#047857; border:1px solid #10b981; font-weight:700;">
+                <i class="fa-solid fa-users"></i> ${totalDispGeral} livre(s)
+              </span>
+            </td>
+            <td colspan="3" style="color:var(--muted); font-size:.82rem; font-weight:600; vertical-align:middle;">
+              Capacidade nominal somada dos 4 subgrupos
+            </td>
+          </tr>
+        `;
+      }
     }
 
     let pendingReducaoData = null;
 
-    async function salvarCapacidadeSub(sub, confirmarExcedida = false) {
+    async function salvarCapacidadeSub(sub, confirmarExcedida = false, motivoReducao = "") {
       const input = document.getElementById(`inputNovaCap_${sub}`);
       const btn = document.getElementById(`btnSalvarCap_${sub}`);
       const feedback = document.getElementById(`feedbackCap_${sub}`);
@@ -2988,28 +3029,35 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Salvando...`;
       if (feedback) feedback.innerHTML = "";
 
-      const currentPass = sessionStorage.getItem("ejc_admin_pass") || "";
-      const endpoint = window.EJC_ENDPOINTS ? window.EJC_ENDPOINTS.adminWrite() : "/api/admin-write";
-
       try {
+        const currentPass = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+        const endpoint = (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : (window.EJC_ENDPOINTS && typeof window.EJC_ENDPOINTS.adminWrite === "function")
+            ? window.EJC_ENDPOINTS.adminWrite()
+            : "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
+
         const payload = {
           action: "update_sub_capacity",
           sub: sub,
           capacidade: novaCap,
           confirmar_reducao_excedida: Boolean(confirmarExcedida),
-          password: currentPass
+          motivo: motivoReducao || "Ajuste manual de capacidade via Dashboard Superadmin",
+          password: currentPass,
+          admin_pass: currentPass
         };
 
         const res = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${currentPass}`
+            "Authorization": `Bearer ${currentPass}`,
+            "x-admin-token": currentPass
           },
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (res.status === 409 && data.alerta_excesso) {
           // Abre modal de confirmação explícita
@@ -3021,17 +3069,11 @@
             excesso: data.excesso
           };
           abrirModalConfirmReducaoCapacidade(pendingReducaoData);
-          btn.disabled = false;
-          btn.innerHTML = originalText;
           return;
         }
 
         if (res.ok && data.success) {
-          if (feedback) {
-            feedback.innerHTML = `<span style="color:#047857;"><i class="fa-solid fa-circle-check"></i> Salvo com sucesso!</span>`;
-            setTimeout(() => { if (feedback) feedback.innerHTML = ""; }, 4000);
-          }
-          if (data.capacities) {
+          if (data.capacities && typeof data.capacities === "object") {
             serverCapacities = { ...serverCapacities, ...data.capacities };
           } else {
             serverCapacities[sub] = novaCap;
@@ -3039,22 +3081,36 @@
           // Atualiza cards do Dashboard e tabela
           renderizarEstatisticas();
           renderizarGestaoCapacidades();
+
+          const postFeedback = document.getElementById(`feedbackCap_${sub}`);
+          if (postFeedback) {
+            postFeedback.innerHTML = `<span style="color:#047857;"><i class="fa-solid fa-circle-check"></i> Salvo com sucesso! (${novaCap} vagas)</span>`;
+            setTimeout(() => {
+              const el = document.getElementById(`feedbackCap_${sub}`);
+              if (el) el.innerHTML = "";
+            }, 4000);
+          }
         } else {
           const errMsg = data.error || data.message || `Erro HTTP ${res.status}`;
-          if (feedback) {
-            feedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> ${errMsg}</span>`;
+          const curFeedback = document.getElementById(`feedbackCap_${sub}`) || feedback;
+          if (curFeedback) {
+            curFeedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> ${errMsg}</span>`;
           }
           alert(`Erro ao salvar capacidade: ${errMsg}`);
         }
       } catch (err) {
         console.error("[salvarCapacidadeSub]", err);
-        if (feedback) {
-          feedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Falha de comunicação</span>`;
+        const curFeedback = document.getElementById(`feedbackCap_${sub}`) || feedback;
+        if (curFeedback) {
+          curFeedback.innerHTML = `<span style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Falha de comunicação</span>`;
         }
         alert(`Erro de comunicação com o servidor: ${err.message}`);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        const postBtn = document.getElementById(`btnSalvarCap_${sub}`) || btn;
+        if (postBtn) {
+          postBtn.disabled = false;
+          postBtn.innerHTML = originalText;
+        }
       }
     }
 
@@ -3081,8 +3137,21 @@
     async function executarConfirmacaoReducaoExcedida() {
       if (!pendingReducaoData) return;
       const sub = pendingReducaoData.sub;
-      fecharModalConfirmReducaoCapacidade();
-      await salvarCapacidadeSub(sub, true);
+      const motivo = document.getElementById("modalReducaoMotivo")?.value || "Redução manual autorizada pelo Superadmin";
+      const modalBtn = document.getElementById("btnConfirmarReducaoExcedida");
+      if (modalBtn) {
+        modalBtn.disabled = true;
+        modalBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
+      }
+      try {
+        fecharModalConfirmReducaoCapacidade();
+        await salvarCapacidadeSub(sub, true, motivo);
+      } finally {
+        if (modalBtn) {
+          modalBtn.disabled = false;
+          modalBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Redução Excedida';
+        }
+      }
     }
 
     function renderizarTabelaInscricoes() {

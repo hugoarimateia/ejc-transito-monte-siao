@@ -39,7 +39,7 @@ function isPagamentoConfirmado(status) {
 // Calcula as contagens oficiais deduplicadas exclusivamente a partir de inscrições ativas e PAGAS
 function calcularContagensOficiais(localStore) {
   const counts = { Verde: 0, Vermelho: 0, Amarelo: 0, Laranja: 0 };
-  const capacities = { Verde: 95, Vermelho: 95, Amarelo: 95, Laranja: 95 };
+  const capacities = { Verde: 105, Vermelho: 105, Amarelo: 105, Laranja: 105 };
   
   // Mapa de pessoas únicas: identificador único -> sub
   // Fonte Única: apenas inscrições não arquivadas (arquivado = false) e com pagamento confirmado
@@ -138,6 +138,28 @@ module.exports = async (req, res) => {
             });
           }
         }
+
+        try {
+          const subRes = await fetch(`${url}/rest/v1/subs?select=nome,capacidade`, {
+            method: "GET",
+            headers: {
+              "apikey": key,
+              "Authorization": `Bearer ${key}`
+            },
+            signal: AbortSignal.timeout(3000)
+          });
+          if (subRes.ok) {
+            const subsData = await subRes.json();
+            if (Array.isArray(subsData)) {
+              subsData.forEach(r => {
+                const s = normalizarSub(r.nome);
+                if (s && r.capacidade !== undefined && r.capacidade !== null) {
+                  capacities[s] = Number(r.capacidade);
+                }
+              });
+            }
+          }
+        } catch (_) {}
       } catch (errDb) {
         console.warn("[SubCounts API] Supabase RPC offline, usando persistência central local:", errDb.message);
       }
