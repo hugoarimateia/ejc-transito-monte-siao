@@ -142,6 +142,16 @@ const ADMIN_EDGE_ADAPTER = `
 
   const originalFetch = window.fetch;
 
+  if (typeof window !== "undefined") {
+    window.EJC_ENDPOINTS = window.EJC_ENDPOINTS || {};
+    if (typeof window.EJC_ENDPOINTS.adminWrite !== "function") {
+      window.EJC_ENDPOINTS.adminWrite = function() { return ADMIN_WRITE_URL; };
+    }
+    if (typeof window.EJC_ENDPOINTS.adminRead !== "function") {
+      window.EJC_ENDPOINTS.adminRead = function() { return ADMIN_READ_URL; };
+    }
+  }
+
   window.fetch = function(input, init) {
     let rawUrl =
       typeof input === "string"

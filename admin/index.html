@@ -2105,8 +2105,25 @@
   <script src="../js/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/env-config.js"></script>
-  <script src="../js/supabase-config.js"></script>
+  <script src="../js/supabase-config.js?v=20261017_cap1"></script>
   <script>
+    const ADMIN_WRITE_EDGE_URL = "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
+
+    // Polyfill defensivo universal para garantir que window.EJC_ENDPOINTS e seus métodos existam
+    window.EJC_ENDPOINTS = window.EJC_ENDPOINTS || {};
+    if (typeof window.EJC_ENDPOINTS.adminWrite !== "function") {
+      window.EJC_ENDPOINTS.adminWrite = function() {
+        return (typeof ADMIN_WRITE_EDGE_URL !== "undefined" && ADMIN_WRITE_EDGE_URL)
+          ? ADMIN_WRITE_EDGE_URL
+          : "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
+      };
+    }
+    if (typeof window.EJC_ENDPOINTS.adminRead !== "function") {
+      window.EJC_ENDPOINTS.adminRead = function() {
+        return "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-read";
+      };
+    }
+
     const ROLE_MAP = {};
 
     // FEATURE FLAGS - TRANSIÇÃO CONTROLADA PARA SUPABASE EDGE
@@ -2122,8 +2139,6 @@
       const lVoltar = document.getElementById("linkVoltarSite");
       if (lVoltar) lVoltar.href = "../index.html";
     }
-
-    const ADMIN_WRITE_EDGE_URL = "https://guppedddwnuvluhiaaas.supabase.co/functions/v1/admin-write";
 
     let currentUserRole = "admin";
     let currentAdminPass = "";
