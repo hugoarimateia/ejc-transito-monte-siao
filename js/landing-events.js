@@ -120,14 +120,24 @@
     var lista = config.reunioes || [];
     for (var i = 0; i < lista.length; i++) {
       var r = lista[i];
-      var t = new Date(r.inicio).getTime();
-      // Se a reunião ainda não começou ou está dentro de sua janela de 2h
-      var endT = r.termino ? new Date(r.termino).getTime() : t + 2 * 3600 * 1000;
-      if (nowMs < endT) {
-        return { reuniao: r, index: i, total: lista.length };
+      var startMs = r.inicio ? new Date(r.inicio).getTime() : NaN;
+      var endMs = r.termino ? new Date(r.termino).getTime() : NaN;
+
+      // Se não há término válido definido
+      if (isNaN(endMs)) {
+        if (!isNaN(startMs)) {
+          return { reuniao: r, index: i, total: lista.length, hasValidEnd: false };
+        }
+        continue;
+      }
+
+      // Se nowMs é estritamente menor que o término da reunião, ela é a ativa
+      // (cobre tanto o período antes do início quanto o período em andamento)
+      if (nowMs < endMs) {
+        return { reuniao: r, index: i, total: lista.length, hasValidEnd: true };
       }
     }
-    // Todas as reuniões já passaram
+    // Todas as reuniões cadastradas já atingiram seu término
     return null;
   }
 
@@ -137,15 +147,18 @@
     var titleEl = cardEl.querySelector(".ejc-events-card-title");
     var badgeEl = cardEl.querySelector(".ejc-events-badge");
     var dateEl = cardEl.querySelector(".ejc-events-date-label");
+    var subtitleEl = cardEl.querySelector(".ejc-events-card-subtitle");
     var statusEl = cardEl.querySelector(".ejc-events-status-msg");
     var timerWrap = cardEl.querySelector(".ejc-events-timer");
 
+    // 4. Após o término da última reunião, apresenta "Não há próximas reuniões agendadas"
     if (!info) {
-      if (titleEl) titleEl.textContent = "Reuniões Gerais e de Coordenadores";
-      if (badgeEl) badgeEl.textContent = "Cronograma Concluído";
-      if (dateEl) dateEl.textContent = "Etapas anteriores finalizadas";
+      if (titleEl) titleEl.textContent = "Reunião Geral – Sorteio de Ficha";
+      if (badgeEl) badgeEl.textContent = "Sorteio de Ficha";
+      if (dateEl) dateEl.innerHTML = '<i class="fa-regular fa-calendar-check" aria-hidden="true"></i> Cronograma finalizado';
+      if (subtitleEl) subtitleEl.textContent = "Não há próximas reuniões agendadas";
       if (statusEl) {
-        statusEl.textContent = "Não há próximas reuniões confirmadas na programação.";
+        statusEl.textContent = "Não há próximas reuniões agendadas";
         statusEl.style.display = "block";
       }
       if (timerWrap) timerWrap.style.display = "none";
@@ -156,12 +169,49 @@
     if (titleEl) titleEl.textContent = r.titulo;
     if (badgeEl) badgeEl.textContent = r.badge || r.tipo;
     if (dateEl) dateEl.innerHTML = '<i class="fa-regular fa-calendar" aria-hidden="true"></i> ' + r.dataTexto;
+    if (subtitleEl) subtitleEl.textContent = r.subtitulo || "Faltam para o início da reunião";
 
+    var startMs = r.inicio ? new Date(r.inicio).getTime() : NaN;
+    var endMs = r.termino ? new Date(r.termino).getTime() : NaN;
+
+    var daysEl = cardEl.querySelector('[data-unit="days"]');
+    var hoursEl = cardEl.querySelector('[data-unit="hours"]');
+    var minsEl = cardEl.querySelector('[data-unit="minutes"]');
+    var secsEl = cardEl.querySelector('[data-unit="seconds"]');
+
+    // Se faltar um término válido e já passou do início, informa a pendência sem inventar dados
+    if (!info.hasValidEnd && !isNaN(startMs) && nowMs >= startMs) {
+      if (timerWrap) timerWrap.style.display = "flex";
+      if (daysEl) daysEl.textContent = "00";
+      if (hoursEl) hoursEl.textContent = "00";
+      if (minsEl) minsEl.textContent = "00";
+      if (secsEl) secsEl.textContent = "00";
+      if (statusEl) {
+        statusEl.textContent = "Horário de término a confirmar";
+        statusEl.style.display = "block";
+      }
+      return;
+    }
+
+    // 2. Entre inicio e termino: apresenta "Reunião em andamento", sem contagem negativa
+    if (!isNaN(startMs) && !isNaN(endMs) && nowMs >= startMs && nowMs < endMs) {
+      if (timerWrap) timerWrap.style.display = "flex";
+      if (daysEl) daysEl.textContent = "00";
+      if (hoursEl) hoursEl.textContent = "00";
+      if (minsEl) minsEl.textContent = "00";
+      if (secsEl) secsEl.textContent = "00";
+      if (statusEl) {
+        statusEl.textContent = "Reunião em andamento";
+        statusEl.style.display = "block";
+      }
+      return;
+    }
+
+    // 1. Antes de inicio: o card conta regressivamente para a reunião
     var rem = calculateRemaining(r.inicio, nowMs);
     updateCardUI(cardEl, rem, r);
   }
 
-  // ----------------------------------------------------------------------------
   // 4. AGENDADOR ÚNICO DE TICK (1000ms)
   // ----------------------------------------------------------------------------
 

@@ -37,10 +37,10 @@
       badge: "10º EJC • AD Monte Sião",
       dataTexto: "04 a 06 de Dezembro de 2026",
       // Sexta-feira, 04 de Dezembro de 2026 às 19:00 (horário previsto canônico)
-      inicio: "2026-12-04T19:00:00" + TIMEZONE_OFFSET,
+      inicio: "2026-12-04T18:00:00" + TIMEZONE_OFFSET,
       termino: "2026-12-06T22:00:00" + TIMEZONE_OFFSET,
       dataConfirmada: true,
-      horarioConfirmado: false, // Horário exato pendente de confirmação final pela coordenação
+      horarioConfirmado: true, // Horário exato pendente de confirmação final pela coordenação
       localNome: "Local do encontro",
       mapsUrl: "https://maps.app.goo.gl/W32NggvNxfmQzZ9M7"
     },
@@ -48,28 +48,15 @@
     // 2. REUNIÕES (Ordenadas cronologicamente para seleção automática da próxima)
     reunioes: [
       {
-        id: "reuniao-coord-04-11",
-        titulo: "Reunião de Coordenadores",
-        dataTexto: "04 de Novembro de 2026",
-        inicio: "2026-11-04T19:30:00" + TIMEZONE_OFFSET,
-        termino: "2026-11-04T21:30:00" + TIMEZONE_OFFSET,
-        tipo: "Coordenadores",
-        badge: "Coordenação",
-        dataConfirmada: true,
-        horarioConfirmado: false,
-        localNome: "Local das reuniões",
-        mapsUrl: "https://maps.app.goo.gl/LzukqmEfCe2GnL6E8"
-      },
-      {
         id: "reuniao-geral-11-11",
         titulo: "Reunião Geral • Sorteio de Ficha",
         dataTexto: "11 de Novembro de 2026",
-        inicio: "2026-11-11T19:30:00" + TIMEZONE_OFFSET,
+        inicio: "2026-11-11T19:00:00" + TIMEZONE_OFFSET,
         termino: "2026-11-11T21:30:00" + TIMEZONE_OFFSET,
         tipo: "Geral",
         badge: "Sorteio de Ficha",
         dataConfirmada: true,
-        horarioConfirmado: false,
+        horarioConfirmado: true,
         localNome: "Local das reuniões",
         mapsUrl: "https://maps.app.goo.gl/LzukqmEfCe2GnL6E8"
       },
@@ -77,12 +64,12 @@
         id: "reuniao-geral-18-11",
         titulo: "Reunião Geral • Sorteio de Ficha",
         dataTexto: "18 de Novembro de 2026",
-        inicio: "2026-11-18T19:30:00" + TIMEZONE_OFFSET,
+        inicio: "2026-11-18T19:00:00" + TIMEZONE_OFFSET,
         termino: "2026-11-18T21:30:00" + TIMEZONE_OFFSET,
         tipo: "Geral",
         badge: "Sorteio de Ficha",
         dataConfirmada: true,
-        horarioConfirmado: false,
+        horarioConfirmado: true,
         localNome: "Local das reuniões",
         mapsUrl: "https://maps.app.goo.gl/LzukqmEfCe2GnL6E8"
       },
@@ -90,12 +77,12 @@
         id: "reuniao-geral-25-11",
         titulo: "Reunião Geral • Sorteio de Ficha",
         dataTexto: "25 de Novembro de 2026",
-        inicio: "2026-11-25T19:30:00" + TIMEZONE_OFFSET,
+        inicio: "2026-11-25T19:00:00" + TIMEZONE_OFFSET,
         termino: "2026-11-25T21:30:00" + TIMEZONE_OFFSET,
         tipo: "Geral",
         badge: "Sorteio de Ficha",
         dataConfirmada: true,
-        horarioConfirmado: false,
+        horarioConfirmado: true,
         localNome: "Local das reuniões",
         mapsUrl: "https://maps.app.goo.gl/LzukqmEfCe2GnL6E8"
       }
