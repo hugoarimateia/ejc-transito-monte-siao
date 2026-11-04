@@ -75,7 +75,9 @@ const publicJsFiles = [
   'script.js',
   'supabase-config.js',
   'env-config.js',
-  'theme.js'
+  'theme.js',
+  'landing-events-config.js',
+  'landing-events.js'
 ];
 
 for (const jsFile of publicJsFiles) {

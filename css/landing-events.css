@@ -1,0 +1,946 @@
+/* ==============================================================================
+   EJC TRÂNSITO MONTE SIÃO - LANDING EVENTS & ESPAÇO TRANSITEIRO
+   Módulo CSS isolado com prefixos ejc-events-* e ejc-transiteiro-*
+   Compatível com temas Claro e Escuro nativos do projeto
+   ============================================================================== */
+
+/* ------------------------------------------------------------------------------
+   1. GRID DE EVENTOS E CARDS NO CALENDÁRIO
+   ------------------------------------------------------------------------------ */
+.ejc-events-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.ejc-events-slot-principal {
+  position: relative;
+  width: 100%;
+  min-height: 236px;
+  border-radius: 20px;
+  transition: min-height 0.2s ease;
+}
+
+/* Card padrão compartilhado por todos os contadores */
+.ejc-events-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: var(--white, #ffffff);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 28px rgba(15, 25, 65, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .ejc-events-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.ejc-events-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(15, 25, 65, 0.1);
+}
+
+[data-theme="dark"] .ejc-events-card:hover {
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45);
+}
+
+/* Destaque sutil no Card Principal do Encontro */
+.ejc-events-card--principal {
+  border-left: 4px solid var(--yellow, #ffd91a);
+}
+
+[data-theme="dark"] .ejc-events-card--principal {
+  border-left: 4px solid #facc15;
+}
+
+/* Header do Card */
+.ejc-events-card-header {
+  margin-bottom: 14px;
+}
+
+.ejc-events-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.ejc-events-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: rgba(2, 50, 132, 0.09);
+  color: var(--blue, #023284);
+}
+
+[data-theme="dark"] .ejc-events-badge {
+  background: rgba(96, 165, 250, 0.16);
+  color: #93c5fd;
+}
+
+.ejc-events-badge--gold {
+  background: rgba(255, 217, 26, 0.22);
+  color: #92400e;
+}
+
+[data-theme="dark"] .ejc-events-badge--gold {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fde047;
+}
+
+.ejc-events-date-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+}
+
+[data-theme="dark"] .ejc-events-date-label {
+  color: #94a3b8;
+}
+
+.ejc-events-card-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--text-main, #0f172a);
+}
+
+[data-theme="dark"] .ejc-events-card-title {
+  color: #f8fafc;
+}
+
+.ejc-events-card-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--muted, #64748b);
+}
+
+[data-theme="dark"] .ejc-events-card-subtitle {
+  color: #94a3b8;
+}
+
+/* ------------------------------------------------------------------------------
+   2. TIMER UNIFICADO (DIAS | HORAS | MINUTOS | SEGUNDOS)
+   ------------------------------------------------------------------------------ */
+.ejc-events-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(2, 50, 132, 0.04);
+  border: 1px solid rgba(2, 50, 132, 0.08);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .ejc-events-timer {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ejc-events-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  flex: 1;
+}
+
+.ejc-events-num {
+  font-family: "Archivo Black", "Inter", sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--blue, #023284);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+[data-theme="dark"] .ejc-events-num {
+  color: #60a5fa;
+}
+
+.ejc-events-card--principal .ejc-events-num {
+  color: var(--blue-dark, #0b1f48);
+}
+
+[data-theme="dark"] .ejc-events-card--principal .ejc-events-num {
+  color: #93c5fd;
+}
+
+.ejc-events-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted, #64748b);
+  margin-top: 2px;
+}
+
+[data-theme="dark"] .ejc-events-label {
+  color: #94a3b8;
+}
+
+.ejc-events-sep {
+  font-family: "Archivo Black", sans-serif;
+  font-size: 1.2rem;
+  color: rgba(2, 50, 132, 0.25);
+  user-select: none;
+  padding-bottom: 12px;
+}
+
+[data-theme="dark"] .ejc-events-sep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Mensagens de estado temporal */
+.ejc-events-status-msg {
+  display: none;
+  margin: 6px 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(255, 217, 26, 0.16);
+  color: #854d0e;
+  border-left: 3px solid #eab308;
+}
+
+[data-theme="dark"] .ejc-events-status-msg {
+  background: rgba(234, 179, 8, 0.14);
+  color: #fef08a;
+  border-left-color: #facc15;
+}
+
+/* ------------------------------------------------------------------------------
+   3. FOOTER DO CARD E LOCALIZAÇÃO COM MAPS
+   ------------------------------------------------------------------------------ */
+.ejc-events-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .ejc-events-card-footer {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.ejc-events-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted, #64748b);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .ejc-events-location {
+  color: #94a3b8;
+}
+
+.ejc-events-location i {
+  color: #ef4444;
+  font-size: 0.88rem;
+}
+
+.ejc-events-maps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--blue, #023284);
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.ejc-events-maps-btn:hover {
+  color: #1d4ed8;
+  transform: translateX(2px);
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .ejc-events-maps-btn {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .ejc-events-maps-btn:hover {
+  color: #bfdbfe;
+}
+
+/* Card Informativo de Ensaios */
+.ejc-events-card--info {
+  background: rgba(2, 50, 132, 0.03);
+  border: 1px dashed rgba(2, 50, 132, 0.2);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .ejc-events-card--info {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ------------------------------------------------------------------------------
+   4. COMPORTAMENTO FLUTUANTE & ENCAIXE NO CALENDÁRIO (DOCKING)
+   ------------------------------------------------------------------------------ */
+.ejc-events-card.ejc-events-floating {
+  position: fixed;
+  bottom: 22px;
+  left: 22px;
+  z-index: 85;
+  width: min(370px, calc(100vw - 36px));
+  margin: 0;
+  box-shadow: 0 16px 42px rgba(15, 25, 65, 0.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(2, 50, 132, 0.16);
+  border-left: 4px solid var(--yellow, #ffd91a);
+  animation: ejcEventsFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  bottom: max(22px, env(safe-area-inset-bottom, 22px));
+  left: max(20px, env(safe-area-inset-left, 20px));
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+[data-theme="dark"] .ejc-events-card.ejc-events-floating {
+  background: rgba(24, 34, 53, 0.94);
+  border-color: rgba(96, 165, 250, 0.25);
+  border-left-color: #facc15;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+}
+
+/* Estado oculto do contador flutuante (fechamento manual ou outros contadores visíveis) */
+.ejc-events-card.ejc-events-floating.is-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(18px) scale(0.96) !important;
+}
+
+@keyframes ejcEventsFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ejc-events-card.ejc-events-docked {
+  position: relative;
+  width: 100%;
+  left: auto;
+  bottom: auto;
+  z-index: 1;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  animation: ejcEventsDockIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ejcEventsDockIn {
+  from {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Botão fechar do contador flutuante */
+.ejc-events-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--muted, #64748b);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+/* Área de toque expandida para mobile / acessibilidade (min 42x42px) */
+.ejc-events-close-btn::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -8px;
+  right: -8px;
+}
+
+.ejc-events-close-btn:hover {
+  background: rgba(2, 50, 132, 0.1);
+  color: var(--primary, #023284);
+  border-color: rgba(2, 50, 132, 0.2);
+  transform: scale(1.05);
+}
+
+.ejc-events-close-btn:active {
+  transform: scale(0.95);
+}
+
+.ejc-events-close-btn:focus-visible {
+  outline: 2px solid var(--primary, #023284);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .ejc-events-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-muted, #94a3b8);
+}
+
+[data-theme="dark"] .ejc-events-close-btn:hover {
+  background: rgba(250, 204, 21, 0.16);
+  color: var(--yellow, #ffd91a);
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+[data-theme="dark"] .ejc-events-close-btn:focus-visible {
+  outline-color: var(--yellow, #ffd91a);
+}
+
+/* Oculta botão de fechar quando o contador está encaixado no Calendário */
+.ejc-events-docked .ejc-events-close-btn {
+  display: none !important;
+}
+
+/* Espaçamento à direita no cabeçalho do card quando flutuante para não colidir com o botão */
+.ejc-events-floating .ejc-events-card-header {
+  padding-right: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ejc-events-card.ejc-events-floating,
+  .ejc-events-card.ejc-events-docked {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   5. SEÇÃO TRANSITEIRO (NOSSA CAMISA & BRINCADEIRAS)
+   ------------------------------------------------------------------------------ */
+.transiteiro-section {
+  padding: 96px 0;
+  background: var(--surface, #f8fafc);
+  position: relative;
+}
+
+[data-theme="dark"] .transiteiro-section {
+  background: var(--bg-surface, #0f172a);
+}
+
+.ejc-transiteiro-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  margin-top: 40px;
+}
+
+.ejc-transiteiro-block {
+  background: var(--white, #ffffff);
+  border-radius: var(--radius-lg, 24px);
+  padding: 40px;
+  box-shadow: var(--shadow, 0 10px 30px rgba(15, 25, 65, 0.05));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="dark"] .ejc-transiteiro-block {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.ejc-transiteiro-block-header {
+  margin-bottom: 28px;
+}
+
+.ejc-transiteiro-block-header h3 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+  margin: 0 0 8px;
+}
+
+[data-theme="dark"] .ejc-transiteiro-block-header h3 {
+  color: #f8fafc;
+}
+
+.ejc-transiteiro-block-header p {
+  color: var(--muted, #64748b);
+  margin: 0;
+  font-size: 0.95rem;
+  max-width: 720px;
+}
+
+[data-theme="dark"] .ejc-transiteiro-block-header p {
+  color: #94a3b8;
+}
+
+/* Subseção Camisas */
+.ejc-sub-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.ejc-sub-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: rgba(15, 23, 42, 0.05);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .ejc-sub-tab {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.ejc-sub-tab:hover {
+  transform: translateY(-1px);
+  background: rgba(15, 23, 42, 0.09);
+}
+
+[data-theme="dark"] .ejc-sub-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ejc-sub-tab.active {
+  border-color: currentColor;
+  background: var(--white, #ffffff);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .ejc-sub-tab.active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.ejc-sub-tab--verde { color: #16a34a; }
+.ejc-sub-tab--vermelho { color: #dc2626; }
+.ejc-sub-tab--amarelo { color: #ca8a04; }
+.ejc-sub-tab--laranja { color: #ea580c; }
+
+[data-theme="dark"] .ejc-sub-tab--verde { color: #4ade80; }
+[data-theme="dark"] .ejc-sub-tab--vermelho { color: #f87171; }
+[data-theme="dark"] .ejc-sub-tab--amarelo { color: #facc15; }
+[data-theme="dark"] .ejc-sub-tab--laranja { color: #fb923c; }
+
+.ejc-sub-tab-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Visualizador de Camisa */
+.ejc-camisa-viewer {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.ejc-camisa-preview-card {
+  position: relative;
+  background: rgba(2, 50, 132, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 20px;
+  padding: 20px;
+  overflow: hidden;
+  text-align: center;
+}
+
+[data-theme="dark"] .ejc-camisa-preview-card {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ejc-camisa-preview-card img {
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  object-fit: contain;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  cursor: zoom-in;
+}
+
+.ejc-camisa-preview-card:hover img {
+  transform: scale(1.02);
+}
+
+.ejc-camisa-zoom-trigger {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 25, 65, 0.85);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.ejc-camisa-zoom-trigger:hover {
+  background: rgba(15, 25, 65, 1);
+  transform: scale(1.04);
+}
+
+.ejc-camisa-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ejc-camisa-info h4 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+}
+
+[data-theme="dark"] .ejc-camisa-info h4 {
+  color: #f8fafc;
+}
+
+.ejc-camisa-info p {
+  color: var(--muted, #64748b);
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+[data-theme="dark"] .ejc-camisa-info p {
+  color: #94a3b8;
+}
+
+.ejc-camisa-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ejc-camisa-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-main, #0f172a);
+}
+
+[data-theme="dark"] .ejc-camisa-features li {
+  color: #e2e8f0;
+}
+
+.ejc-camisa-features i {
+  color: #10b981;
+  font-size: 1rem;
+}
+
+.ejc-camisa-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.ejc-camisa-actions a,
+.ejc-brincadeiras-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Subseção Brincadeiras e Músicas */
+.ejc-brincadeiras-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.ejc-brincadeiras-cover-card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(15, 25, 65, 0.12);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  cursor: zoom-in;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: #ffffff;
+}
+
+[data-theme="dark"] .ejc-brincadeiras-cover-card {
+  background: var(--bg-card, #1e293b);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+
+.ejc-brincadeiras-cover-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 18px 40px rgba(15, 25, 65, 0.18);
+}
+
+.ejc-brincadeiras-cover-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.ejc-brincadeiras-cover-card span {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(15, 25, 65, 0.85);
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.ejc-brincadeiras-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ejc-brincadeiras-content h4 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+}
+
+[data-theme="dark"] .ejc-brincadeiras-content h4 {
+  color: #f8fafc;
+}
+
+.ejc-brincadeiras-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 6px 0;
+}
+
+.ejc-brincadeiras-box {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(2, 50, 132, 0.03);
+  border: 1px solid rgba(2, 50, 132, 0.08);
+}
+
+[data-theme="dark"] .ejc-brincadeiras-box {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ejc-brincadeiras-box strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: var(--blue, #023284);
+}
+
+[data-theme="dark"] .ejc-brincadeiras-box strong {
+  color: #93c5fd;
+}
+
+.ejc-brincadeiras-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--muted, #64748b);
+}
+
+[data-theme="dark"] .ejc-brincadeiras-box ul {
+  color: #94a3b8;
+}
+
+.ejc-brincadeiras-box li::before {
+  content: "•";
+  color: var(--yellow, #ffd91a);
+  font-weight: 800;
+  display: inline-block;
+  width: 12px;
+}
+
+.ejc-brincadeiras-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------------------
+   6. RESPONSIVIDADE (360px, 390px, 768px, 1366px)
+   ------------------------------------------------------------------------------ */
+@media (max-width: 992px) {
+  .ejc-camisa-viewer {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .ejc-brincadeiras-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    text-align: center;
+  }
+  .ejc-brincadeiras-cover-card {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+  .ejc-brincadeiras-summary {
+    text-align: left;
+  }
+  .ejc-brincadeiras-actions {
+    justify-content: center;
+  }
+  .ejc-transiteiro-block {
+    padding: 28px 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ejc-events-card.ejc-events-floating {
+    bottom: 12px;
+    left: 12px;
+    width: calc(100vw - 78px);
+    max-width: 320px;
+    padding: 14px 14px;
+    border-radius: 16px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-card-title {
+    font-size: 0.98rem;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-card-subtitle {
+    font-size: 0.78rem;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-date-label {
+    font-size: 0.72rem;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-num {
+    font-size: 1.18rem;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-unit {
+    min-width: 32px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-label {
+    font-size: 0.6rem;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-sep {
+    font-size: 0.9rem;
+    padding-bottom: 6px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-status-msg {
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-card-footer {
+    font-size: 0.75rem;
+    padding-top: 6px;
+  }
+  .ejc-events-card.ejc-events-floating .ejc-events-maps-btn {
+    font-size: 0.72rem;
+    padding: 2px 4px;
+  }
+  .ejc-events-num {
+    font-size: 1.35rem;
+  }
+  .ejc-events-unit {
+    min-width: 38px;
+  }
+  .ejc-events-timer {
+    padding: 10px 8px;
+    gap: 2px;
+  }
+  .ejc-events-sep {
+    font-size: 1rem;
+    padding-bottom: 8px;
+  }
+  .ejc-brincadeiras-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .ejc-sub-tabs {
+    gap: 6px;
+  }
+  .ejc-sub-tab {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+}

@@ -37,6 +37,7 @@
     rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <link href="css/all.min.css" rel="stylesheet">
+  <link href="css/landing-events.css?v=1" rel="stylesheet">
 </head>
 
 <body>
@@ -53,6 +54,7 @@
         <a href="#responsabilidades">Responsabilidades</a>
         <a href="#contribuicao">Contribuição</a>
         <a href="#calendario">Calendário</a>
+        <a href="#transiteiro">Transiteiro</a>
         <a class="nav-cta" href="/api/whatsapp" data-whatsapp-target="geral" rel="noopener"
           target="_blank">WhatsApp</a>
       </nav>
@@ -725,6 +727,118 @@
             Acompanhe as reuniões, o culto de entrega e os dias do encontro.
             Toque na imagem para ampliar.
           </p>
+
+          <div class="ejc-events-column">
+            <!-- 1. Slot reservado para o Contador Principal do Encontro (Docking) -->
+            <div id="ejcEventsSlotPrincipal" class="ejc-events-slot-principal" aria-label="Espaço reservado do contador principal"></div>
+
+            <!-- 2. Contador da Próxima Reunião (Seleção automática) -->
+            <article class="ejc-events-card" id="ejcEventsCardReuniao" aria-labelledby="ejcReuniaoTitle">
+              <div class="ejc-events-card-header">
+                <div class="ejc-events-card-meta">
+                  <span class="ejc-events-badge">Coordenação</span>
+                  <span class="ejc-events-date-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i> 04 de Novembro de 2026</span>
+                </div>
+                <h3 class="ejc-events-card-title" id="ejcReuniaoTitle">Reunião de Coordenadores</h3>
+                <p class="ejc-events-card-subtitle">Faltam para o início da reunião</p>
+              </div>
+              <div class="ejc-events-status-msg"></div>
+              <div class="ejc-events-timer" role="timer" aria-label="Tempo até a próxima reunião">
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="days">00</span>
+                  <span class="ejc-events-label">Dias</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="hours">00</span>
+                  <span class="ejc-events-label">Horas</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="minutes">00</span>
+                  <span class="ejc-events-label">Min</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="seconds">00</span>
+                  <span class="ejc-events-label">Seg</span>
+                </div>
+              </div>
+              <div class="ejc-events-card-footer">
+                <span class="ejc-events-location">
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                  <span>Local das reuniões</span>
+                </span>
+                <a href="https://maps.app.goo.gl/LzukqmEfCe2GnL6E8" target="_blank" rel="noopener noreferrer" class="ejc-events-maps-btn">
+                  Ver localização <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                </a>
+              </div>
+            </article>
+
+            <!-- 3. Contador do Culto de Entrega -->
+            <article class="ejc-events-card" id="ejcEventsCardCulto" aria-labelledby="ejcCultoTitle">
+              <div class="ejc-events-card-header">
+                <div class="ejc-events-card-meta">
+                  <span class="ejc-events-badge">Culto Especial</span>
+                  <span class="ejc-events-date-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i> 02 de Dezembro de 2026</span>
+                </div>
+                <h3 class="ejc-events-card-title" id="ejcCultoTitle">Culto de Entrega</h3>
+                <p class="ejc-events-card-subtitle">Faltam para o Culto de Entrega</p>
+              </div>
+              <div class="ejc-events-status-msg"></div>
+              <div class="ejc-events-timer" role="timer" aria-label="Tempo até o culto de entrega">
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="days">00</span>
+                  <span class="ejc-events-label">Dias</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="hours">00</span>
+                  <span class="ejc-events-label">Horas</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="minutes">00</span>
+                  <span class="ejc-events-label">Min</span>
+                </div>
+                <span class="ejc-events-sep" aria-hidden="true">:</span>
+                <div class="ejc-events-unit">
+                  <span class="ejc-events-num" data-unit="seconds">00</span>
+                  <span class="ejc-events-label">Seg</span>
+                </div>
+              </div>
+              <div class="ejc-events-card-footer">
+                <span class="ejc-events-location">
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                  <span>Local do culto de entrega</span>
+                </span>
+                <a href="https://maps.app.goo.gl/LzukqmEfCe2GnL6E8" target="_blank" rel="noopener noreferrer" class="ejc-events-maps-btn">
+                  Ver localização <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                </a>
+              </div>
+            </article>
+
+            <!-- 4. Informação Complementar de Ensaios -->
+            <article class="ejc-events-card ejc-events-card--info" id="ejcEventsCardEnsaios" aria-labelledby="ejcEnsaiosTitle">
+              <div class="ejc-events-card-header">
+                <div class="ejc-events-card-meta">
+                  <span class="ejc-events-badge">Ensaios</span>
+                  <span class="ejc-events-date-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i> A divulgar</span>
+                </div>
+                <h3 class="ejc-events-card-title" id="ejcEnsaiosTitle" style="font-size: 1rem;">Ensaios da Equipe do Trânsito</h3>
+                <p class="ejc-events-card-subtitle" style="font-size: 0.8rem;">Programação e datas serão comunicadas nos grupos oficiais.</p>
+              </div>
+              <div class="ejc-events-card-footer">
+                <span class="ejc-events-location">
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                  <span>Local dos ensaios</span>
+                </span>
+                <a href="https://maps.app.goo.gl/m93X2Qwj6AdEBcYFA" target="_blank" rel="noopener noreferrer" class="ejc-events-maps-btn">
+                  Ver localização <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                </a>
+              </div>
+            </article>
+          </div>
         </div>
         <button aria-label="Ampliar o calendário exibido" class="calendar-card reveal" type="button">
           <div aria-live="polite" class="calendar-slides">
@@ -733,6 +847,147 @@
           </div>
           <span>Toque para ampliar</span>
         </button>
+      </div>
+    </section>
+    <section class="section transiteiro-section" id="transiteiro">
+      <div class="container">
+        <div class="section-heading reveal">
+          <span class="eyebrow">Identidade & Tradição</span>
+          <h2>Espaço Transiteiro</h2>
+          <p>
+            Conheça os modelos da camisa oficial do 10º EJC e acesse o material com todas as brincadeiras e músicas da Equipe do Trânsito.
+          </p>
+        </div>
+
+        <div class="ejc-transiteiro-blocks">
+          <!-- SUBSEÇÃO 1: NOSSA CAMISA -->
+          <article class="ejc-transiteiro-block ejc-transiteiro-camisas reveal">
+            <div class="ejc-transiteiro-block-header">
+              <span class="eyebrow">Uniforme Oficial</span>
+              <h3>Nossa Camisa</h3>
+              <p>
+                Visualização oficial da camisa do 10º EJC nas cores de cada Subgrupo (Verde, Vermelho, Amarelo e Laranja), com estampa frontal "Jesus Cristo porque vive em mim" e costas com a marca do 10º EJC.
+              </p>
+            </div>
+
+            <!-- Seleção de Subs -->
+            <div class="ejc-sub-tabs" role="tablist" aria-label="Selecione o Subgrupo para visualizar a camisa">
+              <button type="button" class="ejc-sub-tab ejc-sub-tab--verde active" data-sub="Verde" role="tab" aria-selected="true">
+                <span class="ejc-sub-tab-dot" aria-hidden="true"></span>
+                <span>Sub Verde</span>
+              </button>
+              <button type="button" class="ejc-sub-tab ejc-sub-tab--vermelho" data-sub="Vermelho" role="tab" aria-selected="false">
+                <span class="ejc-sub-tab-dot" aria-hidden="true"></span>
+                <span>Sub Vermelho</span>
+              </button>
+              <button type="button" class="ejc-sub-tab ejc-sub-tab--amarelo" data-sub="Amarelo" role="tab" aria-selected="false">
+                <span class="ejc-sub-tab-dot" aria-hidden="true"></span>
+                <span>Sub Amarelo</span>
+              </button>
+              <button type="button" class="ejc-sub-tab ejc-sub-tab--laranja" data-sub="Laranja" role="tab" aria-selected="false">
+                <span class="ejc-sub-tab-dot" aria-hidden="true"></span>
+                <span>Sub Laranja</span>
+              </button>
+            </div>
+
+            <!-- Visualizador Interativo da Camisa -->
+            <div class="ejc-camisa-viewer">
+              <div class="ejc-camisa-preview-card">
+                <img id="ejcCamisaPreviewImg" src="images/transiteiro/camisa-sub-verde.png" alt="Camisa oficial da Equipe do Trânsito do Sub Verde" loading="lazy">
+                <button type="button" class="ejc-camisa-zoom-trigger" aria-label="Ampliar imagem da camisa">
+                  <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i> Ampliar
+                </button>
+              </div>
+
+              <div class="ejc-camisa-info">
+                <div class="ejc-events-card-meta">
+                  <span class="ejc-events-badge" id="ejcCamisaActiveBadge" style="background-color: #24a764; color: #ffffff;">Sub Verde</span>
+                  <span class="ejc-events-date-label"><i class="fa-solid fa-shirt" aria-hidden="true"></i> Modelo 2026</span>
+                </div>
+                <h4 id="ejcCamisaActiveTitle">Sub Verde</h4>
+                <p id="ejcCamisaActiveDesc">
+                  Camisa oficial Sub Verde — Coordenação Abraão e Sara.
+                </p>
+
+                <ul class="ejc-camisa-features">
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> Frente: "Jesus Cristo porque vive em mim"</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> Costas: Marca oficial do 10º EJC Monte Sião</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> Tecido e acabamento de alta durabilidade</li>
+                </ul>
+
+                <div class="ejc-camisa-actions">
+                  <a href="images/transiteiro/camisas-transito-ad-monte-siao.pdf" target="_blank" rel="noopener noreferrer" class="button button-outline" style="font-size: 0.88rem; padding: 10px 18px;">
+                    <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Abrir PDF Original
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- SUBSEÇÃO 2: BRINCADEIRAS E MÚSICAS -->
+          <article class="ejc-transiteiro-block ejc-transiteiro-brincadeiras reveal">
+            <div class="ejc-transiteiro-block-header">
+              <span class="eyebrow">Animação & Louvor</span>
+              <h3>Brincadeiras e Músicas do Trânsito</h3>
+              <p>
+                Material completo da Equipe do Trânsito com todas as brincadeiras de roda e de fila, letras de músicas, coreografias e dinâmicas preparadas para o 10º EJC.
+              </p>
+            </div>
+
+            <div class="ejc-brincadeiras-layout">
+              <!-- Prévia da Capa com Zoom -->
+              <div class="ejc-brincadeiras-cover-card ejc-brincadeiras-zoom-trigger" role="button" tabindex="0" aria-label="Ampliar capa do caderno de brincadeiras">
+                <img src="images/transiteiro/capa-brincadeiras.png" alt="Capa do caderno de Brincadeiras e Músicas do Trânsito — 10º EJC AD Monte Sião" loading="lazy">
+                <span>Toque para ampliar</span>
+              </div>
+
+              <!-- Conteúdo e Ações -->
+              <div class="ejc-brincadeiras-content">
+                <div>
+                  <h4>Caderno Oficial de Dinâmicas</h4>
+                  <p style="color: var(--muted); font-size: 0.95rem; margin-top: 6px;">
+                    Coordenação Clebinho e Pri. Guia prático dos puxadores com o passo a passo de cada brincadeira para alegrar os encontristas com ordem e alegria no Senhor.
+                  </p>
+                </div>
+
+                <div class="ejc-brincadeiras-summary">
+                  <div class="ejc-brincadeiras-box">
+                    <strong><i class="fa-solid fa-circle-notch" aria-hidden="true"></i> Brincadeiras de Roda</strong>
+                    <ul>
+                      <li>O galo e a galinha</li>
+                      <li>Dança do "Chepi chepi"</li>
+                      <li>Perequetê &amp; Cavalinho</li>
+                      <li>Yoepoetá taiepô</li>
+                      <li>Pipoca &amp; Tremzinho</li>
+                      <li>Lorenza &amp; Quadrilhão</li>
+                    </ul>
+                  </div>
+
+                  <div class="ejc-brincadeiras-box">
+                    <strong><i class="fa-solid fa-arrows-split-up-and-left" aria-hidden="true"></i> Brincadeiras de Fila</strong>
+                    <ul>
+                      <li>A árvore da montanha</li>
+                      <li>Panram pam pam &amp; Djalô</li>
+                      <li>Tralalalaleluia</li>
+                      <li>Meu galo quebrou uma asa</li>
+                      <li>Que abraço bom &amp; Pororó</li>
+                      <li>Dança do Canguru &amp; Terremoto</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="ejc-brincadeiras-actions">
+                  <a href="images/transiteiro/brincadeiras-transito-adms.pdf" target="_blank" rel="noopener noreferrer" class="button button-primary">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i> Abrir material
+                  </a>
+                  <a href="images/transiteiro/brincadeiras-transito-adms.pdf" download="BRINCADEIRAS-TRANSITO-ADMS.pdf" class="button button-secondary">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> Baixar PDF
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
     <section class="section social-section">
@@ -782,6 +1037,55 @@
   <script src="js/script.js"></script>
 
 
+  <!-- CONTADOR PRINCIPAL DO ENCONTRO (Inicialmente flutuante no canto inferior esquerdo) -->
+  <aside id="ejcPrincipalCounter" class="ejc-events-card ejc-events-card--principal ejc-events-floating" aria-labelledby="ejcPrincipalCounterTitle" data-state="floating">
+    <button type="button" class="ejc-events-close-btn" aria-label="Fechar contador flutuante" title="Fechar contador flutuante"><span aria-hidden="true">&times;</span></button>
+    <div class="ejc-events-card-header">
+      <div class="ejc-events-card-meta">
+        <span class="ejc-events-badge ejc-events-badge--gold"><i class="fa-solid fa-cross" aria-hidden="true"></i> 10º EJC • AD Monte Sião</span>
+        <span class="ejc-events-date-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i> 04 a 06 de Dezembro</span>
+      </div>
+      <h3 class="ejc-events-card-title" id="ejcPrincipalCounterTitle">10º EJC — Trânsito Monte Sião</h3>
+      <p class="ejc-events-card-subtitle">Faltam para o início do encontro</p>
+    </div>
+
+    <div class="ejc-events-status-msg"></div>
+
+    <div class="ejc-events-timer" role="timer" aria-label="Contagem regressiva para o início do 10º EJC">
+      <div class="ejc-events-unit">
+        <span class="ejc-events-num" data-unit="days">00</span>
+        <span class="ejc-events-label">Dias</span>
+      </div>
+      <span class="ejc-events-sep" aria-hidden="true">:</span>
+      <div class="ejc-events-unit">
+        <span class="ejc-events-num" data-unit="hours">00</span>
+        <span class="ejc-events-label">Horas</span>
+      </div>
+      <span class="ejc-events-sep" aria-hidden="true">:</span>
+      <div class="ejc-events-unit">
+        <span class="ejc-events-num" data-unit="minutes">00</span>
+        <span class="ejc-events-label">Min</span>
+      </div>
+      <span class="ejc-events-sep" aria-hidden="true">:</span>
+      <div class="ejc-events-unit">
+        <span class="ejc-events-num" data-unit="seconds">00</span>
+        <span class="ejc-events-label">Seg</span>
+      </div>
+    </div>
+
+    <div class="ejc-events-card-footer">
+      <span class="ejc-events-location">
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+        <span>Local do encontro</span>
+      </span>
+      <a href="https://maps.app.goo.gl/W32NggvNxfmQzZ9M7" target="_blank" rel="noopener noreferrer" class="ejc-events-maps-btn">
+        Ver localização <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+      </a>
+    </div>
+  </aside>
+
+  <script src="js/landing-events-config.js?v=1"></script>
+  <script src="js/landing-events.js?v=1"></script>
 </body>
 
 </html>
