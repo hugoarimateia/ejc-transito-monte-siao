@@ -208,6 +208,34 @@ serve(async (req: Request) => {
         });
       }
 
+      // Validação de regras de pagamento obrigatório para novas inscrições
+      const formaPagamentoNorm = String(body.forma_pagamento || "").trim().toLowerCase();
+      if (formaPagamentoNorm === "depois" || formaPagamentoNorm === "pagar_depois" || formaPagamentoNorm === "false") {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "A opção de pagar depois não está mais disponível para novas inscrições. Escolha pagamento online ou dinheiro com comprovante de conversa."
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const isDinheiro = ["dinheiro", "especie", "dinheiro_especie"].includes(formaPagamentoNorm);
+      if (isDinheiro) {
+        if (!body.comprovante_caminho || String(body.comprovante_caminho).trim() === "") {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "Para pagamento em dinheiro, é obrigatório anexar o print ou comprovante da conversa com a coordenação."
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+
+      const statusFinal = isDinheiro ? "informado" : (body.pagamento_status === "confirmado" ? "confirmado" : "pendente");
+      const formaFinal = isDinheiro ? "dinheiro" : (body.forma_pagamento || "checkout_online");
+
       const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(str || ""));
       const assignedId = (body.id && isUuid(body.id)) 
         ? body.id 
@@ -220,8 +248,12 @@ serve(async (req: Request) => {
         email: String(body.email || "").trim().toLowerCase(),
         sub,
         tamanho_camisa: body.tamanho_camisa || null,
-        forma_pagamento: body.forma_pagamento || "checkout",
-        pagamento_status: body.pagamento_status || "pendente",
+        forma_pagamento: formaFinal,
+        pagamento_informado: isDinheiro,
+        pagamento_status: statusFinal,
+        observacao_pagamento: isDinheiro
+          ? "Pagamento em dinheiro informado com comprovante de conversa; aguardando conferência da coordenação."
+          : "Inscrição provisória iniciada no site; aguardando pagamento no Checkout Oficial.",
         arquivado: false,
         token_acesso: body.token_acesso || null,
         atualizado_em: new Date().toISOString()

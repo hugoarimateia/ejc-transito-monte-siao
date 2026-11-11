@@ -188,9 +188,8 @@ document.querySelectorAll('input[name="quer_camisa_adicional"]').forEach(input =
 });
 
 function updatePaymentFields() {
-  const paidChoice = document.querySelector('input[name="pagamento_informado"]:checked');
-  const isPaid = paidChoice?.value === "true";
-  const method = document.querySelector('input[name="forma_pagamento"]:checked')?.value || "";
+  const choice = document.querySelector('input[name="pagamento_informado"]:checked')?.value || "checkout";
+  const isCash = choice === "dinheiro";
 
   // Atualiza classe .selected nos cards de opções de pagamento
   document.querySelectorAll(".payment-card-option").forEach(card => {
@@ -198,26 +197,32 @@ function updatePaymentFields() {
     card.classList.toggle("selected", Boolean(radio && radio.checked));
   });
 
-  if (paidFields) paidFields.hidden = !isPaid;
-  if (paymentReasonField) paymentReasonField.hidden = isPaid;
-  if (pendingMessage) pendingMessage.hidden = isPaid;
-  if (paymentReason) paymentReason.required = !isPaid && Boolean(paidChoice);
+  if (paidFields) paidFields.hidden = !isCash;
+  if (paymentProofField) paymentProofField.hidden = !isCash;
+  if (paymentProof) {
+    paymentProof.required = isCash;
+    if (!isCash) paymentProof.value = "";
+  }
+  if (paymentReasonField) paymentReasonField.hidden = true;
+  if (pendingMessage) pendingMessage.hidden = true;
 
-  if (paymentProofField) paymentProofField.hidden = !isPaid || method !== "pix";
-  if (paymentProof) paymentProof.required = isPaid && method === "pix";
-
-  document.querySelectorAll('input[name="forma_pagamento"]').forEach(el => {
-    el.required = isPaid;
-    if (!isPaid) el.checked = false;
-  });
-
-  if ((!isPaid || method !== "pix") && paymentProof) paymentProof.value = "";
-  if (isPaid && paymentReason) paymentReason.value = "";
+  // Atualiza o texto e ícone do botão de envio conforme o fluxo
+  if (submitSignup) {
+    const btnSpan = submitSignup.querySelector("span");
+    const btnIcon = submitSignup.querySelector("i");
+    if (btnSpan) {
+      btnSpan.textContent = isCash ? "Enviar inscrição para aprovação" : "Ir para o Checkout Oficial";
+    }
+    if (btnIcon) {
+      btnIcon.className = isCash ? "fa-solid fa-paper-plane" : "fa-solid fa-arrow-right";
+    }
+  }
 }
 
 document.querySelectorAll('input[name="pagamento_informado"], input[name="forma_pagamento"]').forEach(input => {
   input.addEventListener("change", updatePaymentFields);
 });
+updatePaymentFields();
 
 // Upload dinâmico: exibição de arquivo selecionado e feedback visual
 const photoInput = document.getElementById("photo");
@@ -248,7 +253,7 @@ if (proofInput && proofUploadZone && proofUploadTitle) {
       proofUploadTitle.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981; margin-right: 6px;"></i> Comprovante: <strong>${fileName}</strong>`;
       proofUploadZone.classList.add("has-file");
     } else {
-      proofUploadTitle.textContent = "Clique para anexar o comprovante";
+      proofUploadTitle.textContent = "Clique para anexar o print da conversa";
       proofUploadZone.classList.remove("has-file");
     }
   });
@@ -504,21 +509,24 @@ if (signupForm) {
     const normalizedPhone = formatPhoneNumber(rawPhone);
 
     const paymentChoice = formData.get("pagamento_informado");
+    if (!paymentChoice || !["checkout", "dinheiro"].includes(paymentChoice)) {
+      setFeedback("Selecione uma forma de pagamento válida (Checkout Oficial ou Pagamento em dinheiro).", "error");
+      return;
+    }
+
     const isCheckout = paymentChoice === "checkout";
-    const paymentReported = paymentChoice === "true";
-    const paymentMethod = paymentReported ? String(formData.get("forma_pagamento") || "") : (isCheckout ? "checkout_online" : null);
+    const isDinheiro = paymentChoice === "dinheiro";
+    const paymentReported = isDinheiro;
+    const paymentMethod = isDinheiro ? "dinheiro" : "checkout_online";
     const proof = formData.get("comprovante");
 
-    if (paymentReported && !["pix", "especie"].includes(paymentMethod)) {
-      setFeedback("Informe se o pagamento foi feito por Pix ou em espécie.", "error");
-      return;
-    }
-    if (paymentReported && paymentMethod === "pix" && (!(proof instanceof File) || !proof.size)) {
-      setFeedback("Para pagamento por Pix informado, o comprovante é obrigatório.", "error");
-      return;
-    }
-    if (paymentReported && proof instanceof File && proof.size) {
-      const proofError = validateFile(proof, PROOF_TYPES, "O comprovante");
+    if (isDinheiro) {
+      if (!(proof instanceof File) || !proof.size) {
+        setFeedback("Para pagamento em dinheiro, é obrigatório anexar o print ou comprovante da conversa com a coordenação.", "error");
+        if (proofInput) proofInput.focus();
+        return;
+      }
+      const proofError = validateFile(proof, PROOF_TYPES, "O comprovante da conversa");
       if (proofError) {
         setFeedback(proofError, "error");
         return;
@@ -540,10 +548,8 @@ if (signupForm) {
     const [shirtSize, shirtModel = "Tradicional"] = String(formData.get("tamanho_camisa") || "").split("|");
     const [extraShirtSizeValue, extraShirtModel = "Tradicional"] = String(formData.get("tamanho_camisa_adicional") || "").split("|");
     const paymentObservation = isCheckout
-      ? "Redirecionado para o Checkout Oficial (Pix/Cartão)."
-      : (paymentReported
-        ? "Pagamento informado pelo inscrito; aguardando conferência da coordenação."
-        : "Pagamento pendente; deverá ser realizado até a data limite da coordenação.");
+      ? "Inscrição provisória iniciada no site; aguardando conclusão e confirmação do pagamento no Checkout Oficial (Pix/Cartão)."
+      : "Pagamento em dinheiro informado com comprovante de conversa; aguardando conferência e aprovação manual da coordenação.";
 
     let photoPath = null;
     let proofPath = null;
@@ -609,8 +615,9 @@ if (signupForm) {
           return;
         }
 
-        // Upload de Comprovante: Supabase Storage inalterado
-        if (paymentReported && paymentMethod === "pix" && proof instanceof File && proof.size) {
+        // Upload de Comprovante da conversa (dinheiro): Supabase Storage
+        if (isDinheiro && proof instanceof File && proof.size) {
+          setFeedback("Enviando comprovante da conversa para conferência...", "loading");
           proofPath = await uploadFile(`comprovantes/${chosenSub.toLowerCase()}`, proof);
         }
 
@@ -629,8 +636,8 @@ if (signupForm) {
           p_comprovante_caminho: proofPath,
           p_forma_pagamento: paymentMethod,
           p_pagamento_informado: paymentReported,
-          p_pagamento_status: paymentReported ? (paymentMethod === "pix" ? "confirmado" : "informado") : "pendente",
-          p_justificativa_pagamento: String(formData.get("justificativa_pagamento") || "").trim() || null,
+          p_pagamento_status: paymentReported ? "informado" : "pendente",
+          p_justificativa_pagamento: null,
           p_observacao_pagamento: paymentObservation
         });
 
@@ -776,8 +783,8 @@ if (signupForm) {
         comprovante_caminho: proofDataUrl,
         forma_pagamento: paymentMethod,
         pagamento_informado: paymentReported,
-        pagamento_status: paymentReported ? (paymentMethod === "pix" ? "confirmado" : "informado") : "pendente",
-        justificativa_pagamento: String(formData.get("justificativa_pagamento") || "").trim() || null,
+        pagamento_status: paymentReported ? "informado" : "pendente",
+        justificativa_pagamento: null,
         observacao_pagamento: paymentObservation,
         token_acesso: userToken
       };
@@ -828,56 +835,64 @@ if (signupForm) {
         };
       }
 
+      // SEGURANÇA: Vaga só é considerada confirmada após aprovação no gateway ou validação manual da coordenação.
+      // O grupo de WhatsApp NÃO é exposto na landing page para inscrições não confirmadas.
+      if (whatsappSuccess) {
+        whatsappSuccess.hidden = true;
+        whatsappSuccess.style.display = "none";
+      }
+      if (whatsappGroupButton) {
+        whatsappGroupButton.removeAttribute("href");
+        whatsappGroupButton.style.pointerEvents = "none";
+      }
+
       if (isCheckout) {
-        setFeedback("Inscrição realizada! Redirecionando para o Checkout Oficial...", "success");
+        setFeedback(
+          `<div style="background: rgba(2, 50, 132, 0.08); border: 2px solid var(--blue); border-radius: 14px; padding: 20px; text-align: center; margin-top: 12px;">
+            <div style="font-size: 1.8rem; color: var(--blue); margin-bottom: 8px;"><i class="fa-solid fa-spinner fa-spin"></i></div>
+            <strong style="display: block; font-size: 1.12rem; color: var(--text-main); margin-bottom: 6px;">Inscrição Provisória Iniciada!</strong>
+            <p style="margin: 0 0 14px; font-size: .88rem; color: var(--text-muted); line-height: 1.5;">Redirecionando para o <strong>Checkout Oficial</strong> para conclusão do pagamento via Pix ou Cartão. A sua vaga e o acesso aos grupos serão liberados assim que o pagamento for aprovado pelo gateway.</p>
+            <a href="${checkoutUrl}" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; padding: 10px 22px; text-decoration: none; font-weight: 700;">
+              <i class="fa-solid fa-bolt"></i> Ir para o Checkout Agora
+            </a>
+          </div>`,
+          "loading",
+          true
+        );
         setTimeout(() => {
           window.location.href = checkoutUrl;
-        }, 1000);
+        }, 1200);
       } else {
+        // Fluxo Dinheiro: Aguardando aprovação da coordenação
         setFeedback(
-          paymentReported
-            ? "Inscrição realizada com sucesso! Pagamento registrado para conferência da coordenação."
-            : "Inscrição realizada com sucesso! Pagamento registrado como pendente até a data limite.",
-          "success"
+          `<div style="background: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; border-radius: 14px; padding: 22px; text-align: center; margin-top: 12px;">
+            <div style="font-size: 2rem; color: #d97706; margin-bottom: 8px;"><i class="fa-solid fa-hourglass-half"></i></div>
+            <strong style="display: block; font-size: 1.2rem; color: var(--text-main); margin-bottom: 6px;">Solicitação de Inscrição Recebida!</strong>
+            <div style="display: inline-block; background: #fef3c7; color: #92400e; font-weight: 800; font-size: .82rem; padding: 4px 14px; border-radius: 999px; margin-bottom: 12px; border: 1px solid #fde68a;">
+              <i class="fa-solid fa-shield-halved"></i> Aguardando Confirmação da Coordenação
+            </div>
+            <p style="margin: 0 0 12px; font-size: .9rem; line-height: 1.55; color: var(--text-main);">
+              O comprovante da conversa com a coordenação foi enviado com sucesso. A sua inscrição está em análise manual e a vaga só será confirmada após a validação pela equipe responsável.
+            </p>
+            <p style="margin: 0 0 16px; font-size: .83rem; color: var(--text-muted);">
+              Você pode acompanhar o andamento da sua solicitação através da página oficial de consulta:
+            </p>
+            <a href="/verificar-inscricao" class="button button-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; padding: 10px 20px; text-decoration: none; font-weight: 700;">
+              <i class="fa-solid fa-magnifying-glass"></i> Consultar em Verificar Inscrição
+            </a>
+          </div>`,
+          "success",
+          true
         );
+
+        signupForm.reset();
+        selectedSubInput.value = chosenSub;
+        if (extraShirtFields) extraShirtFields.hidden = true;
+        if (paidFields) paidFields.hidden = true;
+        updatePaymentFields();
+        if (submitSignup) submitSignup.disabled = false;
+        isSubmittingSignup = false;
       }
-
-      // Acesso ao Grupo do WhatsApp do Sub escolhido após a inscrição (sem pagamento)
-      let subKey = String(chosenSub || "").trim();
-      if (subKey.toLowerCase() === "azul") subKey = "Laranja";
-
-      const subGroupUrl = (window.EJC_WHATSAPP_SUBS && (
-        window.EJC_WHATSAPP_SUBS[subKey] ||
-        window.EJC_WHATSAPP_SUBS[subKey.toLowerCase()] ||
-        window.EJC_WHATSAPP_SUBS[subKey.charAt(0).toUpperCase() + subKey.slice(1).toLowerCase()]
-      )) || "";
-
-      if (whatsappGroupButton) {
-        whatsappGroupButton.removeAttribute("data-whatsapp-target");
-        if (subGroupUrl && typeof subGroupUrl === "string" && subGroupUrl.startsWith("http")) {
-          whatsappGroupButton.href = subGroupUrl;
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
-          whatsappGroupButton.style.pointerEvents = "auto";
-          whatsappGroupButton.style.opacity = "1";
-        } else if (tokenAcessoParam) {
-          whatsappGroupButton.href = window.EJC_ENDPOINTS.whatsapp(tokenAcessoParam);
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
-          whatsappGroupButton.style.pointerEvents = "auto";
-          whatsappGroupButton.style.opacity = "1";
-        } else {
-          whatsappGroupButton.removeAttribute("href");
-          whatsappGroupButton.innerHTML = `<i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Entrar no grupo do Sub ${chosenSub}`;
-          whatsappGroupButton.style.pointerEvents = "none";
-          whatsappGroupButton.style.opacity = "0.6";
-        }
-      }
-      if (whatsappSuccess) {
-        whatsappSuccess.hidden = false;
-        whatsappSuccess.style.display = "flex";
-        whatsappSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-
-      signupForm.reset();
       selectedSubInput.value = chosenSub;
       if (extraShirtFields) extraShirtFields.hidden = true;
       if (paidFields) paidFields.hidden = true;
@@ -1042,6 +1057,10 @@ function aplicarConfiguracaoNaPagina(cfg) {
   const paymentLegend = document.getElementById("paymentLegendTitle");
   if (paymentLegend) {
     paymentLegend.textContent = `Como você deseja pagar a taxa de inscrição (${valorFormatado})?`;
+  }
+  const paymentLegendPrice = document.getElementById("paymentLegendPrice");
+  if (paymentLegendPrice) {
+    paymentLegendPrice.textContent = `(${valorFormatado})`;
   }
 
   const btnPayFeeSection = document.getElementById("btnPayFeeSection");

@@ -914,7 +914,61 @@ async function handleAdminAction(
       .maybeSingle();
 
     if (pErr || !pData) {
-      return { status: 404, body: { error: "Pagamento não encontrado." } };
+      // Se não encontrado em pagamentos, tenta localizar diretamente na tabela inscricoes (ex: pagamento em dinheiro com comprovante de conversa)
+      let insRow: any = null;
+      if (UUID_REGEX.test(rawId)) {
+        const { data: foundIns } = await supabase
+          .from("inscricoes")
+          .select("id, pagamento_status, nome_completo, sub, whatsapp, email, arquivado")
+          .eq("id", rawId)
+          .maybeSingle();
+        insRow = foundIns;
+      }
+
+      if (!insRow) {
+        return { status: 404, body: { error: "Pagamento ou inscrição não encontrado no sistema para rejeição." } };
+      }
+
+      // Idempotência
+      if (insRow.pagamento_status === "rejeitado" || insRow.pagamento_status === "rejected") {
+        return {
+          status: 200,
+          body: { success: true, message: "Inscrição já se encontra com pagamento rejeitado.", status: insRow.pagamento_status, already_rejected: true }
+        };
+      }
+
+      if (isDryRun) {
+        return {
+          status: 200,
+          body: {
+            ok: true,
+            dry_run: true,
+            action: "reject_payment",
+            authorized: true,
+            would_mutate: true,
+            role: authRole.role,
+            target_resources: ["inscricoes", "auditoria_transacoes"],
+            details: {
+              inscricao_id: insRow.id,
+              current_status: insRow.pagamento_status,
+              target_status: "rejeitado",
+              motivo
+            }
+          }
+        };
+      }
+
+      await supabase
+        .from("inscricoes")
+        .update({
+          pagamento_status: "rejeitado",
+          observacao_pagamento: `Comprovante/Pagamento em dinheiro rejeitado pela coordenação: ${motivo}`
+        })
+        .eq("id", insRow.id);
+
+      await recordAudit(supabase, "REJEICAO_PAGAMENTO_DINHEIRO", { inscricao_id: insRow.id, motivo }, clientIp, authRole.role, isDryRun);
+
+      return { status: 200, body: { success: true, message: "Inscrição em dinheiro rejeitada com sucesso.", inscricao_id: insRow.id } };
     }
 
     // Idempotência

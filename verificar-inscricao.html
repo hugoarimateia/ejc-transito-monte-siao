@@ -665,7 +665,10 @@
           confirmado: "status-pago",
           approved: "status-pago",
           pendente: "status-pendente",
+          informado: "status-pendente",
           cancelado: "status-cancelado",
+          recusado: "status-cancelado",
+          rejeitado: "status-cancelado",
           arquivado: "status-arquivado"
         };
         const statusClass = statusMap[insc.pagamento_status] || "status-pendente";
@@ -802,12 +805,20 @@
         statusBadgeLabel = "Pagamento Confirmado";
         statusBadgeClass = "status-pago";
         iconClass = "fa-check-circle";
+      } else if (principal.pagamento_status === "rejeitado") {
+        statusBadgeLabel = "Pagamento Rejeitado";
+        statusBadgeClass = "status-cancelado";
+        iconClass = "fa-circle-xmark";
+      } else if (principal.pagamento_status === "recusado") {
+        statusBadgeLabel = "Cartão Recusado";
+        statusBadgeClass = "status-cancelado";
+        iconClass = "fa-circle-xmark";
       } else if (principal.pagamento_status === "cancelado" || principal.pagamento_status === "pix_expirado") {
         statusBadgeLabel = "Pix Expirado / Aguardando Renovação";
         statusBadgeClass = "status-cancelado";
         iconClass = "fa-circle-xmark";
-      } else if (principal.pagamento_informado) {
-        statusBadgeLabel = "Pagamento Informado (Em Análise)";
+      } else if (principal.pagamento_status === "informado" || principal.pagamento_informado) {
+        statusBadgeLabel = "Aguardando Confirmação da Coordenação";
         statusBadgeClass = "status-pendente";
         iconClass = "fa-hourglass-half";
       }
@@ -862,11 +873,30 @@
             <strong>✓ Cenário B — Confirmado no Gateway:</strong> Seu pagamento foi processado e aprovado com sucesso via Mercado Pago (cartão ou Pix aprovado).
           </div>
         `;
-      } else if (principal.pagamento_informado) {
-        // Cenário C: Não pago no gateway, mas participante informou pagamento
+      } else if (principal.pagamento_status === "rejeitado") {
+        // Cenário: Pagamento rejeitado pela coordenação
+        financeCardHtml += `
+          <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #991b1b;">
+            <strong>✕ Pagamento/Comprovante Rejeitado:</strong> O comprovante ou solicitação em dinheiro foi analisado e rejeitado pela coordenação${principal.observacao_pagamento ? ` (${principal.observacao_pagamento})` : ''}. Entre em contato diretamente com os coordenadores para esclarecer ou regularizar sua inscrição.
+          </div>
+        `;
+      } else if (principal.pagamento_status === "recusado") {
+        // Cenário: Cartão recusado
+        financeCardHtml += `
+          <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #991b1b;">
+            <strong>✕ Cartão de Crédito Recusado:</strong> A operadora do cartão recusou o pagamento. Sua inscrição continua preservada! Você pode tentar novamente com outro cartão de crédito ou pagar instantaneamente via Pix.
+          </div>
+          <div style="margin-top: 12px;">
+            <a href="${checkoutUrl}" class="button button-primary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 18px; font-size: .88rem; border-radius: 8px;">
+              <i class="fa-solid fa-arrows-rotate"></i> Tentar Pagar no Checkout Oficial
+            </a>
+          </div>
+        `;
+      } else if (principal.pagamento_status === "informado" || principal.pagamento_informado) {
+        // Cenário C: Pagamento em dinheiro / comprovante sob análise
         financeCardHtml += `
           <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin-top: 10px; color: #1e40af;">
-            <strong>ℹ️ Cenário C — Pagamento Informado:</strong> Você já registrou uma solicitação informando o pagamento. A coordenação financeira analisará o comprovante para conferência manual.
+            <strong>ℹ️ Em Análise pela Coordenação:</strong> A sua solicitação de inscrição com pagamento em dinheiro e o print da conversa foram enviados com sucesso e encontram-se em análise manual. A vaga só será confirmada e o acesso ao grupo liberado após a aprovação da coordenação.
           </div>
         `;
       } else if (principal.pagamento_status === "cancelado" || principal.pagamento_status === "pix_expirado") {

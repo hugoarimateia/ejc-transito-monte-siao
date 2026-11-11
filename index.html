@@ -401,8 +401,8 @@
               <fieldset class="field field-wide choice-field payment-choice">
                 <legend class="field-label" id="paymentLegendTitle">Como você deseja pagar a taxa de inscrição <span id="paymentLegendPrice">(Carregando...)</span>?</legend>
                 <div class="payment-cards-group">
-                  <!-- Opção 1: Checkout Oficial -->
-                  <label class="payment-card-option selected">
+                  <!-- Opção 1: Checkout Oficial (Pix ou Cartão) -->
+                  <label class="payment-card-option selected" id="paymentOptionCheckout">
                     <span class="payment-card-radio">
                       <input name="pagamento_informado" required="" type="radio" value="checkout" checked>
                       <span class="custom-radio-mark" aria-hidden="true"></span>
@@ -410,101 +410,58 @@
                     <span class="payment-card-body">
                       <span class="payment-card-topline">
                         <strong class="payment-card-title">Pagar agora no Checkout Oficial</strong>
-                        <span class="payment-badge-rec"><i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                          Instantâneo</span>
+                        <span class="payment-badge-rec"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Instantâneo</span>
                       </span>
-                      <span class="payment-card-desc">Pix imediato com confirmação em segundos ou Cartão em até
-                        12x.</span>
+                      <span class="payment-card-desc">Pix imediato com confirmação em segundos ou Cartão em até 12x. Vaga confirmada após aprovação no gateway.</span>
                     </span>
                   </label>
 
-                  <!-- Opção 2: Já realizei o pagamento -->
-                  <label class="payment-card-option">
+                  <!-- Opção 2: Pagamento em dinheiro (Combinado com a Coordenação) -->
+                  <label class="payment-card-option" id="paymentOptionDinheiro">
                     <span class="payment-card-radio">
-                      <input name="pagamento_informado" required="" type="radio" value="true">
+                      <input name="pagamento_informado" required="" type="radio" value="dinheiro">
                       <span class="custom-radio-mark" aria-hidden="true"></span>
                     </span>
                     <span class="payment-card-body">
                       <span class="payment-card-topline">
-                        <strong class="payment-card-title">Já realizei o pagamento à coordenação</strong>
+                        <strong class="payment-card-title">Pagamento em dinheiro (Combinado com a Coordenação)</strong>
                       </span>
-                      <span class="payment-card-desc">Informe como pagou e anexe o comprovante para conferência
-                        financeira.</span>
-                    </span>
-                  </label>
-
-                  <!-- Opção 3: Pagar depois -->
-                  <label class="payment-card-option">
-                    <span class="payment-card-radio">
-                      <input name="pagamento_informado" required="" type="radio" value="false">
-                      <span class="custom-radio-mark" aria-hidden="true"></span>
-                    </span>
-                    <span class="payment-card-body">
-                      <span class="payment-card-topline">
-                        <strong class="payment-card-title">Vou pagar depois (Salvar inscrição pendente)</strong>
-                      </span>
-                      <span class="payment-card-desc">Sua vaga é reservada provisoriamente até o prazo limite da
-                        coordenação.</span>
+                      <span class="payment-card-desc">Obrigatório anexar o print ou comprovante da conversa com a coordenação autorizando o pagamento. Vaga sujeita à aprovação manual.</span>
                     </span>
                   </label>
                 </div>
               </fieldset>
 
-              <!-- Bloco condicional para 'Já realizei' -->
+              <!-- Bloco condicional para 'Pagamento em dinheiro' -->
               <div class="field-wide payment-conditional-box" hidden="" id="paid-fields">
-                <fieldset class="field field-wide choice-field payment-method-choice">
-                  <legend class="field-label">Como foi realizado o pagamento? <span class="req-star"
-                      aria-hidden="true">*</span></legend>
-                  <div class="segmented-choice-group" role="radiogroup">
-                    <label class="segmented-choice-label">
-                      <input name="forma_pagamento" type="radio" value="pix">
-                      <span class="segmented-choice-btn"><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix</span>
-                    </label>
-                    <label class="segmented-choice-label">
-                      <input name="forma_pagamento" type="radio" value="especie">
-                      <span class="segmented-choice-btn"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
-                        Em espécie</span>
-                    </label>
-                  </div>
-                </fieldset>
-
-                <div hidden="" id="payment-proof-field" class="field field-wide" style="margin-top: 16px;">
-                  <label class="field-label" for="payment-proof">Comprovante de pagamento <span class="req-star"
-                      aria-hidden="true">*</span> <span class="field-hint-inline">(obrigatório para Pix)</span></label>
+                <div id="payment-proof-field" class="field field-wide" style="margin-top: 8px;">
+                  <label class="field-label" for="payment-proof">
+                    Comprovante da conversa com a coordenação <span class="req-star" aria-hidden="true">*</span>
+                    <span class="field-hint-inline">(obrigatório)</span>
+                  </label>
+                  <p class="field-hint" style="margin: 0 0 10px; font-size: .83rem; color: var(--text-muted);">
+                    Anexe o print da conversa no WhatsApp com a coordenação onde foi combinada a entrega do valor em dinheiro.
+                  </p>
                   <div class="custom-upload-zone custom-upload-compact" id="proofUploadZone">
                     <input accept="image/jpeg,image/png,image/webp,application/pdf" id="payment-proof"
                       name="comprovante" type="file" class="sr-file-input">
                     <div class="upload-zone-content">
-                      <div class="upload-icon-circle"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></div>
+                      <div class="upload-icon-circle"><i class="fa-solid fa-comments" aria-hidden="true"></i></div>
                       <div class="upload-zone-text">
-                        <strong class="upload-zone-title" id="proofUploadTitle">Clique para anexar o
-                          comprovante</strong>
-                        <p class="upload-zone-sub" id="proofUploadSub">Formatos aceitos: JPG, PNG, WebP ou PDF (até 5
-                          MB)</p>
+                        <strong class="upload-zone-title" id="proofUploadTitle">Clique para anexar o print da conversa</strong>
+                        <p class="upload-zone-sub" id="proofUploadSub">Formatos aceitos: JPG, PNG, WebP ou PDF (até 5 MB)</p>
                       </div>
-                      <span class="upload-browse-btn"><i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                        Anexar</span>
+                      <span class="upload-browse-btn"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> Anexar</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Bloco condicional para 'Vou pagar depois' -->
-              <div class="field field-wide payment-conditional-box" hidden="" id="payment-reason-field">
-                <label for="payment-reason" class="field-label">Justificativa ou observação <span
-                    class="opt-label">(opcional)</span></label>
-                <textarea id="payment-reason" name="justificativa_pagamento"
-                  placeholder="Conte-nos caso precise de mais prazo ou tenha alguma observação especial para a coordenação."
-                  rows="3"></textarea>
-              </div>
-
-              <!-- Aviso de inscrição pendente -->
-              <div class="pending-message-card" hidden="" id="pending-message">
-                <div class="pending-message-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
-                <div class="pending-message-body">
-                  <strong>Inscrição com Pagamento Pendente</strong>
-                  <p>Sua inscrição poderá ser concluída normalmente. Ela ficará registrada como <strong>Pagamento
-                      pendente</strong> e deverá ser quitada até a data limite estipulada pela coordenação.</p>
+                <div class="pending-message-card" style="margin-top: 14px; border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.08); border-radius: 12px; padding: 14px 18px; display: flex; gap: 14px; align-items: flex-start;">
+                  <div class="pending-message-icon" style="color: #3b82f6; font-size: 1.3rem; margin-top: 2px;"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></div>
+                  <div class="pending-message-body" style="font-size: .85rem; line-height: 1.5; color: var(--text-main);">
+                    <strong style="display: block; margin-bottom: 4px; font-size: .92rem;">Validação Manual da Coordenação</strong>
+                    <p style="margin: 0;">Sua inscrição será registrada como <strong>Aguardando confirmação da coordenação</strong> e só será considerada válida/confirmada após a verificação e aprovação do comprovante pela coordenação.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -515,16 +472,14 @@
                 <label class="consent-label" for="consent">
                   <input id="consent" required="" type="checkbox" class="custom-checkbox">
                   <span class="consent-text">
-                    Declaro estar ciente de que, ao efetuar esta inscrição, assumo o compromisso integral com o
-                    pagamento da taxa da equipe. Em caso de desistência, por qualquer motivo, não será possível a
-                    restituição do valor já investido.
+                    Declaro estar ciente de que a minha vaga só será confirmada e garantida após a aprovação do pagamento online ou validação da conversa pela coordenação. Em caso de desistência, por qualquer motivo, não haverá restituição do valor já investido.
                   </span>
                 </label>
               </div>
 
               <div class="form-action-wrap">
                 <button class="button button-primary submit-signup" disabled="" type="submit" id="btnSubmitSignup">
-                  <span>Finalizar inscrição</span>
+                  <span>Ir para o Checkout Oficial</span>
                   <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </button>
                 <p class="form-sub-reminder" id="subSelectionReminder">

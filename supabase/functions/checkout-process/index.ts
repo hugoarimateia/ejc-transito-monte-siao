@@ -905,13 +905,13 @@ serve(async (req: Request) => {
       }
 
       try {
-        // Busca inscrições não arquivadas com status 'pendente' ou 'cancelado' (Pix expirado)
+        // Busca inscrições não arquivadas com status 'pendente', 'cancelado' (Pix expirado) ou 'recusado' (Cartão não autorizado)
         let query = supabase
           .from("inscricoes")
           .select("id, nome_completo, email, whatsapp, sub, pagamento_status, motivo_arquivamento, arquivado, criado_em")
           .eq("arquivado", false)
           .is("motivo_arquivamento", null)
-          .in("pagamento_status", ["pendente", "cancelado"])
+          .in("pagamento_status", ["pendente", "cancelado", "recusado"])
           .order("criado_em", { ascending: false })
           .limit(10);
 
@@ -961,14 +961,16 @@ serve(async (req: Request) => {
           .filter(r => !approvedSet.has(String(r.id))) // Exclui inscrições já pagas/aprovadas
           .map((r) => {
             const isPixExpirado = r.pagamento_status === "cancelado";
+            const isRecusado = r.pagamento_status === "recusado";
             return {
               id: r.id,
               nome_completo: r.nome_completo,
               email: r.email,
               whatsapp: r.whatsapp,
               sub: r.sub,
-              pagamento_status: isPixExpirado ? "pix_expirado" : "pendente",
+              pagamento_status: isPixExpirado ? "pix_expirado" : (isRecusado ? "recusado" : "pendente"),
               pix_expirado: isPixExpirado,
+              cartao_recusado: isRecusado,
               elegivel_novo_pix: true,
               criado_em: r.criado_em
             };
@@ -1610,6 +1612,18 @@ serve(async (req: Request) => {
         if (inscStatus === "approved" || inscStatus === "confirmado" || inscStatus === "pago") {
           return jsonResponse({
             error: "Esta inscrição já possui um pagamento aprovado/confirmado. Não é necessário realizar um novo pagamento."
+          }, 400, req);
+        }
+
+        if (inscStatus === "informado") {
+          return jsonResponse({
+            error: "Esta inscrição possui comprovante ou solicitação em dinheiro em análise pela coordenação. Aguarde a avaliação da coordenação antes de realizar pagamento online."
+          }, 400, req);
+        }
+
+        if (inscStatus === "rejeitado") {
+          return jsonResponse({
+            error: "Esta inscrição foi rejeitada pela coordenação e não pode receber pagamentos online."
           }, 400, req);
         }
 
