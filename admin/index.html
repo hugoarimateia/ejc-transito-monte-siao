@@ -1186,6 +1186,9 @@
             <button type="button" class="btn-action-zip" id="btnDownloadZipTodos" onclick="baixarZipTodosOsSubs()" title="Baixar todas as fichas (PDF) e fotos de todos os 4 subs em um único arquivo ZIP organizado por pastas" style="padding: 9px 16px; font-size: .85rem; border-radius: 9px; border: 1.5px solid var(--blue, #087df9); background: var(--blue, #087df9); color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; transition: all .2s; box-shadow: 0 4px 12px rgba(8, 125, 249, 0.25);">
               <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1rem;"></i> Baixar Todos os Subs (ZIP)
             </button>
+            <button type="button" class="btn-action-xlsx" id="btnExportarCamisasXlsx" onclick="exportarControleCamisasXlsx()" title="Exportar planilha Excel (.xlsx) com o resumo, gráficos e detalhamento de controle de camisas" style="padding: 9px 16px; font-size: .85rem; border-radius: 9px; border: 1.5px solid #0f766e; background: #0d9488; color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; transition: all .2s; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);">
+              <i class="fa-solid fa-file-excel" style="font-size: 1rem;"></i> Exportar controle de camisas (.xlsx)
+            </button>
             <button type="button" class="btn-refresh" id="btnRefreshInscritosSub" onclick="carregarSubAtivo(true)" title="Recarregar dados do Sub" style="padding: 9px 15px; font-size: .85rem; border-radius: 9px; border: 1px solid var(--border); background: var(--card-bg); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
               <i class="fa-solid fa-rotate"></i> Atualizar
             </button>
@@ -6452,6 +6455,1234 @@
         isZipProcessing = false;
         if (btnSub) { btnSub.disabled = false; btnSub.style.opacity = "1"; }
         if (btnTodos) { btnTodos.disabled = false; btnTodos.style.opacity = "1"; }
+      }
+    }
+
+    // =========================================================================
+    // EXPORTAÇÃO ISOLADA: RELATÓRIO DE CONTROLE DE CAMISAS EM EXCEL (.XLSX)
+    // =========================================================================
+    function xlsxXmlEscape(str) {
+      return String(str == null ? "" : str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function xlsxColLetter(colIdx1Based) {
+      let temp, letter = "";
+      let col = colIdx1Based;
+      while (col > 0) {
+        temp = (col - 1) % 26;
+        letter = String.fromCharCode(temp + 65) + letter;
+        col = (col - temp - 1) / 26;
+      }
+      return letter;
+    }
+
+    class XlsxSheetBuilder {
+      constructor(colWidths = []) {
+        this.rows = new Map();
+        this.rowHeights = new Map();
+        this.merges = [];
+        this.colWidths = colWidths;
+        this.autoFilterRef = null;
+        this.drawingRelId = null;
+        this.freezePane = null;
+      }
+
+      setRowHeight(r, height) {
+        this.rowHeights.set(r, height);
+      }
+
+      setCell(r, c, value, style = 0, type = null, formula = null) {
+        if (!this.rows.has(r)) this.rows.set(r, new Map());
+        const rowMap = this.rows.get(r);
+        let cellType = type;
+        if (!cellType) {
+          if (typeof value === "number" && !Number.isNaN(value)) {
+            cellType = "n";
+          } else {
+            cellType = "str";
+          }
+        }
+        rowMap.set(c, { value, style, type: cellType, formula });
+      }
+
+      merge(r1, c1, r2, c2, fillStyle = null) {
+        this.merges.push(`${xlsxColLetter(c1)}${r1}:${xlsxColLetter(c2)}${r2}`);
+        if (fillStyle !== null) {
+          for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+              if (!this.rows.has(r) || !this.rows.get(r).has(c)) {
+                this.setCell(r, c, "", fillStyle, "str");
+              }
+            }
+          }
+        }
+      }
+
+      toXml() {
+        let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n`;
+        xml += `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`;
+
+        if (this.freezePane) {
+          xml += `<sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="${this.freezePane.ySplit}" topLeftCell="${this.freezePane.topLeftCell}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="${this.freezePane.topLeftCell}" sqref="${this.freezePane.topLeftCell}"/></sheetView></sheetViews>`;
+        } else {
+          xml += `<sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews>`;
+        }
+
+        xml += `<sheetFormatPr defaultRowHeight="19"/>`;
+
+        if (this.colWidths.length > 0) {
+          xml += `<cols>`;
+          this.colWidths.forEach((w, idx) => {
+            const c = idx + 1;
+            xml += `<col min="${c}" max="${c}" width="${w}" customWidth="1"/>`;
+          });
+          xml += `</cols>`;
+        }
+
+        xml += `<sheetData>`;
+        const sortedRows = Array.from(this.rows.keys()).sort((a, b) => a - b);
+        for (const r of sortedRows) {
+          const rowMap = this.rows.get(r);
+          const sortedCols = Array.from(rowMap.keys()).sort((a, b) => a - b);
+          const ht = this.rowHeights.get(r);
+          const htAttr = ht ? ` ht="${ht}" customHeight="1"` : "";
+          xml += `<row r="${r}"${htAttr}>`;
+          for (const c of sortedCols) {
+            const cell = rowMap.get(c);
+            const ref = `${xlsxColLetter(c)}${r}`;
+            const sAttr = cell.style ? ` s="${cell.style}"` : "";
+            if (cell.formula) {
+              const valXml = (typeof cell.value === "number" && !Number.isNaN(cell.value)) ? `<v>${cell.value}</v>` : "";
+              xml += `<c r="${ref}"${sAttr}><f>${xlsxXmlEscape(cell.formula)}</f>${valXml}</c>`;
+            } else if (cell.type === "n") {
+              xml += `<c r="${ref}"${sAttr}><v>${cell.value}</v></c>`;
+            } else {
+              const strVal = String(cell.value == null ? "" : cell.value);
+              if (strVal === "") {
+                xml += `<c r="${ref}"${sAttr}/>`;
+              } else {
+                const preserve = (/^\s|\s$|\n/).test(strVal) ? ` xml:space="preserve"` : "";
+                xml += `<c r="${ref}"${sAttr} t="inlineStr"><is><t${preserve}>${xlsxXmlEscape(strVal)}</t></is></c>`;
+              }
+            }
+          }
+          xml += `</row>`;
+        }
+        xml += `</sheetData>`;
+
+        if (this.autoFilterRef) {
+          xml += `<autoFilter ref="${this.autoFilterRef}"/>`;
+        }
+
+        if (this.merges.length > 0) {
+          xml += `<mergeCells count="${this.merges.length}">`;
+          for (const m of this.merges) {
+            xml += `<mergeCell ref="${m}"/>`;
+          }
+          xml += `</mergeCells>`;
+        }
+
+        xml += `<pageMargins left="0.5" right="0.5" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>`;
+
+        if (this.drawingRelId) {
+          xml += `<drawing r:id="${this.drawingRelId}"/>`;
+        }
+
+        xml += `</worksheet>`;
+        return xml;
+      }
+    }
+
+    function buildCamisasBarChartXml(title, sheetName, catColLetter, catStartRow, catEndRow, categories, seriesList) {
+      const catCount = categories.length;
+      let catPtsXml = "";
+      categories.forEach((c, idx) => {
+        catPtsXml += `<c:pt idx="${idx}"><c:v>${xlsxXmlEscape(c)}</c:v></c:pt>`;
+      });
+      const catFormula = `'${sheetName}'!$${catColLetter}$${catStartRow}:$${catColLetter}$${catEndRow}`;
+
+      let serXml = "";
+      seriesList.forEach((s, sIdx) => {
+        let valPtsXml = "";
+        s.values.forEach((v, idx) => {
+          valPtsXml += `<c:pt idx="${idx}"><c:v>${Number(v) || 0}</c:v></c:pt>`;
+        });
+        const valFormula = `'${sheetName}'!$${s.colLetter}$${s.startRow}:$${s.colLetter}$${s.endRow}`;
+        serXml += `
+          <c:ser>
+            <c:idx val="${sIdx}"/>
+            <c:order val="${sIdx}"/>
+            <c:tx><c:v>${xlsxXmlEscape(s.name)}</c:v></c:tx>
+            <c:spPr>
+              <a:solidFill><a:srgbClr val="${s.colorHex}"/></a:solidFill>
+            </c:spPr>
+            <c:invertIfNegative val="0"/>
+            <c:cat>
+              <c:strRef>
+                <c:f>${xlsxXmlEscape(catFormula)}</c:f>
+                <c:strCache>
+                  <c:ptCount val="${catCount}"/>
+                  ${catPtsXml}
+                </c:strCache>
+              </c:strRef>
+            </c:cat>
+            <c:val>
+              <c:numRef>
+                <c:f>${xlsxXmlEscape(valFormula)}</c:f>
+                <c:numCache>
+                  <c:formatCode>General</c:formatCode>
+                  <c:ptCount val="${catCount}"/>
+                  ${valPtsXml}
+                </c:numCache>
+              </c:numRef>
+            </c:val>
+          </c:ser>`;
+      });
+
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:lang val="pt-BR"/>
+  <c:roundedCorners val="0"/>
+  <c:chart>
+    <c:title>
+      <c:tx>
+        <c:rich>
+          <a:bodyPr/>
+          <a:lstStyle/>
+          <a:p>
+            <a:pPr><a:defRPr sz="1100" b="1"/></a:pPr>
+            <a:r><a:rPr lang="pt-BR" sz="1100" b="1"/><a:t>${xlsxXmlEscape(title)}</a:t></a:r>
+          </a:p>
+        </c:rich>
+      </c:tx>
+      <c:overlay val="0"/>
+    </c:title>
+    <c:autoTitleDeleted val="0"/>
+    <c:plotArea>
+      <c:layout/>
+      <c:barChart>
+        <c:barDir val="col"/>
+        <c:grouping val="clustered"/>
+        <c:varyColors val="0"/>
+        ${serXml}
+        <c:gapWidth val="150"/>
+        <c:axId val="1001"/>
+        <c:axId val="1002"/>
+      </c:barChart>
+      <c:catAx>
+        <c:axId val="1001"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="b"/>
+        <c:majorTickMark val="out"/>
+        <c:minorTickMark val="none"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:crossAx val="1002"/>
+        <c:crosses val="autoZero"/>
+        <c:auto val="1"/>
+        <c:lblAlgn val="ctr"/>
+        <c:lblOffset val="100"/>
+      </c:catAx>
+      <c:valAx>
+        <c:axId val="1002"/>
+        <c:scaling><c:orientation val="minMax"/></c:scaling>
+        <c:delete val="0"/>
+        <c:axPos val="l"/>
+        <c:majorGridlines/>
+        <c:numFmt formatCode="General" sourceLinked="1"/>
+        <c:majorTickMark val="out"/>
+        <c:minorTickMark val="none"/>
+        <c:tickLblPos val="nextTo"/>
+        <c:crossAx val="1001"/>
+        <c:crosses val="autoZero"/>
+        <c:crossBetween val="between"/>
+      </c:valAx>
+    </c:plotArea>
+    <c:legend>
+      <c:legendPos val="b"/>
+      <c:overlay val="0"/>
+    </c:legend>
+    <c:plotVisOnly val="1"/>
+    <c:dispBlanksAs val="gap"/>
+  </c:chart>
+</c:chartSpace>`;
+    }
+
+    function buildCamisasStylesXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="2">
+    <numFmt numFmtId="164" formatCode="0.0%"/>
+    <numFmt numFmtId="165" formatCode="#,##0"/>
+  </numFmts>
+  <fonts count="9">
+    <font><sz val="10"/><color rgb="FF1E293B"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="13"/><color rgb="FFFFFFFF"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="11"/><color rgb="FF0F172A"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FF166534"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FF92400E"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FF991B1B"/><name val="Segoe UI"/></font>
+    <font><sz val="9.5"/><color rgb="FF334155"/><name val="Segoe UI"/></font>
+  </fonts>
+  <fills count="11">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF0D9488"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFDCFCE7"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>
+  </fills>
+  <borders count="3">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border>
+      <left style="thin"><color rgb="FFCBD5E1"/></left>
+      <right style="thin"><color rgb="FFCBD5E1"/></right>
+      <top style="thin"><color rgb="FFCBD5E1"/></top>
+      <bottom style="thin"><color rgb="FFCBD5E1"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF94A3B8"/></left>
+      <right style="thin"><color rgb="FF94A3B8"/></right>
+      <top style="medium"><color rgb="FF0F172A"/></top>
+      <bottom style="double"><color rgb="FF0F172A"/></bottom>
+      <diagonal/>
+    </border>
+  </borders>
+  <cellStyleXfs count="1">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+  </cellStyleXfs>
+  <cellXfs count="19">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center" indent="1"/>
+    </xf>
+    <xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center" indent="1"/>
+    </xf>
+    <xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center" wrapText="1"/>
+    </xf>
+    <xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center" wrapText="1"/>
+    </xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="165" fontId="4" fillId="10" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="4" fillId="5" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <xf numFmtId="165" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="164" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="5" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="6" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="7" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="8" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center" wrapText="1"/>
+    </xf>
+    <xf numFmtId="165" fontId="5" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+  </cellXfs>
+  <cellStyles count="1">
+    <cellStyle name="Normal" xfId="0" builtinId="0"/>
+  </cellStyles>
+</styleSheet>`;
+    }
+
+    function normalizarSubCamisaRelatorio(subRaw) {
+      const s = String(subRaw || "").trim().toLowerCase();
+      if (s === "verde" || s === "sub verde") return "Sub Verde";
+      if (s === "vermelho" || s === "sub vermelho") return "Sub Vermelho";
+      if (s === "amarelo" || s === "sub amarelo") return "Sub Amarelo";
+      if (s === "laranja" || s === "sub laranja" || s === "azul" || s === "sub azul") return "Sub Laranja";
+      return "Sem Sub / Não classificado";
+    }
+
+    function extrairTamanhoEModeloCamisa(tamRaw, modRaw, isAdicional) {
+      let tam = String(tamRaw || "").trim();
+      let mod = String(modRaw || "").trim();
+      if (tam.includes("|")) {
+        const parts = tam.split("|").map(p => p.trim()).filter(Boolean);
+        tam = parts[0] || "";
+        if (!mod && parts[1]) mod = parts[1];
+      }
+      const alertas = [];
+      let tamanhoNorm = "Não informado";
+      if (!tam) {
+        alertas.push(isAdicional ? "Tamanho da camisa adicional ausente" : "Tamanho da camisa titular ausente");
+      } else {
+        const up = tam.toUpperCase();
+        if (["PP", "P", "M", "G", "GG", "XG", "XXG"].includes(up)) {
+          tamanhoNorm = up;
+        } else if (up === "SOB MEDIDA" || up === "SOB_MEDIDA" || up === "SOB-MEDIDA") {
+          tamanhoNorm = "Sob medida";
+        } else {
+          tamanhoNorm = "Não informado";
+          alertas.push(`Tamanho fora do padrão ('${tam}')`);
+        }
+      }
+
+      let modeloNorm = "Não especificado";
+      if (!mod) {
+        alertas.push(isAdicional ? "Modelo da camisa adicional não especificado" : "Modelo da camisa titular não especificado");
+      } else {
+        const low = mod.toLowerCase();
+        if (low === "tradicional") {
+          modeloNorm = "Tradicional";
+        } else if (low === "baby look" || low === "babylook" || low === "baby_look") {
+          modeloNorm = "Baby Look";
+        } else {
+          modeloNorm = "Não especificado";
+          alertas.push(`Modelo fora do padrão ('${mod}')`);
+        }
+      }
+
+      return { tamanho: tamanhoNorm, modelo: modeloNorm, alertas };
+    }
+
+    function classificarSituacaoPagamentoCamisa(statusRaw, hasApprovedPayment) {
+      const st = String(statusRaw || "pendente").trim().toLowerCase();
+      if (hasApprovedPayment || st === "confirmado" || st === "approved" || st === "pago") {
+        return { categoria: "Pago / Confirmado", chave: "pago", statusOriginal: st || "confirmado" };
+      }
+      if (st === "informado" || st === "em_analise" || st === "aguardando_analise") {
+        return { categoria: "Em Análise (Informado)", chave: "analise", statusOriginal: st };
+      }
+      if (st === "pendente" || st === "pending" || st === "recusado") {
+        return { categoria: "Pendente", chave: "pendente", statusOriginal: st };
+      }
+      return { categoria: "Pendente", chave: "pendente", statusOriginal: st, alertaStatus: `Status atípico ('${st}') classificado como Pendente` };
+    }
+
+    function gerarBarraVisualCamisas(valor, maximo) {
+      if (!valor || valor <= 0 || !maximo || maximo <= 0) return "— (0)";
+      const blocos = Math.max(1, Math.round((valor / maximo) * 14));
+      return "█".repeat(blocos) + ` (${valor})`;
+    }
+
+    async function exportarControleCamisasXlsx() {
+      if (isZipProcessing) {
+        alert("Já existe uma operação de exportação ou download em andamento. Aguarde a conclusão.");
+        return;
+      }
+      if (typeof JSZip === "undefined") {
+        alert("Biblioteca de empacotamento ainda inicializando. Aguarde 2 segundos e tente novamente.");
+        return;
+      }
+
+      isZipProcessing = true;
+      const btnSub = document.getElementById("btnDownloadZipSub");
+      const btnTodos = document.getElementById("btnDownloadZipTodos");
+      const btnXlsx = document.getElementById("btnExportarCamisasXlsx");
+      if (btnSub) { btnSub.disabled = true; btnSub.style.opacity = "0.5"; }
+      if (btnTodos) { btnTodos.disabled = true; btnTodos.style.opacity = "0.5"; }
+      if (btnXlsx) { btnXlsx.disabled = true; btnXlsx.style.opacity = "0.5"; }
+
+      mostrarProgressoDownload(
+        "Exportando Controle de Camisas (.xlsx)...",
+        "Consultando dados atualizados de camisas em todos os Subs...",
+        20
+      );
+
+      try {
+        const token = currentAdminPass || sessionStorage.getItem("ejc_admin_token") || sessionStorage.getItem("ejc_admin_pass") || "";
+        const res = await fetch(`/api/admin/inscritos-dados?sub=todos`, {
+          headers: { "x-admin-token": token, "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Falha ao obter dados dos inscritos");
+
+        const inscritosRaw = Array.isArray(data.inscritos) ? data.inscritos : [];
+        if (inscritosRaw.length === 0) {
+          alert("Nenhum registro encontrado para gerar o relatório de camisas.");
+          return;
+        }
+
+        atualizarProgressoDownload(55, "Consolidando quantidades por subgrupo, modelo, tamanho e pagamento...");
+
+        const pagamentosApprovedIds = new Set();
+        if (typeof pagamentosData !== "undefined" && Array.isArray(pagamentosData)) {
+          pagamentosData.forEach(p => {
+            const st = String(p.status || "").trim().toLowerCase();
+            if (p.inscricao_id && (st === "approved" || st === "confirmado" || st === "pago")) {
+              pagamentosApprovedIds.add(String(p.inscricao_id));
+            }
+          });
+        }
+
+        const inscricoesRawMap = new Map();
+        if (typeof inscricoesData !== "undefined" && Array.isArray(inscricoesData)) {
+          inscricoesData.forEach(ins => {
+            if (ins && ins.id) inscricoesRawMap.set(String(ins.id), ins);
+          });
+        }
+
+        const TAMANHOS_ORDEM = ["PP", "P", "M", "G", "GG", "XG", "XXG", "Sob medida", "Não informado"];
+        const SUBS_ORDEM = ["Sub Verde", "Sub Vermelho", "Sub Amarelo", "Sub Laranja", "Sem Sub / Não classificado"];
+        const MODELOS_ORDEM = ["Tradicional", "Baby Look", "Não especificado"];
+
+        let excluidosCancelados = 0;
+        let excluidosArquivados = (typeof inscricoesArquivadasData !== "undefined" && Array.isArray(inscricoesArquivadasData))
+          ? inscricoesArquivadasData.length
+          : 0;
+        let inscricoesValidasCount = 0;
+        const itensCamisas = [];
+
+        for (const item of inscritosRaw) {
+          if (item.arquivado === true) {
+            excluidosArquivados++;
+            continue;
+          }
+          const stRaw = String(item.pagamento_status || "pendente").trim().toLowerCase();
+          if (stRaw === "cancelado" || stRaw === "cancelled" || stRaw === "rejeitado" || stRaw === "rejected") {
+            excluidosCancelados++;
+            continue;
+          }
+
+          inscricoesValidasCount++;
+          const rawMem = inscricoesRawMap.get(String(item.id)) || null;
+          const subNorm = normalizarSubCamisaRelatorio(item.sub);
+          const hasApproved = pagamentosApprovedIds.has(String(item.id));
+          const pagInfo = classificarSituacaoPagamentoCamisa(item.pagamento_status, hasApproved);
+          const statusFicha = item.status_cadastro === "completo" ? "Completo" : "Incompleto";
+          const codControle = "CAM-" + String(item.id || "").replace(/-/g, "").substring(0, 8).toUpperCase();
+
+          // 1. Camisa Titular (1 por inscrição válida)
+          const modeloTitularFonte = (rawMem && rawMem.modelo_camisa !== undefined) ? rawMem.modelo_camisa : item.modelo_camisa;
+          const titularInfo = extrairTamanhoEModeloCamisa(item.tamanho_camisa, modeloTitularFonte, false);
+          const alertasTitular = [...titularInfo.alertas];
+          if (pagInfo.alertaStatus) alertasTitular.push(pagInfo.alertaStatus);
+          if (subNorm === "Sem Sub / Não classificado") alertasTitular.push("Subgrupo ausente ou não identificado");
+
+          itensCamisas.push({
+            codigo: codControle,
+            sub: subNorm,
+            origem: "Titular (Inscrição)",
+            isAdicional: false,
+            modelo: titularInfo.modelo,
+            tamanho: titularInfo.tamanho,
+            quantidade: 1,
+            situacaoPagamento: pagInfo.categoria,
+            chavePagamento: pagInfo.chave,
+            statusSistema: pagInfo.statusOriginal,
+            statusFicha,
+            temAlerta: alertasTitular.length > 0,
+            alertaTexto: alertasTitular.length > 0 ? "ALERTA: " + alertasTitular.join("; ") : "OK — Classificado"
+          });
+
+          // 2. Camisa Adicional (somente se solicitada explicitamente)
+          const qtdAdicRaw = Number(item.quantidade_camisas_adicionais) || 0;
+          const querAdic = Boolean(item.quer_camisa_adicional) || qtdAdicRaw > 0;
+          if (querAdic) {
+            const qtdAdic = qtdAdicRaw > 0 ? qtdAdicRaw : 1;
+            const adicInfo = extrairTamanhoEModeloCamisa(item.tamanho_camisa_adicional, item.modelo_camisa_adicional, true);
+            const alertasAdic = [...adicInfo.alertas];
+            if (qtdAdicRaw <= 0) alertasAdic.push("Quantidade adicional não preenchida (assumido 1)");
+            if (pagInfo.alertaStatus) alertasAdic.push(pagInfo.alertaStatus);
+            if (subNorm === "Sem Sub / Não classificado") alertasAdic.push("Subgrupo ausente ou não identificado");
+
+            itensCamisas.push({
+              codigo: codControle + "-EXTRA",
+              sub: subNorm,
+              origem: "Adicional (Extra)",
+              isAdicional: true,
+              modelo: adicInfo.modelo,
+              tamanho: adicInfo.tamanho,
+              quantidade: qtdAdic,
+              situacaoPagamento: pagInfo.categoria,
+              chavePagamento: pagInfo.chave,
+              statusSistema: pagInfo.statusOriginal,
+              statusFicha,
+              temAlerta: alertasAdic.length > 0,
+              alertaTexto: alertasAdic.length > 0 ? "ALERTA: " + alertasAdic.join("; ") : "OK — Classificado"
+            });
+          }
+        }
+
+        const subOrderMap = { "Sub Verde": 1, "Sub Vermelho": 2, "Sub Amarelo": 3, "Sub Laranja": 4, "Sem Sub / Não classificado": 5 };
+        const tamOrderMap = {};
+        TAMANHOS_ORDEM.forEach((t, i) => { tamOrderMap[t] = i + 1; });
+
+        itensCamisas.sort((a, b) => {
+          const sA = subOrderMap[a.sub] || 99;
+          const sB = subOrderMap[b.sub] || 99;
+          if (sA !== sB) return sA - sB;
+          if (a.isAdicional !== b.isAdicional) return a.isAdicional ? 1 : -1;
+          if (a.modelo !== b.modelo) return a.modelo.localeCompare(b.modelo, "pt-BR");
+          const tA = tamOrderMap[a.tamanho] || 99;
+          const tB = tamOrderMap[b.tamanho] || 99;
+          if (tA !== tB) return tA - tB;
+          return a.codigo.localeCompare(b.codigo);
+        });
+
+        const resumoOrigem = {
+          titular: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 },
+          adicional: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 },
+          geral: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 }
+        };
+
+        const resumoSub = {};
+        SUBS_ORDEM.forEach(s => {
+          resumoSub[s] = { titular: 0, adicional: 0, pago: 0, analise: 0, pendente: 0, total: 0 };
+        });
+
+        const resumoTamanho = {};
+        TAMANHOS_ORDEM.forEach(t => {
+          resumoTamanho[t] = {
+            tradPago: 0, tradTotal: 0,
+            babyPago: 0, babyTotal: 0,
+            naoEspPago: 0, naoEspTotal: 0,
+            pago: 0, analise: 0, pendente: 0, total: 0
+          };
+        });
+
+        const matrizSubTamTotal = {};
+        const matrizSubTamPago = {};
+        const matrizSubModTam = {};
+
+        SUBS_ORDEM.forEach(s => {
+          matrizSubTamTotal[s] = { pago: 0, analise: 0, pendente: 0, total: 0 };
+          matrizSubTamPago[s] = { total: 0 };
+          TAMANHOS_ORDEM.forEach(t => {
+            matrizSubTamTotal[s][t] = 0;
+            matrizSubTamPago[s][t] = 0;
+          });
+          matrizSubModTam[s] = {};
+          MODELOS_ORDEM.forEach(m => {
+            matrizSubModTam[s][m] = { pago: 0, analise: 0, pendente: 0, total: 0 };
+            TAMANHOS_ORDEM.forEach(t => {
+              matrizSubModTam[s][m][t] = 0;
+            });
+          });
+        });
+
+        for (const item of itensCamisas) {
+          const q = item.quantidade;
+          const origTarget = item.isAdicional ? resumoOrigem.adicional : resumoOrigem.titular;
+          origTarget[item.chavePagamento] += q;
+          origTarget.total += q;
+          if (item.temAlerta) origTarget.alerta += q;
+
+          resumoOrigem.geral[item.chavePagamento] += q;
+          resumoOrigem.geral.total += q;
+          if (item.temAlerta) resumoOrigem.geral.alerta += q;
+
+          const subObj = resumoSub[item.sub];
+          if (item.isAdicional) subObj.adicional += q;
+          else subObj.titular += q;
+          subObj[item.chavePagamento] += q;
+          subObj.total += q;
+
+          const tamObj = resumoTamanho[item.tamanho];
+          if (item.modelo === "Tradicional") {
+            tamObj.tradTotal += q;
+            if (item.chavePagamento === "pago") tamObj.tradPago += q;
+          } else if (item.modelo === "Baby Look") {
+            tamObj.babyTotal += q;
+            if (item.chavePagamento === "pago") tamObj.babyPago += q;
+          } else {
+            tamObj.naoEspTotal += q;
+            if (item.chavePagamento === "pago") tamObj.naoEspPago += q;
+          }
+          tamObj[item.chavePagamento] += q;
+          tamObj.total += q;
+
+          matrizSubTamTotal[item.sub][item.tamanho] += q;
+          matrizSubTamTotal[item.sub][item.chavePagamento] += q;
+          matrizSubTamTotal[item.sub].total += q;
+
+          if (item.chavePagamento === "pago") {
+            matrizSubTamPago[item.sub][item.tamanho] += q;
+            matrizSubTamPago[item.sub].total += q;
+          }
+
+          const smt = matrizSubModTam[item.sub][item.modelo];
+          smt[item.tamanho] += q;
+          smt[item.chavePagamento] += q;
+          smt.total += q;
+        }
+
+        const totalGeralPecas = resumoOrigem.geral.total || 1;
+        const maxSubTotal = Math.max(...SUBS_ORDEM.map(s => resumoSub[s].total), 1);
+        const maxTamTotal = Math.max(...TAMANHOS_ORDEM.map(t => resumoTamanho[t].total), 1);
+        const dataGeracao = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
+
+        atualizarProgressoDownload(80, "Montando abas Resumo, Gráficos e Detalhamento em Excel (.xlsx)...");
+
+        // =====================================================================
+        // ABA 1: RESUMO DE CAMISAS
+        // =====================================================================
+        const s1 = new XlsxSheetBuilder([28, 24, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 30]);
+
+        s1.setRowHeight(1, 28);
+        s1.setCell(1, 1, "RELATÓRIO DE CONTROLE E DEMANDA DE CAMISAS — EJC TRÂNSITO MONTE SIÃO", 1);
+        s1.merge(1, 1, 1, 13, 1);
+
+        s1.setRowHeight(2, 20);
+        s1.setCell(2, 1, `Gerado em: ${dataGeracao} (Horário de Fortaleza) | Fonte: Dados dos Inscritos por Sub | Escopo: Controle exclusivo de camisas (Sem dados pessoais)`, 17);
+        s1.merge(2, 1, 2, 13, 17);
+
+        s1.setRowHeight(4, 22);
+        s1.setCell(4, 1, "1. CRITÉRIOS DE CONTAGEM E REGRAS APLICADAS NO RELATÓRIO", 2);
+        s1.merge(4, 1, 4, 13, 2);
+
+        const regrasTextos = [
+          `• Base de registros válidos: Considera exclusivamente inscrições ativas (não arquivadas) e não canceladas/rejeitadas (${inscricoesValidasCount} inscrições válidas contabilizadas; ${excluidosCancelados} canceladas/rejeitadas excluídas${excluidosArquivados > 0 ? " e " + excluidosArquivados + " arquivadas ignoradas" : ""}).`,
+          `• Quantidade máxima sem duplicidade: Cada inscrição válida gera exatamente 1 Camisa Titular (${resumoOrigem.titular.total} peças). Camisas Adicionais (${resumoOrigem.adicional.total} peças) são somadas apenas quando solicitadas explicitamente, evitando somar duas vezes a mesma camisa.`,
+          `• Situação do pagamento/validação: Diferenciação estrita entre Pagas/Confirmadas (${resumoOrigem.geral.pago} peças), Em Análise/Informadas (${resumoOrigem.geral.analise} peças) e Pendentes (${resumoOrigem.geral.pendente} peças). Camisas pendentes não são tratadas como pagas.`,
+          `• Sinalização de campos ausentes: Registros sem tamanho ou sem modelo especificado não são descartados nem inventados; são contabilizados em categoria própria e sinalizados (${resumoOrigem.geral.alerta} peça(s) com alerta de verificação).`
+        ];
+        regrasTextos.forEach((txt, idx) => {
+          const r = 5 + idx;
+          s1.setRowHeight(r, 20);
+          s1.setCell(r, 1, txt, 17);
+          s1.merge(r, 1, r, 13, 17);
+        });
+
+        // Quadro 1: Visão Geral e Demanda Máxima (Linhas 10 a 14)
+        s1.setRowHeight(10, 22);
+        s1.setCell(10, 1, "2. VISÃO GERAL E QUANTIDADE MÁXIMA DE CAMISAS A CONSIDERAR (SEM DUPLICIDADE)", 2);
+        s1.merge(10, 1, 10, 13, 2);
+
+        s1.setRowHeight(11, 24);
+        const q1Headers = [
+          "Categoria / Origem da Camisa",
+          "Critério Aplicado",
+          "Pagas / Confirmadas",
+          "Em Análise (Informado)",
+          "Pendentes",
+          "Quantidade Máxima (Total)",
+          "% do Total",
+          "Peças c/ Alerta",
+          "Orientação para Pedido / Controle"
+        ];
+        q1Headers.forEach((h, idx) => s1.setCell(11, idx + 1, h, idx < 2 ? 3 : 4));
+        s1.merge(11, 9, 11, 13, 4);
+
+        const q1Rows = [
+          {
+            cat: "Camisas Titulares (Inscrição)",
+            crit: "1 peça por inscrição válida",
+            d: resumoOrigem.titular,
+            obs: `Garantidas por pagamento confirmado: ${resumoOrigem.titular.pago} | Teto titular: ${resumoOrigem.titular.total}`
+          },
+          {
+            cat: "Camisas Adicionais (Extras)",
+            crit: "Somente com pedido adicional ativo",
+            d: resumoOrigem.adicional,
+            obs: `Garantidas por pagamento confirmado: ${resumoOrigem.adicional.pago} | Teto adicional: ${resumoOrigem.adicional.total}`
+          }
+        ];
+        q1Rows.forEach((row, idx) => {
+          const r = 12 + idx;
+          s1.setRowHeight(r, 20);
+          s1.setCell(r, 1, row.cat, 7);
+          s1.setCell(r, 2, row.crit, 5);
+          s1.setCell(r, 3, row.d.pago, 18);
+          s1.setCell(r, 4, row.d.analise, 8);
+          s1.setCell(r, 5, row.d.pendente, 8);
+          s1.setCell(r, 6, row.d.total, 9);
+          s1.setCell(r, 7, row.d.total / totalGeralPecas, 10);
+          s1.setCell(r, 8, row.d.alerta, row.d.alerta > 0 ? 15 : 8);
+          s1.setCell(r, 9, row.obs, 5);
+          s1.merge(r, 9, r, 13, 5);
+        });
+
+        s1.setRowHeight(14, 22);
+        s1.setCell(14, 1, "TOTAL DE CAMISAS (DEMANDA MÁXIMA)", 11);
+        s1.setCell(14, 2, "Soma sem duplicidade (Titulares + Extras)", 11);
+        s1.setCell(14, 3, resumoOrigem.geral.pago, 12, "n", "SUM(C12:C13)");
+        s1.setCell(14, 4, resumoOrigem.geral.analise, 12, "n", "SUM(D12:D13)");
+        s1.setCell(14, 5, resumoOrigem.geral.pendente, 12, "n", "SUM(E12:E13)");
+        s1.setCell(14, 6, resumoOrigem.geral.total, 12, "n", "SUM(F12:F13)");
+        s1.setCell(14, 7, 1, 13);
+        s1.setCell(14, 8, resumoOrigem.geral.alerta, 12, "n", "SUM(H12:H13)");
+        s1.setCell(14, 9, `Confirmadas (Pagas): ${resumoOrigem.geral.pago} camisas | Demanda Máxima Total: ${resumoOrigem.geral.total} camisas`, 11);
+        s1.merge(14, 9, 14, 13, 11);
+
+        // Quadro 2: Quantidade de Camisas por Subgrupo (Linhas 16 a 23)
+        s1.setRowHeight(16, 22);
+        s1.setCell(16, 1, "3. QUANTIDADE DE CAMISAS POR SUBGRUPO (COM VISUALIZAÇÃO PROPORCIONAL)", 2);
+        s1.merge(16, 1, 16, 13, 2);
+
+        s1.setRowHeight(17, 24);
+        const q2Headers = [
+          "Subgrupo Oficial",
+          "Camisas Titulares",
+          "Camisas Adicionais",
+          "Pagas / Confirmadas",
+          "Em Análise (Informado)",
+          "Pendentes",
+          "Demanda Máxima Total",
+          "% por Subgrupo",
+          "Visualização por Subgrupo (Demanda Total)"
+        ];
+        q2Headers.forEach((h, idx) => s1.setCell(17, idx + 1, h, idx === 0 ? 3 : 4));
+        s1.merge(17, 9, 17, 13, 4);
+
+        SUBS_ORDEM.forEach((subName, idx) => {
+          const r = 18 + idx;
+          const d = resumoSub[subName];
+          s1.setRowHeight(r, 20);
+          s1.setCell(r, 1, subName, 7);
+          s1.setCell(r, 2, d.titular, 8);
+          s1.setCell(r, 3, d.adicional, 8);
+          s1.setCell(r, 4, d.pago, 18);
+          s1.setCell(r, 5, d.analise, 8);
+          s1.setCell(r, 6, d.pendente, 8);
+          s1.setCell(r, 7, d.total, 9);
+          s1.setCell(r, 8, d.total / totalGeralPecas, 10);
+          s1.setCell(r, 9, `${gerarBarraVisualCamisas(d.total, maxSubTotal)} | Pagas: ${d.pago}`, 5);
+          s1.merge(r, 9, r, 13, 5);
+        });
+
+        s1.setRowHeight(23, 22);
+        s1.setCell(23, 1, "TOTAL GERAL POR SUBGRUPO", 11);
+        s1.setCell(23, 2, resumoOrigem.titular.total, 12, "n", "SUM(B18:B22)");
+        s1.setCell(23, 3, resumoOrigem.adicional.total, 12, "n", "SUM(C18:C22)");
+        s1.setCell(23, 4, resumoOrigem.geral.pago, 12, "n", "SUM(D18:D22)");
+        s1.setCell(23, 5, resumoOrigem.geral.analise, 12, "n", "SUM(E18:E22)");
+        s1.setCell(23, 6, resumoOrigem.geral.pendente, 12, "n", "SUM(F18:F22)");
+        s1.setCell(23, 7, resumoOrigem.geral.total, 12, "n", "SUM(G18:G22)");
+        s1.setCell(23, 8, 1, 13);
+        s1.setCell(23, 9, `100% conferido (${resumoOrigem.geral.total} peças em ${inscricoesValidasCount} inscrições)`, 11);
+        s1.merge(23, 9, 23, 13, 11);
+
+        // Quadro 3: Quantidade por Tamanho no Total Geral e Separação por Modelo (Linhas 25 a 36)
+        s1.setRowHeight(25, 22);
+        s1.setCell(25, 1, "4. QUANTIDADE POR TAMANHO NO TOTAL GERAL E SEPARAÇÃO POR MODELO", 2);
+        s1.merge(25, 1, 25, 13, 2);
+
+        s1.setRowHeight(26, 26);
+        const q3Headers = [
+          "Tamanho",
+          "Tradicional (Pagas)",
+          "Tradicional (Total)",
+          "Baby Look (Pagas)",
+          "Baby Look (Total)",
+          "Modelo Não Esp. (Pagas)",
+          "Modelo Não Esp. (Total)",
+          "Total Pagas / Confirmadas",
+          "Total Em Análise",
+          "Total Pendentes",
+          "Demanda Máxima (Total Geral)",
+          "% por Tamanho",
+          "Gráfico Visual por Tamanho"
+        ];
+        q3Headers.forEach((h, idx) => s1.setCell(26, idx + 1, h, idx === 0 ? 3 : 4));
+
+        let sumTradPago = 0, sumTradTotal = 0, sumBabyPago = 0, sumBabyTotal = 0, sumNaoEspPago = 0, sumNaoEspTotal = 0;
+
+        TAMANHOS_ORDEM.forEach((tamName, idx) => {
+          const r = 27 + idx;
+          const d = resumoTamanho[tamName];
+          sumTradPago += d.tradPago;
+          sumTradTotal += d.tradTotal;
+          sumBabyPago += d.babyPago;
+          sumBabyTotal += d.babyTotal;
+          sumNaoEspPago += d.naoEspPago;
+          sumNaoEspTotal += d.naoEspTotal;
+
+          s1.setRowHeight(r, 20);
+          const isMissingRow = tamName === "Não informado" && d.total > 0;
+          s1.setCell(r, 1, tamName, isMissingRow ? 16 : 7);
+          s1.setCell(r, 2, d.tradPago, 8);
+          s1.setCell(r, 3, d.tradTotal, 8);
+          s1.setCell(r, 4, d.babyPago, 8);
+          s1.setCell(r, 5, d.babyTotal, 8);
+          s1.setCell(r, 6, d.naoEspPago, d.naoEspPago > 0 ? 15 : 8);
+          s1.setCell(r, 7, d.naoEspTotal, d.naoEspTotal > 0 ? 15 : 8);
+          s1.setCell(r, 8, d.pago, 18);
+          s1.setCell(r, 9, d.analise, 8);
+          s1.setCell(r, 10, d.pendente, 8);
+          s1.setCell(r, 11, d.total, 9);
+          s1.setCell(r, 12, d.total / totalGeralPecas, 10);
+          s1.setCell(r, 13, gerarBarraVisualCamisas(d.total, maxTamTotal), 5);
+        });
+
+        s1.setRowHeight(36, 22);
+        s1.setCell(36, 1, "TOTAL GERAL POR TAMANHO", 11);
+        s1.setCell(36, 2, sumTradPago, 12, "n", "SUM(B27:B35)");
+        s1.setCell(36, 3, sumTradTotal, 12, "n", "SUM(C27:C35)");
+        s1.setCell(36, 4, sumBabyPago, 12, "n", "SUM(D27:D35)");
+        s1.setCell(36, 5, sumBabyTotal, 12, "n", "SUM(E27:E35)");
+        s1.setCell(36, 6, sumNaoEspPago, 12, "n", "SUM(F27:F35)");
+        s1.setCell(36, 7, sumNaoEspTotal, 12, "n", "SUM(G27:G35)");
+        s1.setCell(36, 8, resumoOrigem.geral.pago, 12, "n", "SUM(H27:H35)");
+        s1.setCell(36, 9, resumoOrigem.geral.analise, 12, "n", "SUM(I27:I35)");
+        s1.setCell(36, 10, resumoOrigem.geral.pendente, 12, "n", "SUM(J27:J35)");
+        s1.setCell(36, 11, resumoOrigem.geral.total, 12, "n", "SUM(K27:K35)");
+        s1.setCell(36, 12, 1, 13);
+        s1.setCell(36, 13, `Tradicional: ${sumTradTotal} | Baby Look: ${sumBabyTotal}${sumNaoEspTotal > 0 ? " | Não esp.: " + sumNaoEspTotal : ""}`, 11);
+
+        // Quadro 4A: Combinação Subgrupo x Tamanho — SOMENTE CAMISAS PAGAS (Linhas 38 a 45)
+        s1.setRowHeight(38, 22);
+        s1.setCell(38, 1, "5A. COMBINAÇÃO DE SUBGRUPO × TAMANHO — SOMENTE CAMISAS PAGAS / CONFIRMADAS", 2);
+        s1.merge(38, 1, 38, 13, 2);
+
+        s1.setRowHeight(39, 24);
+        const q4aHeaders = ["Subgrupo", "Escopo de Pagamento", ...TAMANHOS_ORDEM, "Total Pagas no Sub", "% das Pagas"];
+        q4aHeaders.forEach((h, idx) => s1.setCell(39, idx + 1, h, idx < 2 ? 3 : 4));
+
+        const totalPagasDenom = resumoOrigem.geral.pago || 1;
+        SUBS_ORDEM.forEach((subName, idx) => {
+          const r = 40 + idx;
+          const d = matrizSubTamPago[subName];
+          s1.setRowHeight(r, 20);
+          s1.setCell(r, 1, subName, 7);
+          s1.setCell(r, 2, "Somente Pagas / Confirmadas", 14);
+          TAMANHOS_ORDEM.forEach((t, tIdx) => {
+            s1.setCell(r, 3 + tIdx, d[t], 8);
+          });
+          s1.setCell(r, 12, d.total, 18);
+          s1.setCell(r, 13, d.total / totalPagasDenom, 10);
+        });
+
+        s1.setRowHeight(45, 22);
+        s1.setCell(45, 1, "TOTAL DE CAMISAS PAGAS", 11);
+        s1.setCell(45, 2, "Confirmadas no Sistema", 11);
+        TAMANHOS_ORDEM.forEach((t, tIdx) => {
+          const colL = xlsxColLetter(3 + tIdx);
+          s1.setCell(45, 3 + tIdx, resumoTamanho[t].pago, 12, "n", `SUM(${colL}40:${colL}44)`);
+        });
+        s1.setCell(45, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L40:L44)");
+        s1.setCell(45, 13, 1, 13);
+
+        // Quadro 4B: Combinação Subgrupo x Tamanho — DEMANDA MÁXIMA TOTAL (Linhas 47 a 54)
+        s1.setRowHeight(47, 22);
+        s1.setCell(47, 1, "5B. COMBINAÇÃO DE SUBGRUPO × TAMANHO — DEMANDA MÁXIMA TOTAL (PAGAS + EM ANÁLISE + PENDENTES)", 2);
+        s1.merge(47, 1, 47, 13, 2);
+
+        s1.setRowHeight(48, 24);
+        const q4bHeaders = ["Subgrupo", "Pagas / Análise / Pendentes", ...TAMANHOS_ORDEM, "Total Pagas", "Demanda Máxima Total"];
+        q4bHeaders.forEach((h, idx) => s1.setCell(48, idx + 1, h, idx < 2 ? 3 : 4));
+
+        SUBS_ORDEM.forEach((subName, idx) => {
+          const r = 49 + idx;
+          const d = matrizSubTamTotal[subName];
+          s1.setRowHeight(r, 20);
+          s1.setCell(r, 1, subName, 7);
+          s1.setCell(r, 2, `${d.pago} pagas | ${d.analise} análise | ${d.pendente} pend.`, 5);
+          TAMANHOS_ORDEM.forEach((t, tIdx) => {
+            s1.setCell(r, 3 + tIdx, d[t], 8);
+          });
+          s1.setCell(r, 12, d.pago, 18);
+          s1.setCell(r, 13, d.total, 9);
+        });
+
+        s1.setRowHeight(54, 22);
+        s1.setCell(54, 1, "TOTAL GERAL (DEMANDA MÁXIMA)", 11);
+        s1.setCell(54, 2, `${resumoOrigem.geral.pago} pagas | ${resumoOrigem.geral.analise} análise | ${resumoOrigem.geral.pendente} pend.`, 11);
+        TAMANHOS_ORDEM.forEach((t, tIdx) => {
+          const colL = xlsxColLetter(3 + tIdx);
+          s1.setCell(54, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUM(${colL}49:${colL}53)`);
+        });
+        s1.setCell(54, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L49:L53)");
+        s1.setCell(54, 13, resumoOrigem.geral.total, 12, "n", "SUM(M49:M53)");
+
+        // Quadro 5: Grade Completa Subgrupo × Modelo × Tamanho (Com AutoFiltro) (Linhas 56+)
+        s1.setRowHeight(56, 22);
+        s1.setCell(56, 1, "6. GRADE COMPLETA POR SUBGRUPO × MODELO × TAMANHO (COM FILTRO DE CONFERÊNCIA)", 2);
+        s1.merge(56, 1, 56, 13, 2);
+
+        const q5HeaderRow = 57;
+        s1.setRowHeight(q5HeaderRow, 24);
+        const q5Headers = ["Subgrupo", "Modelo da Camisa", ...TAMANHOS_ORDEM, "Pagas / Confirmadas", "Demanda Máxima Total"];
+        q5Headers.forEach((h, idx) => s1.setCell(q5HeaderRow, idx + 1, h, idx < 2 ? 3 : 4));
+
+        let curRow = q5HeaderRow + 1;
+        for (const subName of SUBS_ORDEM) {
+          for (const modName of MODELOS_ORDEM) {
+            const d = matrizSubModTam[subName][modName];
+            const isOfficialSub = subName !== "Sem Sub / Não classificado";
+            const isStandardModel = modName !== "Não especificado";
+            if ((isOfficialSub && isStandardModel) || d.total > 0) {
+              s1.setRowHeight(curRow, 20);
+              s1.setCell(curRow, 1, subName, 7);
+              s1.setCell(curRow, 2, modName, modName === "Não especificado" ? 15 : 6);
+              TAMANHOS_ORDEM.forEach((t, tIdx) => {
+                s1.setCell(curRow, 3 + tIdx, d[t], 8);
+              });
+              s1.setCell(curRow, 12, d.pago, 18);
+              s1.setCell(curRow, 13, d.total, 9);
+              curRow++;
+            }
+          }
+        }
+
+        const lastQ5DataRow = curRow - 1;
+        s1.autoFilterRef = `A${q5HeaderRow}:M${lastQ5DataRow}`;
+
+        s1.setRowHeight(curRow, 22);
+        s1.setCell(curRow, 1, "TOTAL CONFERIDO DA GRADE", 11);
+        s1.setCell(curRow, 2, "Todos os Modelos", 11);
+        TAMANHOS_ORDEM.forEach((t, tIdx) => {
+          const colL = xlsxColLetter(3 + tIdx);
+          s1.setCell(curRow, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUBTOTAL(109,${colL}58:${colL}${lastQ5DataRow})`);
+        });
+        s1.setCell(curRow, 12, resumoOrigem.geral.pago, 12, "n", `SUBTOTAL(109,L58:L${lastQ5DataRow})`);
+        s1.setCell(curRow, 13, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,M58:M${lastQ5DataRow})`);
+
+        s1.drawingRelId = "rId1";
+
+        // =====================================================================
+        // ABA 2: DETALHAMENTO DE CAMISAS (SEM DADOS PESSOAIS)
+        // =====================================================================
+        const s2 = new XlsxSheetBuilder([10, 18, 18, 20, 20, 15, 13, 24, 18, 16, 42]);
+        s2.freezePane = { ySplit: 5, topLeftCell: "A6" };
+
+        s2.setRowHeight(1, 28);
+        s2.setCell(1, 1, "DETALHAMENTO INDIVIDUAL DE CAMISAS PARA CONTROLE — EJC TRÂNSITO MONTE SIÃO", 1);
+        s2.merge(1, 1, 1, 11, 1);
+
+        s2.setRowHeight(2, 20);
+        s2.setCell(2, 1, `Gerado em: ${dataGeracao} | Privacidade: Dados pessoais omitidos (código anônimo de controle) | 1 linha por registro de camisa (Titular ou Adicional)`, 17);
+        s2.merge(2, 1, 2, 11, 17);
+
+        const lastDetailRow = 5 + itensCamisas.length;
+        s2.setRowHeight(3, 22);
+        s2.setCell(3, 1, "TOTAIS:", 11);
+        s2.setCell(3, 2, `${itensCamisas.length} registros`, 11);
+        s2.setCell(3, 3, `Titulares: ${resumoOrigem.titular.total}`, 11);
+        s2.setCell(3, 4, `Adicionais: ${resumoOrigem.adicional.total}`, 11);
+        s2.setCell(3, 5, `Trad.: ${sumTradTotal} | Baby: ${sumBabyTotal}`, 11);
+        s2.setCell(3, 6, "PEÇAS (FILTRO):", 11);
+        s2.setCell(3, 7, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,G6:G${lastDetailRow})`);
+        s2.setCell(3, 8, `Pagas: ${resumoOrigem.geral.pago} | Análise: ${resumoOrigem.geral.analise}`, 11);
+        s2.setCell(3, 9, `Pendentes: ${resumoOrigem.geral.pendente}`, 11);
+        s2.setCell(3, 10, `Alertas: ${resumoOrigem.geral.alerta}`, 11);
+        s2.setCell(3, 11, "Use as setas na linha 5 para filtrar por Subgrupo, Modelo, Tamanho ou Pagamento", 11);
+
+        s2.setRowHeight(5, 25);
+        const s2Headers = [
+          "Item Nº",
+          "Código Controle",
+          "Subgrupo",
+          "Origem da Camisa",
+          "Modelo",
+          "Tamanho",
+          "Quantidade",
+          "Situação do Pagamento",
+          "Status no Sistema",
+          "Status da Ficha",
+          "Sinalização / Observação de Controle"
+        ];
+        s2Headers.forEach((h, idx) => s2.setCell(5, idx + 1, h, idx === 10 ? 3 : 4));
+
+        itensCamisas.forEach((item, idx) => {
+          const r = 6 + idx;
+          s2.setRowHeight(r, 19);
+          const pagStyle = item.chavePagamento === "pago" ? 14 : (item.chavePagamento === "analise" ? 15 : 16);
+          const modStyle = item.modelo === "Não especificado" ? 15 : 6;
+          const tamStyle = item.tamanho === "Não informado" ? 16 : 6;
+          const alertaStyle = item.temAlerta ? 15 : 5;
+
+          s2.setCell(r, 1, idx + 1, 8);
+          s2.setCell(r, 2, item.codigo, 6);
+          s2.setCell(r, 3, item.sub, 6);
+          s2.setCell(r, 4, item.origem, item.isAdicional ? 15 : 6);
+          s2.setCell(r, 5, item.modelo, modStyle);
+          s2.setCell(r, 6, item.tamanho, tamStyle);
+          s2.setCell(r, 7, item.quantidade, 9);
+          s2.setCell(r, 8, item.situacaoPagamento, pagStyle);
+          s2.setCell(r, 9, item.statusSistema, 6);
+          s2.setCell(r, 10, item.statusFicha, 6);
+          s2.setCell(r, 11, item.alertaTexto, alertaStyle);
+        });
+
+        s2.autoFilterRef = `A5:K${lastDetailRow}`;
+
+        const footerRow = lastDetailRow + 1;
+        s2.setRowHeight(footerRow, 22);
+        s2.setCell(footerRow, 1, "TOTAL", 11);
+        s2.setCell(footerRow, 2, `${itensCamisas.length} linhas`, 11);
+        s2.setCell(footerRow, 3, "Todos os Subs", 11);
+        s2.setCell(footerRow, 4, `${resumoOrigem.titular.total} Tit. + ${resumoOrigem.adicional.total} Adic.`, 11);
+        s2.setCell(footerRow, 5, "Todos os Modelos", 11);
+        s2.setCell(footerRow, 6, "Todos os Tam.", 11);
+        s2.setCell(footerRow, 7, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,G6:G${lastDetailRow})`);
+        s2.setCell(footerRow, 8, `Pagas: ${resumoOrigem.geral.pago} | Pend.: ${resumoOrigem.geral.pendente}`, 11);
+        s2.setCell(footerRow, 9, `Análise: ${resumoOrigem.geral.analise}`, 11);
+        s2.setCell(footerRow, 10, "Conferido", 11);
+        s2.setCell(footerRow, 11, `Soma total sem duplicidade: ${resumoOrigem.geral.total} camisas`, 11);
+
+        // =====================================================================
+        // PACOTE OPENXML (.XLSX)
+        // =====================================================================
+        const zip = new JSZip();
+
+        zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
+  <Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+</Types>`);
+
+        zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`);
+
+        zip.file("xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Resumo de Camisas" sheetId="1" r:id="rId1"/>
+    <sheet name="Detalhamento de Camisas" sheetId="2" r:id="rId2"/>
+  </sheets>
+</workbook>`);
+
+        zip.file("xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`);
+
+        zip.file("xl/styles.xml", buildCamisasStylesXml());
+        zip.file("xl/worksheets/sheet1.xml", s1.toXml());
+        zip.file("xl/worksheets/sheet2.xml", s2.toXml());
+
+        zip.file("xl/worksheets/_rels/sheet1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
+</Relationships>`);
+
+        zip.file("xl/drawings/drawing1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <xdr:twoCellAnchor>
+    <xdr:from><xdr:col>13</xdr:col><xdr:colOff>100000</xdr:colOff><xdr:row>3</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>21</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>23</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:graphicFrame macro="">
+      <xdr:nvGraphicFramePr>
+        <xdr:cNvPr id="2" name="Grafico Camisas por Tamanho"/>
+        <xdr:cNvGraphicFramePr/>
+      </xdr:nvGraphicFramePr>
+      <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/>
+        </a:graphicData>
+      </a:graphic>
+    </xdr:graphicFrame>
+    <xdr:clientData/>
+  </xdr:twoCellAnchor>
+  <xdr:twoCellAnchor>
+    <xdr:from><xdr:col>13</xdr:col><xdr:colOff>100000</xdr:colOff><xdr:row>24</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>21</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>44</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:graphicFrame macro="">
+      <xdr:nvGraphicFramePr>
+        <xdr:cNvPr id="3" name="Grafico Camisas por Subgrupo"/>
+        <xdr:cNvGraphicFramePr/>
+      </xdr:nvGraphicFramePr>
+      <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId2"/>
+        </a:graphicData>
+      </a:graphic>
+    </xdr:graphicFrame>
+    <xdr:clientData/>
+  </xdr:twoCellAnchor>
+</xdr:wsDr>`);
+
+        zip.file("xl/drawings/_rels/drawing1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
+</Relationships>`);
+
+        const tamCats = TAMANHOS_ORDEM.slice(0, 8);
+        const tamPaidVals = tamCats.map(t => resumoTamanho[t].pago);
+        const tamMaxVals = tamCats.map(t => resumoTamanho[t].total);
+        zip.file("xl/charts/chart1.xml", buildCamisasBarChartXml(
+          "Quantidade de Camisas por Tamanho (Pagas vs. Demanda Máxima)",
+          "Resumo de Camisas",
+          "A", 27, 34,
+          tamCats,
+          [
+            { name: "Pagas / Confirmadas", colLetter: "H", startRow: 27, endRow: 34, values: tamPaidVals, colorHex: "16A34A" },
+            { name: "Demanda Máxima Total", colLetter: "K", startRow: 27, endRow: 34, values: tamMaxVals, colorHex: "087DF9" }
+          ]
+        ));
+
+        const subCats = SUBS_ORDEM.slice(0, 4);
+        const subPaidVals = subCats.map(s => resumoSub[s].pago);
+        const subPendVals = subCats.map(s => resumoSub[s].pendente);
+        const subMaxVals = subCats.map(s => resumoSub[s].total);
+        zip.file("xl/charts/chart2.xml", buildCamisasBarChartXml(
+          "Distribuição de Camisas por Subgrupo",
+          "Resumo de Camisas",
+          "A", 18, 21,
+          subCats,
+          [
+            { name: "Pagas / Confirmadas", colLetter: "D", startRow: 18, endRow: 21, values: subPaidVals, colorHex: "16A34A" },
+            { name: "Pendentes", colLetter: "F", startRow: 18, endRow: 21, values: subPendVals, colorHex: "F59E0B" },
+            { name: "Demanda Máxima Total", colLetter: "G", startRow: 18, endRow: 21, values: subMaxVals, colorHex: "0D9488" }
+          ]
+        ));
+
+        atualizarProgressoDownload(95, "Finalizando arquivo Excel (.xlsx)...");
+        const xlsxBlob = await zip.generateAsync({
+          type: "blob",
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+
+        const hojeIso = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Fortaleza" });
+        salvarBlobLocal(xlsxBlob, `Controle_de_Camisas_EJC_${hojeIso}.xlsx`);
+      } catch (err) {
+        console.error("[Exportar Controle Camisas XLSX]", err);
+        alert("Erro ao gerar relatório Excel de camisas: " + err.message);
+      } finally {
+        fecharProgressoDownload();
+        isZipProcessing = false;
+        if (btnSub) { btnSub.disabled = false; btnSub.style.opacity = "1"; }
+        if (btnTodos) { btnTodos.disabled = false; btnTodos.style.opacity = "1"; }
+        if (btnXlsx) { btnXlsx.disabled = false; btnXlsx.style.opacity = "1"; }
       }
     }
 
