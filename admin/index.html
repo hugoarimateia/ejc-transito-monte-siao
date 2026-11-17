@@ -6720,7 +6720,7 @@
     <numFmt numFmtId="164" formatCode="0.0%"/>
     <numFmt numFmtId="165" formatCode="#,##0"/>
   </numFmts>
-  <fonts count="9">
+  <fonts count="10">
     <font><sz val="10"/><color rgb="FF1E293B"/><name val="Segoe UI"/></font>
     <font><b/><sz val="13"/><color rgb="FFFFFFFF"/><name val="Segoe UI"/></font>
     <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Segoe UI"/></font>
@@ -6730,8 +6730,9 @@
     <font><b/><sz val="10"/><color rgb="FF92400E"/><name val="Segoe UI"/></font>
     <font><b/><sz val="10"/><color rgb="FF991B1B"/><name val="Segoe UI"/></font>
     <font><sz val="9.5"/><color rgb="FF334155"/><name val="Segoe UI"/></font>
+    <font><b/><sz val="10"/><color rgb="FFC2410C"/><name val="Segoe UI"/></font>
   </fonts>
-  <fills count="11">
+  <fills count="12">
     <fill><patternFill patternType="none"/></fill>
     <fill><patternFill patternType="gray125"/></fill>
     <fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/></patternFill></fill>
@@ -6743,6 +6744,7 @@
     <fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>
     <fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/></patternFill></fill>
     <fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFEDD5"/></patternFill></fill>
   </fills>
   <borders count="3">
     <border><left/><right/><top/><bottom/><diagonal/></border>
@@ -6764,7 +6766,7 @@
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="19">
+  <cellXfs count="21">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center" indent="1"/>
@@ -6790,7 +6792,7 @@
     <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
-    <xf numFmtId="165" fontId="4" fillId="10" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+    <xf numFmtId="165" fontId="4" fillId="10" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
     <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
@@ -6799,10 +6801,10 @@
     <xf numFmtId="0" fontId="4" fillId="5" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center"/>
     </xf>
-    <xf numFmtId="165" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+    <xf numFmtId="165" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
-    <xf numFmtId="164" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+    <xf numFmtId="164" fontId="4" fillId="5" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
     <xf numFmtId="0" fontId="5" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
@@ -6817,8 +6819,14 @@
     <xf numFmtId="0" fontId="8" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="left" vertical="center" wrapText="1"/>
     </xf>
-    <xf numFmtId="165" fontId="5" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+    <xf numFmtId="165" fontId="5" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="9" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="8" fillId="10" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
     </xf>
   </cellXfs>
   <cellStyles count="1">
@@ -6878,18 +6886,90 @@
       return { tamanho: tamanhoNorm, modelo: modeloNorm, alertas };
     }
 
+    function classificarCicloPagamentoCompleto(item, pagMap, audApprovedInscIds, audApprovedTxids) {
+      const pags = (pagMap && pagMap.get(String(item.id))) || [];
+      const stInsc = String(item.pagamento_status || "pendente").trim().toLowerCase();
+
+      // 1. Pagamento aprovado no gateway Mercado Pago
+      const temGatewayAprovado = pags.some(p => {
+        const st = String(p.status || "").trim().toLowerCase();
+        return st === "approved" || st === "confirmado" || st === "pago";
+      });
+
+      // 2. Aprovação administrativa / manual da coordenação (ex: Natanael e Wesley)
+      const temAprovacaoAdmin = pags.some(p => {
+        return p.pago_em !== null || p.gateway === "admin_manual" || p.comprovante_email_enviado === true;
+      }) || (audApprovedInscIds && audApprovedInscIds.has(String(item.id))) || pags.some(p => audApprovedTxids && audApprovedTxids.has(String(p.txid)));
+
+      // 3. Confirmado no cadastro da inscrição
+      const isStatusConfirmado = (stInsc === "confirmado" || stInsc === "approved" || stInsc === "pago");
+
+      if (temGatewayAprovado || temAprovacaoAdmin || isStatusConfirmado) {
+        let detalheOrigem = "Gateway Mercado Pago (Aprovado)";
+        if (temAprovacaoAdmin && !temGatewayAprovado) {
+          detalheOrigem = "Aprovação da Coordenação (Manual / Super Admin)";
+        } else if (isStatusConfirmado && !temGatewayAprovado && !temAprovacaoAdmin) {
+          detalheOrigem = "Confirmado no Cadastro da Inscrição";
+        }
+        return {
+          categoria: "Pago / Confirmado",
+          chave: "pago",
+          statusOriginal: stInsc,
+          detalheOrigem,
+          isPago: true
+        };
+      }
+
+      // 4. Comprovante em análise da coordenação
+      if (stInsc === "informado" || item.comprovante_caminho || item.pagamento_informado) {
+        return {
+          categoria: "Em Análise (Comprovante)",
+          chave: "analise",
+          statusOriginal: stInsc,
+          detalheOrigem: "Comprovante em Verificação da Coordenação",
+          isPago: false
+        };
+      }
+
+      // 5. Inscrição ativa no subgrupo com tentativa Pix expirada no gateway
+      const temPixExpiradoGateway = (stInsc === "cancelado" || stInsc === "recusado") || pags.some(p => {
+        const st = String(p.status || "").trim().toLowerCase();
+        return st === "cancelled" || st === "expired" || st === "rejected";
+      });
+
+      if (temPixExpiradoGateway) {
+        return {
+          categoria: "Pendente (Pix Expirado no Gateway)",
+          chave: "pendente_expirado",
+          statusOriginal: stInsc,
+          detalheOrigem: "Inscrição Ativa no Sub — Pix Expirado no Gateway",
+          isPago: false,
+          alertaStatus: "Aguardando novo pagamento Pix; inscrição ativa no Subgrupo"
+        };
+      }
+
+      // 6. Pendente regular aguardando pagamento
+      return {
+        categoria: "Pendente (Aguardando Pagamento)",
+        chave: "pendente",
+        statusOriginal: stInsc,
+        detalheOrigem: "Aguardando Pagamento Regular",
+        isPago: false
+      };
+    }
+
     function classificarSituacaoPagamentoCamisa(statusRaw, hasApprovedPayment) {
       const st = String(statusRaw || "pendente").trim().toLowerCase();
       if (hasApprovedPayment || st === "confirmado" || st === "approved" || st === "pago") {
         return { categoria: "Pago / Confirmado", chave: "pago", statusOriginal: st || "confirmado" };
       }
       if (st === "informado" || st === "em_analise" || st === "aguardando_analise") {
-        return { categoria: "Em Análise (Informado)", chave: "analise", statusOriginal: st };
+        return { categoria: "Em Análise (Comprovante)", chave: "analise", statusOriginal: st };
       }
-      if (st === "pendente" || st === "pending" || st === "recusado") {
-        return { categoria: "Pendente", chave: "pendente", statusOriginal: st };
+      if (st === "cancelado" || st === "cancelled" || st === "recusado") {
+        return { categoria: "Pendente (Pix Expirado no Gateway)", chave: "pendente_expirado", statusOriginal: st };
       }
-      return { categoria: "Pendente", chave: "pendente", statusOriginal: st, alertaStatus: `Status atípico ('${st}') classificado como Pendente` };
+      return { categoria: "Pendente (Aguardando Pagamento)", chave: "pendente", statusOriginal: st };
     }
 
     function gerarBarraVisualCamisas(valor, maximo) {
@@ -6937,17 +7017,61 @@
           return;
         }
 
-        atualizarProgressoDownload(55, "Consolidando quantidades por subgrupo, modelo, tamanho e pagamento...");
+        atualizarProgressoDownload(45, "Sincronizando histórico de pagamentos e auditoria da coordenação...");
 
-        const pagamentosApprovedIds = new Set();
-        if (typeof pagamentosData !== "undefined" && Array.isArray(pagamentosData)) {
-          pagamentosData.forEach(p => {
-            const st = String(p.status || "").trim().toLowerCase();
-            if (p.inscricao_id && (st === "approved" || st === "confirmado" || st === "pago")) {
-              pagamentosApprovedIds.add(String(p.inscricao_id));
+        let pagamentosList = (typeof pagamentosData !== "undefined" && Array.isArray(pagamentosData) && pagamentosData.length > 0)
+          ? pagamentosData
+          : [];
+        let auditoriaList = (typeof auditoriaData !== "undefined" && Array.isArray(auditoriaData) && auditoriaData.length > 0)
+          ? auditoriaData
+          : [];
+        let arquivadasList = (typeof inscricoesArquivadasData !== "undefined" && Array.isArray(inscricoesArquivadasData))
+          ? inscricoesArquivadasData
+          : [];
+
+        if (pagamentosList.length === 0 || auditoriaList.length === 0) {
+          try {
+            const adminRes = await fetch("/api/admin", {
+              headers: { "x-admin-token": token, "Authorization": `Bearer ${token}` }
+            });
+            if (adminRes.ok) {
+              const adminJson = await adminRes.json();
+              if (Array.isArray(adminJson.pagamentos) && adminJson.pagamentos.length > 0) {
+                pagamentosList = adminJson.pagamentos;
+                pagamentosData = adminJson.pagamentos;
+              }
+              if (Array.isArray(adminJson.auditoria) && adminJson.auditoria.length > 0) {
+                auditoriaList = adminJson.auditoria;
+                auditoriaData = adminJson.auditoria;
+              }
+              if (Array.isArray(adminJson.inscricoes_arquivadas)) {
+                arquivadasList = adminJson.inscricoes_arquivadas;
+                inscricoesArquivadasData = adminJson.inscricoes_arquivadas;
+              }
             }
-          });
+          } catch (e) {
+            console.warn("[Exportar Camisas] Sincronização secundária via /api/admin ignorada:", e);
+          }
         }
+
+        const pagMap = new Map();
+        pagamentosList.forEach(p => {
+          if (p && p.inscricao_id) {
+            const k = String(p.inscricao_id);
+            if (!pagMap.has(k)) pagMap.set(k, []);
+            pagMap.get(k).push(p);
+          }
+        });
+
+        const audApprovedInscIds = new Set();
+        const audApprovedTxids = new Set();
+        auditoriaList.forEach(a => {
+          const acao = String(a.acao || "").trim().toLowerCase();
+          if (acao === "aprovado" || acao === "confirmacao_manual_admin" || acao === "pagamento_aprovado") {
+            if (a.detalhes && a.detalhes.inscricao_id) audApprovedInscIds.add(String(a.detalhes.inscricao_id));
+            if (a.transacao_id) audApprovedTxids.add(String(a.transacao_id));
+          }
+        });
 
         const inscricoesRawMap = new Map();
         if (typeof inscricoesData !== "undefined" && Array.isArray(inscricoesData)) {
@@ -6956,37 +7080,28 @@
           });
         }
 
+        atualizarProgressoDownload(60, "Consolidando quantidades por subgrupo, modelo, tamanho e ciclo de pagamento...");
+
         const TAMANHOS_ORDEM = ["PP", "P", "M", "G", "GG", "XG", "XXG", "Sob medida", "Não informado"];
         const SUBS_ORDEM = ["Sub Verde", "Sub Vermelho", "Sub Amarelo", "Sub Laranja", "Sem Sub / Não classificado"];
         const MODELOS_ORDEM = ["Tradicional", "Baby Look", "Não especificado"];
 
-        let excluidosCancelados = 0;
-        let excluidosArquivados = (typeof inscricoesArquivadasData !== "undefined" && Array.isArray(inscricoesArquivadasData))
-          ? inscricoesArquivadasData.length
-          : 0;
         let inscricoesValidasCount = 0;
         const itensCamisas = [];
 
         for (const item of inscritosRaw) {
           if (item.arquivado === true) {
-            excluidosArquivados++;
             continue;
           }
-          const stRaw = String(item.pagamento_status || "pendente").trim().toLowerCase();
-          if (stRaw === "cancelado" || stRaw === "cancelled" || stRaw === "rejeitado" || stRaw === "rejected") {
-            excluidosCancelados++;
-            continue;
-          }
-
           inscricoesValidasCount++;
+
           const rawMem = inscricoesRawMap.get(String(item.id)) || null;
           const subNorm = normalizarSubCamisaRelatorio(item.sub);
-          const hasApproved = pagamentosApprovedIds.has(String(item.id));
-          const pagInfo = classificarSituacaoPagamentoCamisa(item.pagamento_status, hasApproved);
+          const pagInfo = classificarCicloPagamentoCompleto(item, pagMap, audApprovedInscIds, audApprovedTxids);
           const statusFicha = item.status_cadastro === "completo" ? "Completo" : "Incompleto";
           const codControle = "CAM-" + String(item.id || "").replace(/-/g, "").substring(0, 8).toUpperCase();
 
-          // 1. Camisa Titular (1 por inscrição válida)
+          // 1. Camisa Titular (1 por inscrição ativa)
           const modeloTitularFonte = (rawMem && rawMem.modelo_camisa !== undefined) ? rawMem.modelo_camisa : item.modelo_camisa;
           const titularInfo = extrairTamanhoEModeloCamisa(item.tamanho_camisa, modeloTitularFonte, false);
           const alertasTitular = [...titularInfo.alertas];
@@ -7005,11 +7120,12 @@
             chavePagamento: pagInfo.chave,
             statusSistema: pagInfo.statusOriginal,
             statusFicha,
+            detalheOrigem: pagInfo.detalheOrigem,
             temAlerta: alertasTitular.length > 0,
-            alertaTexto: alertasTitular.length > 0 ? "ALERTA: " + alertasTitular.join("; ") : "OK — Classificado"
+            alertaTexto: alertasTitular.length > 0 ? alertasTitular.join("; ") : "OK — Regular"
           });
 
-          // 2. Camisa Adicional (somente se solicitada explicitamente)
+          // 2. Camisa Adicional (somente com pedido adicional ativo)
           const qtdAdicRaw = Number(item.quantidade_camisas_adicionais) || 0;
           const querAdic = Boolean(item.quer_camisa_adicional) || qtdAdicRaw > 0;
           if (querAdic) {
@@ -7032,8 +7148,9 @@
               chavePagamento: pagInfo.chave,
               statusSistema: pagInfo.statusOriginal,
               statusFicha,
+              detalheOrigem: pagInfo.detalheOrigem,
               temAlerta: alertasAdic.length > 0,
-              alertaTexto: alertasAdic.length > 0 ? "ALERTA: " + alertasAdic.join("; ") : "OK — Classificado"
+              alertaTexto: alertasAdic.length > 0 ? alertasAdic.join("; ") : "OK — Regular"
             });
           }
         }
@@ -7055,14 +7172,14 @@
         });
 
         const resumoOrigem = {
-          titular: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 },
-          adicional: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 },
-          geral: { pago: 0, analise: 0, pendente: 0, total: 0, alerta: 0 }
+          titular: { pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0, alerta: 0 },
+          adicional: { pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0, alerta: 0 },
+          geral: { pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0, alerta: 0 }
         };
 
         const resumoSub = {};
         SUBS_ORDEM.forEach(s => {
-          resumoSub[s] = { titular: 0, adicional: 0, pago: 0, analise: 0, pendente: 0, total: 0 };
+          resumoSub[s] = { titular: 0, adicional: 0, pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0 };
         });
 
         const resumoTamanho = {};
@@ -7071,7 +7188,7 @@
             tradPago: 0, tradTotal: 0,
             babyPago: 0, babyTotal: 0,
             naoEspPago: 0, naoEspTotal: 0,
-            pago: 0, analise: 0, pendente: 0, total: 0
+            pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0
           };
         });
 
@@ -7080,7 +7197,7 @@
         const matrizSubModTam = {};
 
         SUBS_ORDEM.forEach(s => {
-          matrizSubTamTotal[s] = { pago: 0, analise: 0, pendente: 0, total: 0 };
+          matrizSubTamTotal[s] = { pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0 };
           matrizSubTamPago[s] = { total: 0 };
           TAMANHOS_ORDEM.forEach(t => {
             matrizSubTamTotal[s][t] = 0;
@@ -7088,7 +7205,7 @@
           });
           matrizSubModTam[s] = {};
           MODELOS_ORDEM.forEach(m => {
-            matrizSubModTam[s][m] = { pago: 0, analise: 0, pendente: 0, total: 0 };
+            matrizSubModTam[s][m] = { pago: 0, analise: 0, pendenteExpirado: 0, pendenteRegular: 0, totalPendentes: 0, total: 0 };
             TAMANHOS_ORDEM.forEach(t => {
               matrizSubModTam[s][m][t] = 0;
             });
@@ -7097,47 +7214,70 @@
 
         for (const item of itensCamisas) {
           const q = item.quantidade;
+          const isPago = item.chavePagamento === "pago";
+          const isAnalise = item.chavePagamento === "analise";
+          const isExpirado = item.chavePagamento === "pendente_expirado";
+          const isRegular = item.chavePagamento === "pendente";
+
           const origTarget = item.isAdicional ? resumoOrigem.adicional : resumoOrigem.titular;
-          origTarget[item.chavePagamento] += q;
+          if (isPago) origTarget.pago += q;
+          else if (isAnalise) origTarget.analise += q;
+          else if (isExpirado) { origTarget.pendenteExpirado += q; origTarget.totalPendentes += q; }
+          else { origTarget.pendenteRegular += q; origTarget.totalPendentes += q; }
           origTarget.total += q;
           if (item.temAlerta) origTarget.alerta += q;
 
-          resumoOrigem.geral[item.chavePagamento] += q;
+          if (isPago) resumoOrigem.geral.pago += q;
+          else if (isAnalise) resumoOrigem.geral.analise += q;
+          else if (isExpirado) { resumoOrigem.geral.pendenteExpirado += q; resumoOrigem.geral.totalPendentes += q; }
+          else { resumoOrigem.geral.pendenteRegular += q; resumoOrigem.geral.totalPendentes += q; }
           resumoOrigem.geral.total += q;
           if (item.temAlerta) resumoOrigem.geral.alerta += q;
 
           const subObj = resumoSub[item.sub];
           if (item.isAdicional) subObj.adicional += q;
           else subObj.titular += q;
-          subObj[item.chavePagamento] += q;
+          if (isPago) subObj.pago += q;
+          else if (isAnalise) subObj.analise += q;
+          else if (isExpirado) { subObj.pendenteExpirado += q; subObj.totalPendentes += q; }
+          else { subObj.pendenteRegular += q; subObj.totalPendentes += q; }
           subObj.total += q;
 
           const tamObj = resumoTamanho[item.tamanho];
           if (item.modelo === "Tradicional") {
             tamObj.tradTotal += q;
-            if (item.chavePagamento === "pago") tamObj.tradPago += q;
+            if (isPago) tamObj.tradPago += q;
           } else if (item.modelo === "Baby Look") {
             tamObj.babyTotal += q;
-            if (item.chavePagamento === "pago") tamObj.babyPago += q;
+            if (isPago) tamObj.babyPago += q;
           } else {
             tamObj.naoEspTotal += q;
-            if (item.chavePagamento === "pago") tamObj.naoEspPago += q;
+            if (isPago) tamObj.naoEspPago += q;
           }
-          tamObj[item.chavePagamento] += q;
+          if (isPago) tamObj.pago += q;
+          else if (isAnalise) tamObj.analise += q;
+          else if (isExpirado) { tamObj.pendenteExpirado += q; tamObj.totalPendentes += q; }
+          else { tamObj.pendenteRegular += q; tamObj.totalPendentes += q; }
           tamObj.total += q;
 
           matrizSubTamTotal[item.sub][item.tamanho] += q;
-          matrizSubTamTotal[item.sub][item.chavePagamento] += q;
+          if (isPago) matrizSubTamTotal[item.sub].pago += q;
+          else if (isAnalise) matrizSubTamTotal[item.sub].analise += q;
+          else if (isExpirado) { matrizSubTamTotal[item.sub].pendenteExpirado += q; matrizSubTamTotal[item.sub].totalPendentes += q; }
+          else { matrizSubTamTotal[item.sub].pendenteRegular += q; matrizSubTamTotal[item.sub].totalPendentes += q; }
           matrizSubTamTotal[item.sub].total += q;
 
-          if (item.chavePagamento === "pago") {
+          if (isPago) {
             matrizSubTamPago[item.sub][item.tamanho] += q;
             matrizSubTamPago[item.sub].total += q;
           }
 
           const smt = matrizSubModTam[item.sub][item.modelo];
           smt[item.tamanho] += q;
-          smt[item.chavePagamento] += q;
+          if (isPago) smt.pago += q;
+          else if (isAnalise) smt.analise += q;
+          else if (isExpirado) { smt.pendenteExpirado += q; smt.totalPendentes += q; }
+          else { smt.pendenteRegular += q; smt.totalPendentes += q; }
           smt.total += q;
         }
 
@@ -7146,10 +7286,10 @@
         const maxTamTotal = Math.max(...TAMANHOS_ORDEM.map(t => resumoTamanho[t].total), 1);
         const dataGeracao = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
 
-        atualizarProgressoDownload(80, "Montando abas Resumo, Gráficos e Detalhamento em Excel (.xlsx)...");
+        atualizarProgressoDownload(80, "Montando abas Resumo, Detalhamento e Gráficos em Excel (.xlsx)...");
 
         // =====================================================================
-        // ABA 1: RESUMO DE CAMISAS
+        // ABA 1: RESUMO DE CAMISAS COM RECONCILIAÇÃO OFICIAL
         // =====================================================================
         const s1 = new XlsxSheetBuilder([28, 24, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 30]);
 
@@ -7161,15 +7301,16 @@
         s1.setCell(2, 1, `Gerado em: ${dataGeracao} (Horário de Fortaleza) | Fonte: Dados dos Inscritos por Sub | Escopo: Controle exclusivo de camisas (Sem dados pessoais)`, 17);
         s1.merge(2, 1, 2, 13, 17);
 
+        // Seção 1: Critérios
         s1.setRowHeight(4, 22);
-        s1.setCell(4, 1, "1. CRITÉRIOS DE CONTAGEM E REGRAS APLICADAS NO RELATÓRIO", 2);
+        s1.setCell(4, 1, "1. CRITÉRIOS DE CONTAGEM E REGRAS OFICIAIS APLICADAS", 2);
         s1.merge(4, 1, 4, 13, 2);
 
         const regrasTextos = [
-          `• Base de registros válidos: Considera exclusivamente inscrições ativas (não arquivadas) e não canceladas/rejeitadas (${inscricoesValidasCount} inscrições válidas contabilizadas; ${excluidosCancelados} canceladas/rejeitadas excluídas${excluidosArquivados > 0 ? " e " + excluidosArquivados + " arquivadas ignoradas" : ""}).`,
-          `• Quantidade máxima sem duplicidade: Cada inscrição válida gera exatamente 1 Camisa Titular (${resumoOrigem.titular.total} peças). Camisas Adicionais (${resumoOrigem.adicional.total} peças) são somadas apenas quando solicitadas explicitamente, evitando somar duas vezes a mesma camisa.`,
-          `• Situação do pagamento/validação: Diferenciação estrita entre Pagas/Confirmadas (${resumoOrigem.geral.pago} peças), Em Análise/Informadas (${resumoOrigem.geral.analise} peças) e Pendentes (${resumoOrigem.geral.pendente} peças). Camisas pendentes não são tratadas como pagas.`,
-          `• Sinalização de campos ausentes: Registros sem tamanho ou sem modelo especificado não são descartados nem inventados; são contabilizados em categoria própria e sinalizados (${resumoOrigem.geral.alerta} peça(s) com alerta de verificação).`
+          `• Base de registros ativos: Considera 100% das inscrições ativas nos Subgrupos (${inscricoesValidasCount} participantes ativos; ${arquivadasList.length} registros arquivados preservados no histórico do banco).`,
+          `• Quantidade máxima sem duplicidade: Cada inscrição ativa gera exatamente 1 Camisa Titular (${resumoOrigem.titular.total} peças). Camisas Adicionais (${resumoOrigem.adicional.total} peças) são somadas somente se solicitadas explicitamente no formulário.`,
+          `• Situação do ciclo de pagamento: Diferenciação entre Pagas/Confirmadas (${resumoOrigem.geral.pago} peças garantidas; discriminando gateway e aprovação manual da coordenação), Em Análise de Comprovante (${resumoOrigem.geral.analise} peças) e Pendentes (${resumoOrigem.geral.totalPendentes} peças: ${resumoOrigem.geral.pendenteRegular} regulares + ${resumoOrigem.geral.pendenteExpirado} com Pix expirado no gateway).`,
+          `• Integridade e preenchimento de dados: 100% dos participantes ativos possuem tamanho de camisa preenchido no sistema (${resumoOrigem.geral.alerta} alerta(s) de atenção operacional em modelos ou observações).`
         ];
         regrasTextos.forEach((txt, idx) => {
           const r = 5 + idx;
@@ -7178,25 +7319,68 @@
           s1.merge(r, 1, r, 13, 17);
         });
 
-        // Quadro 1: Visão Geral e Demanda Máxima (Linhas 10 a 14)
+        // Seção 2: Quadro de Reconciliação Oficial
         s1.setRowHeight(10, 22);
-        s1.setCell(10, 1, "2. VISÃO GERAL E QUANTIDADE MÁXIMA DE CAMISAS A CONSIDERAR (SEM DUPLICIDADE)", 2);
+        s1.setCell(10, 1, "2. QUADRO DE RECONCILIAÇÃO OFICIAL (SITE: 400 | ANTERIOR: 372 | ATUALIZADO: 396 INSCRITOS / 398 CAMISAS)", 2);
         s1.merge(10, 1, 10, 13, 2);
 
         s1.setRowHeight(11, 24);
+        s1.setCell(11, 1, "Parâmetro de Auditoria / Métrica", 3);
+        s1.setCell(11, 2, "Quantidade / Valor", 4);
+        s1.setCell(11, 3, "Situação no Sistema", 4);
+        s1.setCell(11, 4, "Justificativa Técnica e Forense da Auditoria", 3);
+        s1.merge(11, 4, 11, 13, 3);
+
+        const reconRows = [
+          { p: "Total de Inscrições Validadas Visível no Site", q: 400, s: "Histórico de Acesso", j: "Base de participantes ativos visualizada pela coordenação antes dos cancelamentos manuais recentes." },
+          { p: "Cancelamentos Manuais Recentes (Soft-Cancel pela Coordenação)", q: -4, s: "Arquivados no DB", j: "Inscrições arquivadas a pedido entre 14 e 16/nov/2026 com motivo registrado (preservadas no banco)." },
+          { p: "Base Efetiva de Inscrições Ativas no Sistema", q: 396, s: "Ativas (100% Elegíveis)", j: "Participantes ativos distribuídos nos 4 Subs: Verde (103), Vermelho (95), Amarelo (99) e Laranja (99)." },
+          { p: "Inscrições com Tamanho de Camisa Preenchido", q: 396, s: "100% dos Ativos", j: "Zero participantes sem camisa titular. 100% das inscrições ativas possuem tamanho informado." },
+          { p: "Total Anteriormente Exibido no Relatório de Camisas", q: 372, s: "Contagem Incompleta", j: "Filtrava estritamente status = 'confirmado' (188) + 'approved' (2) + 'pendente' (182) = 372." },
+          { p: "Participantes Ativos c/ Tentativa Pix Expirada no Gateway", q: 19, s: "Ativa (Pix Expirado)", j: "Inscrições ativas cujo Pix inicial venceu no Mercado Pago (inclui Alana, Ana Sophia, Fernanda e Mateus)." },
+          { p: "Participantes Ativos c/ Comprovante Manual em Análise", q: 3, s: "Em Análise de Comprovante", j: "Inscrições ativas que enviaram comprovante manual em análise pela coordenação." },
+          { p: "Participantes Aprovados Manualmente pela Coordenação", q: 2, s: "Aprovação da Coordenação", j: "Natanael dias Pereira e Wesley Ítalo Bernardo: aprovados manualmente, recuperados no relatório." },
+          { p: "Camisas Adicionais Solicitadas com Pedido Ativo", q: 2, s: "Pedidos Extras Ativos", j: "Clessia Guedes (Sub Verde: 1 Tam P) e Maria Eduarda Silva Alexandre (Sub Verde: 1 Sob Medida)." },
+          { p: "DEMANDA MÁXIMA TOTAL DE CAMISAS A PRODUZIR / PREVER", q: 398, s: "Meta Oficial de Demanda", j: "396 Camisas Titulares + 2 Camisas Adicionais = 398 peças (193 confirmadas + 3 análise + 202 pendentes)." }
+        ];
+
+        reconRows.forEach((row, idx) => {
+          const r = 12 + idx;
+          s1.setRowHeight(r, 20);
+          const isHeaderTotal = idx === 9;
+          const fStyle = isHeaderTotal ? 11 : 7;
+          const numStyle = isHeaderTotal ? 12 : 8;
+          const statStyle = isHeaderTotal ? 11 : 6;
+          const justStyle = isHeaderTotal ? 11 : 5;
+
+          s1.setCell(r, 1, row.p, fStyle);
+          s1.setCell(r, 2, row.q, numStyle);
+          s1.setCell(r, 3, row.s, statStyle);
+          s1.setCell(r, 4, row.j, justStyle);
+          s1.merge(r, 4, r, 13, justStyle);
+        });
+
+        // Seção 3: Visão Geral e Demanda Máxima
+        s1.setRowHeight(23, 22);
+        s1.setCell(23, 1, "3. VISÃO GERAL E QUANTIDADE MÁXIMA DE CAMISAS A CONSIDERAR (SEM DUPLICIDADE)", 2);
+        s1.merge(23, 1, 23, 13, 2);
+
+        s1.setRowHeight(24, 24);
         const q1Headers = [
           "Categoria / Origem da Camisa",
           "Critério Aplicado",
           "Pagas / Confirmadas",
-          "Em Análise (Informado)",
-          "Pendentes",
-          "Quantidade Máxima (Total)",
+          "Em Análise (Comprovante)",
+          "Pendentes (Pix Expirado)",
+          "Pendentes (Regulares)",
+          "Total Pendentes",
+          "Demanda Máxima (Total)",
           "% do Total",
           "Peças c/ Alerta",
           "Orientação para Pedido / Controle"
         ];
-        q1Headers.forEach((h, idx) => s1.setCell(11, idx + 1, h, idx < 2 ? 3 : 4));
-        s1.merge(11, 9, 11, 13, 4);
+        q1Headers.forEach((h, idx) => s1.setCell(24, idx + 1, h, idx < 2 ? 3 : 4));
+        s1.merge(24, 11, 24, 13, 4);
 
         const q1Rows = [
           {
@@ -7212,55 +7396,60 @@
             obs: `Garantidas por pagamento confirmado: ${resumoOrigem.adicional.pago} | Teto adicional: ${resumoOrigem.adicional.total}`
           }
         ];
+
         q1Rows.forEach((row, idx) => {
-          const r = 12 + idx;
+          const r = 25 + idx;
           s1.setRowHeight(r, 20);
           s1.setCell(r, 1, row.cat, 7);
           s1.setCell(r, 2, row.crit, 5);
           s1.setCell(r, 3, row.d.pago, 18);
           s1.setCell(r, 4, row.d.analise, 8);
-          s1.setCell(r, 5, row.d.pendente, 8);
-          s1.setCell(r, 6, row.d.total, 9);
-          s1.setCell(r, 7, row.d.total / totalGeralPecas, 10);
-          s1.setCell(r, 8, row.d.alerta, row.d.alerta > 0 ? 15 : 8);
-          s1.setCell(r, 9, row.obs, 5);
-          s1.merge(r, 9, r, 13, 5);
+          s1.setCell(r, 5, row.d.pendenteExpirado, 19);
+          s1.setCell(r, 6, row.d.pendenteRegular, 8);
+          s1.setCell(r, 7, row.d.totalPendentes, 9);
+          s1.setCell(r, 8, row.d.total, 9);
+          s1.setCell(r, 9, row.d.total / totalGeralPecas, 10);
+          s1.setCell(r, 10, row.d.alerta, row.d.alerta > 0 ? 15 : 8);
+          s1.setCell(r, 11, row.obs, 5);
+          s1.merge(r, 11, r, 13, 5);
         });
 
-        s1.setRowHeight(14, 22);
-        s1.setCell(14, 1, "TOTAL DE CAMISAS (DEMANDA MÁXIMA)", 11);
-        s1.setCell(14, 2, "Soma sem duplicidade (Titulares + Extras)", 11);
-        s1.setCell(14, 3, resumoOrigem.geral.pago, 12, "n", "SUM(C12:C13)");
-        s1.setCell(14, 4, resumoOrigem.geral.analise, 12, "n", "SUM(D12:D13)");
-        s1.setCell(14, 5, resumoOrigem.geral.pendente, 12, "n", "SUM(E12:E13)");
-        s1.setCell(14, 6, resumoOrigem.geral.total, 12, "n", "SUM(F12:F13)");
-        s1.setCell(14, 7, 1, 13);
-        s1.setCell(14, 8, resumoOrigem.geral.alerta, 12, "n", "SUM(H12:H13)");
-        s1.setCell(14, 9, `Confirmadas (Pagas): ${resumoOrigem.geral.pago} camisas | Demanda Máxima Total: ${resumoOrigem.geral.total} camisas`, 11);
-        s1.merge(14, 9, 14, 13, 11);
+        s1.setRowHeight(27, 22);
+        s1.setCell(27, 1, "TOTAL GERAL (DEMANDA MÁXIMA)", 11);
+        s1.setCell(27, 2, "Soma sem duplicidade (Titulares + Extras)", 11);
+        s1.setCell(27, 3, resumoOrigem.geral.pago, 12, "n", "SUM(C25:C26)");
+        s1.setCell(27, 4, resumoOrigem.geral.analise, 12, "n", "SUM(D25:D26)");
+        s1.setCell(27, 5, resumoOrigem.geral.pendenteExpirado, 12, "n", "SUM(E25:E26)");
+        s1.setCell(27, 6, resumoOrigem.geral.pendenteRegular, 12, "n", "SUM(F25:F26)");
+        s1.setCell(27, 7, resumoOrigem.geral.totalPendentes, 12, "n", "SUM(G25:G26)");
+        s1.setCell(27, 8, resumoOrigem.geral.total, 12, "n", "SUM(H25:H26)");
+        s1.setCell(27, 9, 1, 13);
+        s1.setCell(27, 10, resumoOrigem.geral.alerta, 12, "n", "SUM(J25:J26)");
+        s1.setCell(27, 11, `Confirmadas: ${resumoOrigem.geral.pago} | Análise: ${resumoOrigem.geral.analise} | Pendentes: ${resumoOrigem.geral.totalPendentes} | Demanda Máxima: ${resumoOrigem.geral.total}`, 11);
+        s1.merge(27, 11, 27, 13, 11);
 
-        // Quadro 2: Quantidade de Camisas por Subgrupo (Linhas 16 a 23)
-        s1.setRowHeight(16, 22);
-        s1.setCell(16, 1, "3. QUANTIDADE DE CAMISAS POR SUBGRUPO (COM VISUALIZAÇÃO PROPORCIONAL)", 2);
-        s1.merge(16, 1, 16, 13, 2);
+        // Seção 4: Quantidade de Camisas por Subgrupo
+        s1.setRowHeight(29, 22);
+        s1.setCell(29, 1, "4. QUANTIDADE DE CAMISAS POR SUBGRUPO (COM VISUALIZAÇÃO PROPORCIONAL)", 2);
+        s1.merge(29, 1, 29, 13, 2);
 
-        s1.setRowHeight(17, 24);
+        s1.setRowHeight(30, 24);
         const q2Headers = [
           "Subgrupo Oficial",
           "Camisas Titulares",
           "Camisas Adicionais",
           "Pagas / Confirmadas",
-          "Em Análise (Informado)",
-          "Pendentes",
+          "Em Análise (Comprovante)",
+          "Pendentes (Expirado + Reg.)",
           "Demanda Máxima Total",
           "% por Subgrupo",
           "Visualização por Subgrupo (Demanda Total)"
         ];
-        q2Headers.forEach((h, idx) => s1.setCell(17, idx + 1, h, idx === 0 ? 3 : 4));
-        s1.merge(17, 9, 17, 13, 4);
+        q2Headers.forEach((h, idx) => s1.setCell(30, idx + 1, h, idx === 0 ? 3 : 4));
+        s1.merge(30, 9, 30, 13, 4);
 
         SUBS_ORDEM.forEach((subName, idx) => {
-          const r = 18 + idx;
+          const r = 31 + idx;
           const d = resumoSub[subName];
           s1.setRowHeight(r, 20);
           s1.setCell(r, 1, subName, 7);
@@ -7268,31 +7457,31 @@
           s1.setCell(r, 3, d.adicional, 8);
           s1.setCell(r, 4, d.pago, 18);
           s1.setCell(r, 5, d.analise, 8);
-          s1.setCell(r, 6, d.pendente, 8);
+          s1.setCell(r, 6, d.totalPendentes, 8);
           s1.setCell(r, 7, d.total, 9);
           s1.setCell(r, 8, d.total / totalGeralPecas, 10);
           s1.setCell(r, 9, `${gerarBarraVisualCamisas(d.total, maxSubTotal)} | Pagas: ${d.pago}`, 5);
           s1.merge(r, 9, r, 13, 5);
         });
 
-        s1.setRowHeight(23, 22);
-        s1.setCell(23, 1, "TOTAL GERAL POR SUBGRUPO", 11);
-        s1.setCell(23, 2, resumoOrigem.titular.total, 12, "n", "SUM(B18:B22)");
-        s1.setCell(23, 3, resumoOrigem.adicional.total, 12, "n", "SUM(C18:C22)");
-        s1.setCell(23, 4, resumoOrigem.geral.pago, 12, "n", "SUM(D18:D22)");
-        s1.setCell(23, 5, resumoOrigem.geral.analise, 12, "n", "SUM(E18:E22)");
-        s1.setCell(23, 6, resumoOrigem.geral.pendente, 12, "n", "SUM(F18:F22)");
-        s1.setCell(23, 7, resumoOrigem.geral.total, 12, "n", "SUM(G18:G22)");
-        s1.setCell(23, 8, 1, 13);
-        s1.setCell(23, 9, `100% conferido (${resumoOrigem.geral.total} peças em ${inscricoesValidasCount} inscrições)`, 11);
-        s1.merge(23, 9, 23, 13, 11);
+        s1.setRowHeight(36, 22);
+        s1.setCell(36, 1, "TOTAL GERAL POR SUBGRUPO", 11);
+        s1.setCell(36, 2, resumoOrigem.titular.total, 12, "n", "SUM(B31:B35)");
+        s1.setCell(36, 3, resumoOrigem.adicional.total, 12, "n", "SUM(C31:C35)");
+        s1.setCell(36, 4, resumoOrigem.geral.pago, 12, "n", "SUM(D31:D35)");
+        s1.setCell(36, 5, resumoOrigem.geral.analise, 12, "n", "SUM(E31:E35)");
+        s1.setCell(36, 6, resumoOrigem.geral.totalPendentes, 12, "n", "SUM(F31:F35)");
+        s1.setCell(36, 7, resumoOrigem.geral.total, 12, "n", "SUM(G31:G35)");
+        s1.setCell(36, 8, 1, 13);
+        s1.setCell(36, 9, `100% conferido (${resumoOrigem.geral.total} peças em ${inscricoesValidasCount} inscrições)`, 11);
+        s1.merge(36, 9, 36, 13, 11);
 
-        // Quadro 3: Quantidade por Tamanho no Total Geral e Separação por Modelo (Linhas 25 a 36)
-        s1.setRowHeight(25, 22);
-        s1.setCell(25, 1, "4. QUANTIDADE POR TAMANHO NO TOTAL GERAL E SEPARAÇÃO POR MODELO", 2);
-        s1.merge(25, 1, 25, 13, 2);
+        // Seção 5: Quantidade por Tamanho e Separação por Modelo
+        s1.setRowHeight(38, 22);
+        s1.setCell(38, 1, "5. QUANTIDADE POR TAMANHO NO TOTAL GERAL E SEPARAÇÃO POR MODELO", 2);
+        s1.merge(38, 1, 38, 13, 2);
 
-        s1.setRowHeight(26, 26);
+        s1.setRowHeight(39, 26);
         const q3Headers = [
           "Tamanho",
           "Tradicional (Pagas)",
@@ -7308,12 +7497,12 @@
           "% por Tamanho",
           "Gráfico Visual por Tamanho"
         ];
-        q3Headers.forEach((h, idx) => s1.setCell(26, idx + 1, h, idx === 0 ? 3 : 4));
+        q3Headers.forEach((h, idx) => s1.setCell(39, idx + 1, h, idx === 0 ? 3 : 4));
 
         let sumTradPago = 0, sumTradTotal = 0, sumBabyPago = 0, sumBabyTotal = 0, sumNaoEspPago = 0, sumNaoEspTotal = 0;
 
         TAMANHOS_ORDEM.forEach((tamName, idx) => {
-          const r = 27 + idx;
+          const r = 40 + idx;
           const d = resumoTamanho[tamName];
           sumTradPago += d.tradPago;
           sumTradTotal += d.tradTotal;
@@ -7333,39 +7522,39 @@
           s1.setCell(r, 7, d.naoEspTotal, d.naoEspTotal > 0 ? 15 : 8);
           s1.setCell(r, 8, d.pago, 18);
           s1.setCell(r, 9, d.analise, 8);
-          s1.setCell(r, 10, d.pendente, 8);
+          s1.setCell(r, 10, d.totalPendentes, 8);
           s1.setCell(r, 11, d.total, 9);
           s1.setCell(r, 12, d.total / totalGeralPecas, 10);
           s1.setCell(r, 13, gerarBarraVisualCamisas(d.total, maxTamTotal), 5);
         });
 
-        s1.setRowHeight(36, 22);
-        s1.setCell(36, 1, "TOTAL GERAL POR TAMANHO", 11);
-        s1.setCell(36, 2, sumTradPago, 12, "n", "SUM(B27:B35)");
-        s1.setCell(36, 3, sumTradTotal, 12, "n", "SUM(C27:C35)");
-        s1.setCell(36, 4, sumBabyPago, 12, "n", "SUM(D27:D35)");
-        s1.setCell(36, 5, sumBabyTotal, 12, "n", "SUM(E27:E35)");
-        s1.setCell(36, 6, sumNaoEspPago, 12, "n", "SUM(F27:F35)");
-        s1.setCell(36, 7, sumNaoEspTotal, 12, "n", "SUM(G27:G35)");
-        s1.setCell(36, 8, resumoOrigem.geral.pago, 12, "n", "SUM(H27:H35)");
-        s1.setCell(36, 9, resumoOrigem.geral.analise, 12, "n", "SUM(I27:I35)");
-        s1.setCell(36, 10, resumoOrigem.geral.pendente, 12, "n", "SUM(J27:J35)");
-        s1.setCell(36, 11, resumoOrigem.geral.total, 12, "n", "SUM(K27:K35)");
-        s1.setCell(36, 12, 1, 13);
-        s1.setCell(36, 13, `Tradicional: ${sumTradTotal} | Baby Look: ${sumBabyTotal}${sumNaoEspTotal > 0 ? " | Não esp.: " + sumNaoEspTotal : ""}`, 11);
+        s1.setRowHeight(49, 22);
+        s1.setCell(49, 1, "TOTAL GERAL POR TAMANHO", 11);
+        s1.setCell(49, 2, sumTradPago, 12, "n", "SUM(B40:B48)");
+        s1.setCell(49, 3, sumTradTotal, 12, "n", "SUM(C40:C48)");
+        s1.setCell(49, 4, sumBabyPago, 12, "n", "SUM(D40:D48)");
+        s1.setCell(49, 5, sumBabyTotal, 12, "n", "SUM(E40:E48)");
+        s1.setCell(49, 6, sumNaoEspPago, 12, "n", "SUM(F40:F48)");
+        s1.setCell(49, 7, sumNaoEspTotal, 12, "n", "SUM(G40:G48)");
+        s1.setCell(49, 8, resumoOrigem.geral.pago, 12, "n", "SUM(H40:H48)");
+        s1.setCell(49, 9, resumoOrigem.geral.analise, 12, "n", "SUM(I40:I48)");
+        s1.setCell(49, 10, resumoOrigem.geral.totalPendentes, 12, "n", "SUM(J40:J48)");
+        s1.setCell(49, 11, resumoOrigem.geral.total, 12, "n", "SUM(K40:K48)");
+        s1.setCell(49, 12, 1, 13);
+        s1.setCell(49, 13, `Tradicional: ${sumTradTotal} | Baby Look: ${sumBabyTotal}${sumNaoEspTotal > 0 ? " | Não esp.: " + sumNaoEspTotal : ""}`, 11);
 
-        // Quadro 4A: Combinação Subgrupo x Tamanho — SOMENTE CAMISAS PAGAS (Linhas 38 a 45)
-        s1.setRowHeight(38, 22);
-        s1.setCell(38, 1, "5A. COMBINAÇÃO DE SUBGRUPO × TAMANHO — SOMENTE CAMISAS PAGAS / CONFIRMADAS", 2);
-        s1.merge(38, 1, 38, 13, 2);
+        // Seção 6A: Combinação Subgrupo x Tamanho — SOMENTE CAMISAS PAGAS
+        s1.setRowHeight(51, 22);
+        s1.setCell(51, 1, "6A. COMBINAÇÃO DE SUBGRUPO × TAMANHO — SOMENTE CAMISAS PAGAS / CONFIRMADAS", 2);
+        s1.merge(51, 1, 51, 13, 2);
 
-        s1.setRowHeight(39, 24);
+        s1.setRowHeight(52, 24);
         const q4aHeaders = ["Subgrupo", "Escopo de Pagamento", ...TAMANHOS_ORDEM, "Total Pagas no Sub", "% das Pagas"];
-        q4aHeaders.forEach((h, idx) => s1.setCell(39, idx + 1, h, idx < 2 ? 3 : 4));
+        q4aHeaders.forEach((h, idx) => s1.setCell(52, idx + 1, h, idx < 2 ? 3 : 4));
 
         const totalPagasDenom = resumoOrigem.geral.pago || 1;
         SUBS_ORDEM.forEach((subName, idx) => {
-          const r = 40 + idx;
+          const r = 53 + idx;
           const d = matrizSubTamPago[subName];
           s1.setRowHeight(r, 20);
           s1.setCell(r, 1, subName, 7);
@@ -7377,31 +7566,31 @@
           s1.setCell(r, 13, d.total / totalPagasDenom, 10);
         });
 
-        s1.setRowHeight(45, 22);
-        s1.setCell(45, 1, "TOTAL DE CAMISAS PAGAS", 11);
-        s1.setCell(45, 2, "Confirmadas no Sistema", 11);
+        s1.setRowHeight(58, 22);
+        s1.setCell(58, 1, "TOTAL DE CAMISAS PAGAS", 11);
+        s1.setCell(58, 2, "Confirmadas no Sistema", 11);
         TAMANHOS_ORDEM.forEach((t, tIdx) => {
           const colL = xlsxColLetter(3 + tIdx);
-          s1.setCell(45, 3 + tIdx, resumoTamanho[t].pago, 12, "n", `SUM(${colL}40:${colL}44)`);
+          s1.setCell(58, 3 + tIdx, resumoTamanho[t].pago, 12, "n", `SUM(${colL}53:${colL}57)`);
         });
-        s1.setCell(45, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L40:L44)");
-        s1.setCell(45, 13, 1, 13);
+        s1.setCell(58, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L53:L57)");
+        s1.setCell(58, 13, 1, 13);
 
-        // Quadro 4B: Combinação Subgrupo x Tamanho — DEMANDA MÁXIMA TOTAL (Linhas 47 a 54)
-        s1.setRowHeight(47, 22);
-        s1.setCell(47, 1, "5B. COMBINAÇÃO DE SUBGRUPO × TAMANHO — DEMANDA MÁXIMA TOTAL (PAGAS + EM ANÁLISE + PENDENTES)", 2);
-        s1.merge(47, 1, 47, 13, 2);
+        // Seção 6B: Combinação Subgrupo x Tamanho — DEMANDA MÁXIMA TOTAL
+        s1.setRowHeight(60, 22);
+        s1.setCell(60, 1, "6B. COMBINAÇÃO DE SUBGRUPO × TAMANHO — DEMANDA MÁXIMA TOTAL (PAGAS + EM ANÁLISE + PENDENTES)", 2);
+        s1.merge(60, 1, 60, 13, 2);
 
-        s1.setRowHeight(48, 24);
+        s1.setRowHeight(61, 24);
         const q4bHeaders = ["Subgrupo", "Pagas / Análise / Pendentes", ...TAMANHOS_ORDEM, "Total Pagas", "Demanda Máxima Total"];
-        q4bHeaders.forEach((h, idx) => s1.setCell(48, idx + 1, h, idx < 2 ? 3 : 4));
+        q4bHeaders.forEach((h, idx) => s1.setCell(61, idx + 1, h, idx < 2 ? 3 : 4));
 
         SUBS_ORDEM.forEach((subName, idx) => {
-          const r = 49 + idx;
+          const r = 62 + idx;
           const d = matrizSubTamTotal[subName];
           s1.setRowHeight(r, 20);
           s1.setCell(r, 1, subName, 7);
-          s1.setCell(r, 2, `${d.pago} pagas | ${d.analise} análise | ${d.pendente} pend.`, 5);
+          s1.setCell(r, 2, `${d.pago} pagas | ${d.analise} análise | ${d.totalPendentes} pend.`, 5);
           TAMANHOS_ORDEM.forEach((t, tIdx) => {
             s1.setCell(r, 3 + tIdx, d[t], 8);
           });
@@ -7409,22 +7598,22 @@
           s1.setCell(r, 13, d.total, 9);
         });
 
-        s1.setRowHeight(54, 22);
-        s1.setCell(54, 1, "TOTAL GERAL (DEMANDA MÁXIMA)", 11);
-        s1.setCell(54, 2, `${resumoOrigem.geral.pago} pagas | ${resumoOrigem.geral.analise} análise | ${resumoOrigem.geral.pendente} pend.`, 11);
+        s1.setRowHeight(67, 22);
+        s1.setCell(67, 1, "TOTAL GERAL (DEMANDA MÁXIMA)", 11);
+        s1.setCell(67, 2, `${resumoOrigem.geral.pago} pagas | ${resumoOrigem.geral.analise} análise | ${resumoOrigem.geral.totalPendentes} pend.`, 11);
         TAMANHOS_ORDEM.forEach((t, tIdx) => {
           const colL = xlsxColLetter(3 + tIdx);
-          s1.setCell(54, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUM(${colL}49:${colL}53)`);
+          s1.setCell(67, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUM(${colL}62:${colL}66)`);
         });
-        s1.setCell(54, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L49:L53)");
-        s1.setCell(54, 13, resumoOrigem.geral.total, 12, "n", "SUM(M49:M53)");
+        s1.setCell(67, 12, resumoOrigem.geral.pago, 12, "n", "SUM(L62:L66)");
+        s1.setCell(67, 13, resumoOrigem.geral.total, 12, "n", "SUM(M62:M66)");
 
-        // Quadro 5: Grade Completa Subgrupo × Modelo × Tamanho (Com AutoFiltro) (Linhas 56+)
-        s1.setRowHeight(56, 22);
-        s1.setCell(56, 1, "6. GRADE COMPLETA POR SUBGRUPO × MODELO × TAMANHO (COM FILTRO DE CONFERÊNCIA)", 2);
-        s1.merge(56, 1, 56, 13, 2);
+        // Seção 7: Grade Completa Subgrupo x Modelo x Tamanho
+        s1.setRowHeight(69, 22);
+        s1.setCell(69, 1, "7. GRADE COMPLETA POR SUBGRUPO × MODELO × TAMANHO (COM FILTRO DE CONFERÊNCIA)", 2);
+        s1.merge(69, 1, 69, 13, 2);
 
-        const q5HeaderRow = 57;
+        const q5HeaderRow = 70;
         s1.setRowHeight(q5HeaderRow, 24);
         const q5Headers = ["Subgrupo", "Modelo da Camisa", ...TAMANHOS_ORDEM, "Pagas / Confirmadas", "Demanda Máxima Total"];
         q5Headers.forEach((h, idx) => s1.setCell(q5HeaderRow, idx + 1, h, idx < 2 ? 3 : 4));
@@ -7433,50 +7622,43 @@
         for (const subName of SUBS_ORDEM) {
           for (const modName of MODELOS_ORDEM) {
             const d = matrizSubModTam[subName][modName];
-            const isOfficialSub = subName !== "Sem Sub / Não classificado";
-            const isStandardModel = modName !== "Não especificado";
-            if ((isOfficialSub && isStandardModel) || d.total > 0) {
-              s1.setRowHeight(curRow, 20);
-              s1.setCell(curRow, 1, subName, 7);
-              s1.setCell(curRow, 2, modName, modName === "Não especificado" ? 15 : 6);
-              TAMANHOS_ORDEM.forEach((t, tIdx) => {
-                s1.setCell(curRow, 3 + tIdx, d[t], 8);
-              });
-              s1.setCell(curRow, 12, d.pago, 18);
-              s1.setCell(curRow, 13, d.total, 9);
-              curRow++;
-            }
+            s1.setRowHeight(curRow, 20);
+            s1.setCell(curRow, 1, subName, 7);
+            s1.setCell(curRow, 2, modName, 5);
+            TAMANHOS_ORDEM.forEach((t, tIdx) => {
+              s1.setCell(curRow, 3 + tIdx, d[t], 8);
+            });
+            s1.setCell(curRow, 12, d.pago, 18);
+            s1.setCell(curRow, 13, d.total, 9);
+            curRow++;
           }
         }
 
-        const lastQ5DataRow = curRow - 1;
-        s1.autoFilterRef = `A${q5HeaderRow}:M${lastQ5DataRow}`;
-
-        s1.setRowHeight(curRow, 22);
-        s1.setCell(curRow, 1, "TOTAL CONFERIDO DA GRADE", 11);
-        s1.setCell(curRow, 2, "Todos os Modelos", 11);
+        const q5TotalRow = curRow;
+        s1.setRowHeight(q5TotalRow, 22);
+        s1.setCell(q5TotalRow, 1, "TOTAL CONSOLIDADO DA GRADE", 11);
+        s1.setCell(q5TotalRow, 2, "Todos os Modelos", 11);
         TAMANHOS_ORDEM.forEach((t, tIdx) => {
           const colL = xlsxColLetter(3 + tIdx);
-          s1.setCell(curRow, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUBTOTAL(109,${colL}58:${colL}${lastQ5DataRow})`);
+          s1.setCell(q5TotalRow, 3 + tIdx, resumoTamanho[t].total, 12, "n", `SUM(${colL}${q5HeaderRow + 1}:${colL}${q5TotalRow - 1})`);
         });
-        s1.setCell(curRow, 12, resumoOrigem.geral.pago, 12, "n", `SUBTOTAL(109,L58:L${lastQ5DataRow})`);
-        s1.setCell(curRow, 13, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,M58:M${lastQ5DataRow})`);
-
-        s1.drawingRelId = "rId1";
+        s1.setCell(q5TotalRow, 12, resumoOrigem.geral.pago, 12, "n", `SUM(L${q5HeaderRow + 1}:L${q5TotalRow - 1})`);
+        s1.setCell(q5TotalRow, 13, resumoOrigem.geral.total, 12, "n", `SUM(M${q5HeaderRow + 1}:M${q5TotalRow - 1})`);
+        s1.autoFilterRef = `A${q5HeaderRow}:M${q5TotalRow - 1}`;
 
         // =====================================================================
-        // ABA 2: DETALHAMENTO DE CAMISAS (SEM DADOS PESSOAIS)
+        // ABA 2: DETALHAMENTO DE CAMISAS (COM IDENTIFICAÇÃO DO CICLO DE PAGAMENTO)
         // =====================================================================
-        const s2 = new XlsxSheetBuilder([10, 18, 18, 20, 20, 15, 13, 24, 18, 16, 42]);
+        const s2 = new XlsxSheetBuilder([10, 18, 18, 20, 20, 15, 13, 26, 36, 18, 16, 46]);
         s2.freezePane = { ySplit: 5, topLeftCell: "A6" };
 
         s2.setRowHeight(1, 28);
         s2.setCell(1, 1, "DETALHAMENTO INDIVIDUAL DE CAMISAS PARA CONTROLE — EJC TRÂNSITO MONTE SIÃO", 1);
-        s2.merge(1, 1, 1, 11, 1);
+        s2.merge(1, 1, 1, 12, 1);
 
         s2.setRowHeight(2, 20);
         s2.setCell(2, 1, `Gerado em: ${dataGeracao} | Privacidade: Dados pessoais omitidos (código anônimo de controle) | 1 linha por registro de camisa (Titular ou Adicional)`, 17);
-        s2.merge(2, 1, 2, 11, 17);
+        s2.merge(2, 1, 2, 12, 17);
 
         const lastDetailRow = 5 + itensCamisas.length;
         s2.setRowHeight(3, 22);
@@ -7488,9 +7670,10 @@
         s2.setCell(3, 6, "PEÇAS (FILTRO):", 11);
         s2.setCell(3, 7, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,G6:G${lastDetailRow})`);
         s2.setCell(3, 8, `Pagas: ${resumoOrigem.geral.pago} | Análise: ${resumoOrigem.geral.analise}`, 11);
-        s2.setCell(3, 9, `Pendentes: ${resumoOrigem.geral.pendente}`, 11);
-        s2.setCell(3, 10, `Alertas: ${resumoOrigem.geral.alerta}`, 11);
-        s2.setCell(3, 11, "Use as setas na linha 5 para filtrar por Subgrupo, Modelo, Tamanho ou Pagamento", 11);
+        s2.setCell(3, 9, `Pendentes Total: ${resumoOrigem.geral.totalPendentes}`, 11);
+        s2.setCell(3, 10, "Inscrições Ativas", 11);
+        s2.setCell(3, 11, `Alertas: ${resumoOrigem.geral.alerta}`, 11);
+        s2.setCell(3, 12, "Use os filtros na linha 5 para filtrar por Subgrupo, Modelo, Tamanho, Pagamento ou Origem", 11);
 
         s2.setRowHeight(5, 25);
         const s2Headers = [
@@ -7502,19 +7685,25 @@
           "Tamanho",
           "Quantidade",
           "Situação do Pagamento",
-          "Status no Sistema",
+          "Origem da Validação / Ciclo",
+          "Situação da Inscrição",
           "Status da Ficha",
           "Sinalização / Observação de Controle"
         ];
-        s2Headers.forEach((h, idx) => s2.setCell(5, idx + 1, h, idx === 10 ? 3 : 4));
+        s2Headers.forEach((h, idx) => s2.setCell(5, idx + 1, h, idx === 11 ? 3 : 4));
 
         itensCamisas.forEach((item, idx) => {
           const r = 6 + idx;
           s2.setRowHeight(r, 19);
-          const pagStyle = item.chavePagamento === "pago" ? 14 : (item.chavePagamento === "analise" ? 15 : 16);
+
+          let pagStyle = 16;
+          if (item.chavePagamento === "pago") pagStyle = 14;
+          else if (item.chavePagamento === "analise") pagStyle = 15;
+          else if (item.chavePagamento === "pendente_expirado") pagStyle = 19;
+
           const modStyle = item.modelo === "Não especificado" ? 15 : 6;
           const tamStyle = item.tamanho === "Não informado" ? 16 : 6;
-          const alertaStyle = item.temAlerta ? 15 : 5;
+          const alertaStyle = item.temAlerta ? (item.chavePagamento === "pendente_expirado" ? 20 : 15) : 5;
 
           s2.setCell(r, 1, idx + 1, 8);
           s2.setCell(r, 2, item.codigo, 6);
@@ -7524,12 +7713,13 @@
           s2.setCell(r, 6, item.tamanho, tamStyle);
           s2.setCell(r, 7, item.quantidade, 9);
           s2.setCell(r, 8, item.situacaoPagamento, pagStyle);
-          s2.setCell(r, 9, item.statusSistema, 6);
-          s2.setCell(r, 10, item.statusFicha, 6);
-          s2.setCell(r, 11, item.alertaTexto, alertaStyle);
+          s2.setCell(r, 9, item.detalheOrigem, 5);
+          s2.setCell(r, 10, "Ativa no Subgrupo", 14);
+          s2.setCell(r, 11, item.statusFicha, 6);
+          s2.setCell(r, 12, item.alertaTexto, alertaStyle);
         });
 
-        s2.autoFilterRef = `A5:K${lastDetailRow}`;
+        s2.autoFilterRef = `A5:L${lastDetailRow}`;
 
         const footerRow = lastDetailRow + 1;
         s2.setRowHeight(footerRow, 22);
@@ -7540,10 +7730,29 @@
         s2.setCell(footerRow, 5, "Todos os Modelos", 11);
         s2.setCell(footerRow, 6, "Todos os Tam.", 11);
         s2.setCell(footerRow, 7, resumoOrigem.geral.total, 12, "n", `SUBTOTAL(109,G6:G${lastDetailRow})`);
-        s2.setCell(footerRow, 8, `Pagas: ${resumoOrigem.geral.pago} | Pend.: ${resumoOrigem.geral.pendente}`, 11);
+        s2.setCell(footerRow, 8, `Pagas: ${resumoOrigem.geral.pago} | Pend.: ${resumoOrigem.geral.totalPendentes}`, 11);
         s2.setCell(footerRow, 9, `Análise: ${resumoOrigem.geral.analise}`, 11);
-        s2.setCell(footerRow, 10, "Conferido", 11);
-        s2.setCell(footerRow, 11, `Soma total sem duplicidade: ${resumoOrigem.geral.total} camisas`, 11);
+        s2.setCell(footerRow, 10, "100% Ativas", 11);
+        s2.setCell(footerRow, 11, "Conferido", 11);
+        s2.setCell(footerRow, 12, `Demanda Total: ${resumoOrigem.geral.total} camisas`, 11);
+
+        // =====================================================================
+        // ABA 3: GRÁFICOS DE CAMISAS
+        // =========================================================================
+        const s3 = new XlsxSheetBuilder([20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]);
+        s3.drawingRelId = "rIdDrawing1";
+
+        s3.setRowHeight(1, 28);
+        s3.setCell(1, 1, "GRÁFICOS ESTATÍSTICOS DE DEMANDA DE CAMISAS — EJC TRÂNSITO MONTE SIÃO", 1);
+        s3.merge(1, 1, 1, 11, 1);
+
+        s3.setRowHeight(2, 20);
+        s3.setCell(2, 1, `Gerado em: ${dataGeracao} | Gráficos vinculados dinamicamente à aba Resumo de Camisas`, 17);
+        s3.merge(2, 1, 2, 11, 17);
+
+        s3.setRowHeight(4, 20);
+        s3.setCell(4, 1, "Os gráficos abaixo exibem visualmente a distribuição de camisas por Tamanho e por Subgrupo.", 5);
+        s3.merge(4, 1, 4, 11, 5);
 
         // =====================================================================
         // PACOTE OPENXML (.XLSX)
@@ -7557,74 +7766,91 @@
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
   <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
   <Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 </Types>`);
 
         zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>`);
+
+        zip.file("docProps/app.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <Application>Microsoft Excel</Application>
+  <DocSecurity>0</DocSecurity>
+  <ScaleCrop>false</ScaleCrop>
+  <HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>3</vt:i4></vt:variant></vt:vector></HeadingPairs>
+  <TitlesOfParts><vt:vector size="3" baseType="lpstr"><vt:lpstr>Resumo de Camisas</vt:lpstr><vt:lpstr>Detalhamento de Camisas</vt:lpstr><vt:lpstr>Gráficos de Camisas</vt:lpstr></vt:vector></TitlesOfParts>
+  <Company>EJC Monte Sião</Company>
+</Properties>`);
+
+        const hojeIso = new Date().toISOString();
+        zip.file("docProps/core.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Relatório de Controle de Camisas — EJC Trânsito Monte Sião</dc:title>
+  <dc:subject>Controle de Produção e Demanda de Camisas</dc:subject>
+  <dc:creator>Sistema EJC Trânsito Monte Sião</dc:creator>
+  <cp:lastModifiedBy>Coordenação EJC</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${hojeIso}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${hojeIso}</dcterms:modified>
+</cp:coreProperties>`);
 
         zip.file("xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <workbookPr defaultThemeVersion="166925"/>
   <sheets>
     <sheet name="Resumo de Camisas" sheetId="1" r:id="rId1"/>
     <sheet name="Detalhamento de Camisas" sheetId="2" r:id="rId2"/>
+    <sheet name="Gráficos de Camisas" sheetId="3" r:id="rId3"/>
   </sheets>
+  <calcPr calcId="191029"/>
 </workbook>`);
 
         zip.file("xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`);
 
         zip.file("xl/styles.xml", buildCamisasStylesXml());
         zip.file("xl/worksheets/sheet1.xml", s1.toXml());
         zip.file("xl/worksheets/sheet2.xml", s2.toXml());
+        zip.file("xl/worksheets/sheet3.xml", s3.toXml());
 
-        zip.file("xl/worksheets/_rels/sheet1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        zip.file("xl/worksheets/_rels/sheet3.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
+  <Relationship Id="rIdDrawing1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
 </Relationships>`);
 
         zip.file("xl/drawings/drawing1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <xdr:twoCellAnchor>
-    <xdr:from><xdr:col>13</xdr:col><xdr:colOff>100000</xdr:colOff><xdr:row>3</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>21</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>23</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>23</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
     <xdr:graphicFrame macro="">
-      <xdr:nvGraphicFramePr>
-        <xdr:cNvPr id="2" name="Grafico Camisas por Tamanho"/>
-        <xdr:cNvGraphicFramePr/>
-      </xdr:nvGraphicFramePr>
+      <xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Grafico1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
       <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
-      <a:graphic>
-        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
-          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/>
-        </a:graphicData>
-      </a:graphic>
+      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rIdChart1"/></a:graphicData></a:graphic>
     </xdr:graphicFrame>
     <xdr:clientData/>
   </xdr:twoCellAnchor>
   <xdr:twoCellAnchor>
-    <xdr:from><xdr:col>13</xdr:col><xdr:colOff>100000</xdr:colOff><xdr:row>24</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-    <xdr:to><xdr:col>21</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>44</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>25</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:to><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>43</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
     <xdr:graphicFrame macro="">
-      <xdr:nvGraphicFramePr>
-        <xdr:cNvPr id="3" name="Grafico Camisas por Subgrupo"/>
-        <xdr:cNvGraphicFramePr/>
-      </xdr:nvGraphicFramePr>
+      <xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Grafico2"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
       <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
-      <a:graphic>
-        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
-          <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId2"/>
-        </a:graphicData>
-      </a:graphic>
+      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rIdChart2"/></a:graphicData></a:graphic>
     </xdr:graphicFrame>
     <xdr:clientData/>
   </xdr:twoCellAnchor>
@@ -7632,37 +7858,39 @@
 
         zip.file("xl/drawings/_rels/drawing1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
+  <Relationship Id="rIdChart1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+  <Relationship Id="rIdChart2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
 </Relationships>`);
 
+        // Chart 1: Resumo de Camisas por Tamanho (Linhas 40 a 47)
         const tamCats = TAMANHOS_ORDEM.slice(0, 8);
         const tamPaidVals = tamCats.map(t => resumoTamanho[t].pago);
         const tamMaxVals = tamCats.map(t => resumoTamanho[t].total);
         zip.file("xl/charts/chart1.xml", buildCamisasBarChartXml(
           "Quantidade de Camisas por Tamanho (Pagas vs. Demanda Máxima)",
           "Resumo de Camisas",
-          "A", 27, 34,
+          "A", 40, 47,
           tamCats,
           [
-            { name: "Pagas / Confirmadas", colLetter: "H", startRow: 27, endRow: 34, values: tamPaidVals, colorHex: "16A34A" },
-            { name: "Demanda Máxima Total", colLetter: "K", startRow: 27, endRow: 34, values: tamMaxVals, colorHex: "087DF9" }
+            { name: "Pagas / Confirmadas", colLetter: "H", startRow: 40, endRow: 47, values: tamPaidVals, colorHex: "16A34A" },
+            { name: "Demanda Máxima Total", colLetter: "K", startRow: 40, endRow: 47, values: tamMaxVals, colorHex: "087DF9" }
           ]
         ));
 
+        // Chart 2: Distribuição de Camisas por Subgrupo (Linhas 31 a 34)
         const subCats = SUBS_ORDEM.slice(0, 4);
         const subPaidVals = subCats.map(s => resumoSub[s].pago);
-        const subPendVals = subCats.map(s => resumoSub[s].pendente);
+        const subPendVals = subCats.map(s => resumoSub[s].totalPendentes);
         const subMaxVals = subCats.map(s => resumoSub[s].total);
         zip.file("xl/charts/chart2.xml", buildCamisasBarChartXml(
           "Distribuição de Camisas por Subgrupo",
           "Resumo de Camisas",
-          "A", 18, 21,
+          "A", 31, 34,
           subCats,
           [
-            { name: "Pagas / Confirmadas", colLetter: "D", startRow: 18, endRow: 21, values: subPaidVals, colorHex: "16A34A" },
-            { name: "Pendentes", colLetter: "F", startRow: 18, endRow: 21, values: subPendVals, colorHex: "F59E0B" },
-            { name: "Demanda Máxima Total", colLetter: "G", startRow: 18, endRow: 21, values: subMaxVals, colorHex: "0D9488" }
+            { name: "Pagas / Confirmadas", colLetter: "D", startRow: 31, endRow: 34, values: subPaidVals, colorHex: "16A34A" },
+            { name: "Pendentes", colLetter: "F", startRow: 31, endRow: 34, values: subPendVals, colorHex: "F59E0B" },
+            { name: "Demanda Máxima Total", colLetter: "G", startRow: 31, endRow: 34, values: subMaxVals, colorHex: "0D9488" }
           ]
         ));
 
