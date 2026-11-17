@@ -7792,15 +7792,15 @@
   <Company>EJC Monte Sião</Company>
 </Properties>`);
 
-        const hojeIso = new Date().toISOString();
+        const criadoEmIsoUtc = new Date().toISOString();
         zip.file("docProps/core.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <dc:title>Relatório de Controle de Camisas — EJC Trânsito Monte Sião</dc:title>
   <dc:subject>Controle de Produção e Demanda de Camisas</dc:subject>
   <dc:creator>Sistema EJC Trânsito Monte Sião</dc:creator>
   <cp:lastModifiedBy>Coordenação EJC</cp:lastModifiedBy>
-  <dcterms:created xsi:type="dcterms:W3CDTF">${hojeIso}</dcterms:created>
-  <dcterms:modified xsi:type="dcterms:W3CDTF">${hojeIso}</dcterms:modified>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${criadoEmIsoUtc}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${criadoEmIsoUtc}</dcterms:modified>
 </cp:coreProperties>`);
 
         zip.file("xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
